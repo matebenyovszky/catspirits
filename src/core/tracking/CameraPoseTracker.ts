@@ -143,8 +143,7 @@ export class CameraPoseTracker {
       delegate: "GPU", recovering: false, lastCaptureAt: -Infinity, lastVideoTime: -1,
       lastResultAt: now, lastVideoAt: now, lastStatusAt: 0, lastFrameTimestamp: -1,
       fpsStartedAt: now, frameCount: 0, fps: 0, clearedStalePose: false, hasResult: false,
-      captureMs: 0, inputSize: "", cameraLabel: "", 
-      
+      captureMs: 0, inputSize: "", cameraLabel: "",
     };
     this.session = session;
     document.addEventListener("visibilitychange", this.onVisibility);
