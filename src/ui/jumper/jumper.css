@@ -54,3 +54,5 @@
 @media(min-width:801px){.jumper-hero{top:19%}}
 @media(min-width:1500px){.jumper-hero{top:21%}}
 @media(max-height:700px) and (min-width:801px){.jumper-hero{top:17%}}
+/* Keep the longer German title on two lines so all home controls stay visible. */
+html:lang(de) .jumper-hero h1{font-size:clamp(36px,4.8vw,68px)}

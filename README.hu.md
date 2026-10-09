@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Nyisd meg a Vite által kiírt címet. Magyar: `/?lang=hu`, angol: `/?lang=en`. A kezdőlapi nyelvválasztó megjegyzi a választást, és megőrzi az ebben a játékban mentett eredményeket. Választás nélkül a böngésző nyelve alapján indul; a magyaron kívüli nyelveknél angolul.
+Nyisd meg a Vite által kiírt címet. Magyar: `/?lang=hu`, angol: `/?lang=en`, német: `/?lang=de`. A kezdőlapi nyelvválasztó megjegyzi a választást, és megőrzi az ebben a játékban mentett eredményeket. Elsőbbséget kap a link nyelve, majd a mentett választás, végül a böngésző nyelvi preferencialistájának első támogatott nyelve. Ha nincs egyezés, alapértelmezésként angolul indul.
 
 ## Ellenőrzés és feltölthető build
 

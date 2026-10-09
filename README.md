@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite. `/?lang=en` selects English and `/?lang=hu` selects Hungarian. The home-screen language buttons remember your choice. Without an explicit choice, Hungarian browsers get Hungarian and other browsers get English. Switching language preserves saved progress, scores, colours and sound settings.
+Open the URL printed by Vite. `/?lang=en` selects English, `/?lang=hu` Hungarian and `/?lang=de` German. The home-screen language buttons remember your choice. Language selection follows the URL, then a saved choice, then the browser's ordered language preferences. The first supported preference is used, with English as the default when none match. Switching language preserves saved progress, scores, colours and sound settings.
 
 ## Test and build
 
@@ -56,7 +56,7 @@ Progress is stored on the current origin under `catspirits.cyber-jumper.v1`, ind
 - `src/core/jumper/`: course simulation, robot rendering, audio and camera adapter.
 - `src/core/tracking/`: the browser camera worker, body motion input and runner physics required by this game.
 - `src/ui/jumper/`: menus, controls and responsive styles.
-- `src/i18n/`: Hungarian/English text, language selection and translation tests.
+- `src/i18n/`: English/Hungarian/German text, language selection and translation tests.
 - `public/_headers`, `wrangler.jsonc`: Cloudflare static-site configuration.
 
 The game remains Cyber Jumper within the Catspirits project; it retains all five worlds, robot colours, jump/duck obstacles, four-section previews, shields, stars, chill mode, reduced motion, music and effects.

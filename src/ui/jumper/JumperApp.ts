@@ -1,4 +1,4 @@
-import { getLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
+import { getLanguage, isLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
 import { JumperSimulation, WORLDS, SUITS, DUCK_GATE_HALF_DEPTH, freshSave, validateSave, type JumperSave, type JumperPhase } from '../../core/jumper/JumperSimulation';
 import { JumperView } from '../../core/jumper/JumperView';
 import { JumperAudio } from '../../core/jumper/JumperAudio';
@@ -58,7 +58,7 @@ export class JumperApp {
         </nav>
       </header>
       <section class="jumper-hero" aria-label="Kezdőképernyő">
-        <fieldset class="language-switch"><legend>Nyelv</legend><button type="button" data-language="hu" lang="hu" aria-pressed="${getLanguage()==='hu'}">Magyar</button><button type="button" data-language="en" lang="en" aria-pressed="${getLanguage()==='en'}">English</button></fieldset>
+        <fieldset class="language-switch"><legend>Nyelv</legend><button type="button" data-language="en" lang="en" aria-pressed="${getLanguage()==='en'}">English</button><button type="button" data-language="hu" lang="hu" aria-pressed="${getLanguage()==='hu'}">Magyar</button><button type="button" data-language="de" lang="de" aria-pressed="${getLanguage()==='de'}">Deutsch</button></fieldset>
         <div class="hero-badge"><span></span> 5 VILÁG · 1 NAGY KALAND</div>
         <h1>UGORJ A<br><span>JÖVŐBE.</span></h1>
         <p>Kis robot. Nagy ugrások. Gyűjts kristályokat,<br class="desktop-break"> lovagold meg a ritmust, és világítsd be a pályát!</p>
@@ -125,7 +125,8 @@ export class JumperApp {
       button.addEventListener('click',event=>{if(!pointerHandled || event.detail===0)action();pointerHandled=false;},{signal:this.abort.signal});
     }
     this.root.querySelectorAll<HTMLButtonElement>('[data-language]').forEach(button=>button.addEventListener('click',()=>{
-      const language=button.dataset.language==='hu'?'hu':'en';
+      const language=button.dataset.language;
+      if(!isLanguage(language))return;
       if(language===getLanguage())return;
       this.persist();
       try { localStorage.setItem(LANGUAGE_KEY,language); } catch { /* URL also stores the choice. */ }

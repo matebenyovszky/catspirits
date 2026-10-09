@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getLanguage, initializeLanguage, LANGUAGE_KEY, localizedHtml, resolveLanguage, setLanguage, t } from './index';
+import { english } from './en';
+import { german } from './de';
 
 beforeEach(() => { setLanguage('en'); localStorage.clear(); history.replaceState(null, '', '/'); });
 afterEach(() => { setLanguage('hu'); vi.unstubAllGlobals(); });
@@ -11,8 +13,27 @@ describe('language choice', () => {
     expect(resolveLanguage('?lang=hu', 'en', 'en-GB')).toBe('hu');
     expect(resolveLanguage('?lang=invalid', 'en', 'hu-HU')).toBe('en');
     expect(resolveLanguage('', null, 'hu-HU')).toBe('hu');
-    expect(resolveLanguage('', null, 'de-DE')).toBe('en');
+    expect(resolveLanguage('', null, 'de-DE')).toBe('de');
     expect(resolveLanguage('', 'unknown', 'en-US')).toBe('en');
+  });
+  it('uses the first supported browser preference and defaults to English', () => {
+    expect(resolveLanguage('', null, ['fr-FR', 'de-AT', 'en'])).toBe('de');
+    expect(resolveLanguage('', null, ['en-US', 'hu-HU'])).toBe('en');
+    expect(resolveLanguage('', null, ['HU-hu', 'de-DE'])).toBe('hu');
+    expect(resolveLanguage('', null, ['de-CH'])).toBe('de');
+    expect(resolveLanguage('', null, ['fr', 'es'])).toBe('en');
+    expect(resolveLanguage('', null, [])).toBe('en');
+    expect(resolveLanguage('?lang=de', 'hu', ['en-US'])).toBe('de');
+    expect(resolveLanguage('', 'de', ['hu-HU'])).toBe('de');
+  });
+  it('initializes German metadata from the browser preference list', () => {
+    vi.stubGlobal('navigator', { language: 'fr-FR', languages: ['fr-FR', 'de-DE', 'en'] });
+    document.head.innerHTML = '<meta name="description" content="">';
+    initializeLanguage();
+    expect(getLanguage()).toBe('de');
+    expect(document.documentElement.lang).toBe('de');
+    expect(document.title).toContain('Spring in die Zukunft');
+    expect(document.querySelector('meta')!.content).toContain('fünf Welten');
   });
   it('sets document metadata and honours the stored choice', () => {
     localStorage.setItem(LANGUAGE_KEY, 'en');
@@ -34,6 +55,23 @@ describe('language choice', () => {
 });
 
 describe('translated game output', () => {
+  it('provides complete German phrases with matching interpolation fields', () => {
+    expect(Object.keys(german).sort()).toEqual(Object.keys(english).sort());
+    for (const [source, target] of Object.entries(german)) {
+      expect(target.trim(), source).not.toBe('');
+      expect(target.match(/\{\w+\}/g) ?? [], source).toEqual(source.match(/\{\w+\}/g) ?? []);
+    }
+  });
+  it('translates German counts, nested lane labels and camera messages', () => {
+    setLanguage('de');
+    expect(t('1 csillag')).toBe('1 Stern');
+    expect(t('3 csillag')).toBe('3 Sterne');
+    expect(t('1 élet')).toBe('1 Leben');
+    expect(t('{count} ★ után', { count: 7 })).toBe('Ab 7 ★');
+    expect(t(', kristályok: {lane} sáv', { lane: 'BAL' })).toBe(', Kristalle: Spur LINKS');
+    expect(t('FaceTime HD megnyitva. Testkövető modell betöltése…')).toBe('FaceTime HD geöffnet. Modell zur Bewegungserkennung wird geladen…');
+    expect(localizedHtml('<button aria-label="Ugrás"> UGRÁS </button>')).toContain('aria-label="Springen"> SPRINGEN </button>');
+  });
   it('translates counts, combos and camera labels while preserving values', () => {
     expect(t('1 csillag')).toBe('1 star');
     expect(t('3 élet')).toBe('3 lives');

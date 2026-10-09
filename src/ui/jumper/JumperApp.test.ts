@@ -37,7 +37,34 @@ afterEach(() => {
   window.dispatchEvent(new Event('pagehide')); vi.unstubAllGlobals(); setLanguage('hu');
 });
 
-describe('standalone bilingual interface', () => {
+describe('standalone multilingual interface', () => {
+  it('renders German menus, controls, camera errors and course previews', async () => {
+    setLanguage('de');
+    const save = freshSave(); save.stars = [3, 3, 0, 0, 0];
+    localStorage.setItem('catspirits.cyber-jumper.v1', JSON.stringify(save));
+    new JumperApp(root);
+    expect(text('h1')).toBe('SPRING INDIE ZUKUNFT.');
+    expect(root.querySelector('[data-language="de"]')!.getAttribute('aria-pressed')).toBe('true');
+    expect(text('.language-switch')).toContain('Deutsch');
+    expect(root.querySelector('[data-jump]')!.getAttribute('aria-label')).toBe('Springen');
+    click('[data-worlds]'); expect(text('.world-list')).toContain('Regenbogenbrücke');
+    click('[data-world="2"]');
+    click('[data-suits]'); expect(text('.suit-grid')).toContain('Ab 7 ★');
+    click('[data-modal-close]'); click('[data-settings]');
+    expect(root.querySelector('[data-music]')!.getAttribute('aria-label')).toBe('Musiklautstärke');
+    click('[data-modal-close]'); click('[data-help]');
+    expect(text('.jumper-modal')).toContain('Ab Welt 3');
+    click('[data-modal-close]');
+    const option = root.querySelector<HTMLInputElement>('[value="camera"]')!;
+    option.checked = true; option.dispatchEvent(new Event('change'));
+    click('[data-play]'); await settle();
+    expect(text('[data-camera-status]')).toContain('Keine Kamera gefunden');
+    click('[data-use-keys]'); advance(1);
+    expect(text('[data-level-name]')).toBe('Sternenhafen');
+    expect(text('[data-course-preview]')).toContain('↓ DUCKEN');
+    expect(root.querySelector('[data-section="2"]')!.getAttribute('aria-label')).toContain('geduckt bleiben');
+    click('[data-pause]'); expect(text('#modal-title')).toBe('Pause.');
+  });
   it('renders English worlds, suits, settings and help with accessible labels', () => {
     new JumperApp(root);
     expect(text('h1')).toBe('JUMP INTOTHE FUTURE.');

@@ -1,4 +1,4 @@
-/** Hungarian source phrases are stable IDs shared by the two interfaces. */
+/** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
   'Cyber Jumper játékpálya. Szóköz: ugrás, le nyíl vagy S: lehajolás, bal és jobb nyíl: sávváltás, P: szünet.': 'Cyber Jumper course. Space: jump, Down or S: duck, Left and Right: change lanes, P: pause.',
   'Cyber Jumper kezdőlap': 'Catspirits home',

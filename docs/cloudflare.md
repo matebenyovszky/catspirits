@@ -16,7 +16,7 @@ In the Worker's **Settings → Builds** section:
 
 The build generates `dist`. `wrangler.jsonc` identifies that directory with `assets.directory`, names the existing Worker `catspirits`, and declares the already assigned `catspirits.com` custom domain. The `workers.dev` and preview URLs remain disabled, matching the current dashboard settings.
 
-Pushes to `main` trigger Cloudflare's connected build and production deployment. The GitHub Actions workflow separately tests and builds the game without deployment credentials. Verify both `https://catspirits.com/?lang=en` and `https://catspirits.com/?lang=hu` after a successful deployment.
+Pushes to `main` trigger Cloudflare's connected build and production deployment. The GitHub Actions workflow separately tests and builds the game without deployment credentials. Verify `https://catspirits.com/?lang=en`, `https://catspirits.com/?lang=hu` and `https://catspirits.com/?lang=de` after a successful deployment.
 
 Official references: [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/get-started/), [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/), [custom domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/).
 
