@@ -277,6 +277,30 @@ describe("CameraPoseTracker lifecycle", () => {
     expect(animationFrames.size).toBe(0);
   });
 
+  it('keeps tracking live callback frames with frozen media timestamps and counters', async () => {
+    const callbacks = new Map<number, VideoFrameRequestCallback>();
+    let callbackId = 0;
+    video.requestVideoFrameCallback = vi.fn(callback => { callbacks.set(++callbackId, callback); return callbackId; });
+    video.cancelVideoFrameCallback = vi.fn(id => callbacks.delete(id));
+    video.getVideoPlaybackQuality = vi.fn(() => ({ totalVideoFrames: 1, droppedVideoFrames: 0 } as VideoPlaybackQuality));
+    const camera = await startTracking();
+    for (let id = 1; id <= 180; id++) {
+      await vi.advanceTimersByTimeAsync(33);
+      const [key, callback] = callbacks.entries().next().value!;
+      callbacks.delete(key);
+      const now = performance.now();
+      callback(now, { mediaTime: 0, presentedFrames: 1 } as VideoFrameCallbackMetadata);
+      await flush();
+      expect(workers[0].postMessage).toHaveBeenCalledTimes(id);
+      workers[0].receive({ type: 'frame', id, frame: { timestampMs: now, landmarks: [], worldLandmarks: [], inferenceMs: 8 } });
+      await flush();
+      // Completion may consume a newer callback frame, never the same one.
+      expect(workers[0].postMessage).toHaveBeenCalledTimes(id);
+    }
+    expect(camera.track.stop).not.toHaveBeenCalled();
+    expect(statuses.mock.lastCall?.[0].state).toBe('tracking');
+  });
+
   it('falls back when an offscreen preview has layout but no video callbacks', async () => {
     video.requestVideoFrameCallback=vi.fn(()=>123);
     video.cancelVideoFrameCallback=vi.fn();

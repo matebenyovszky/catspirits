@@ -38,7 +38,7 @@ type Session = {
   recovering: boolean;
   lastCaptureAt: number;
   lastVideoTime: number;
-  decodedVideoTime?: number;
+  decodedFrameNumber: number;
   lastResultAt: number;
   lastVideoAt: number;
   lastStatusAt: number;
@@ -139,7 +139,7 @@ export class CameraPoseTracker {
     const now = performance.now();
     const session: Session = {
       abort: new AbortController(), running: false, inFlight: false, pendingId: 0,
-      lastVideoCallbackAt: now, useVideoCallbacks: true,
+      lastVideoCallbackAt: now, useVideoCallbacks: true, decodedFrameNumber: 0,
       delegate: "GPU", recovering: false, lastCaptureAt: -Infinity, lastVideoTime: -1,
       lastResultAt: now, lastVideoAt: now, lastStatusAt: 0, lastFrameTimestamp: -1,
       fpsStartedAt: now, frameCount: 0, fps: 0, clearedStalePose: false, hasResult: false,
@@ -236,7 +236,10 @@ export class CameraPoseTracker {
     if (!this.isCurrent(session)) return;
     const nextFrame = (now: number, metadata?: VideoFrameCallbackMetadata) => {
       session.raf = session.videoCallback = undefined;
-      session.decodedVideoTime = metadata?.mediaTime;
+      // A callback signals a newly presented frame. Use that signal rather
+      // than mediaTime: live-stream timestamp/statistics support differs
+      // across WebKit versions. Completion still cannot reuse this frame.
+      if (metadata) session.decodedFrameNumber++;
       if (metadata) session.lastVideoCallbackAt = performance.now();
       this.schedule(session);
       this.captureLatest(session, now);
@@ -254,7 +257,8 @@ export class CameraPoseTracker {
     // Process only a fresh decoded frame, with one inference in flight.
     if (!this.isCurrent(session) || !session.running || session.inFlight
       || this.video.readyState < 2 || !this.video.videoWidth) return;
-    const key = session.decodedVideoTime ?? videoFrameKey(this.video);
+    const key = session.useVideoCallbacks && session.videoCallback !== undefined
+      ? session.decodedFrameNumber : videoFrameKey(this.video);
     if (key === session.lastVideoTime) return;
     session.lastVideoTime = key;
     session.lastVideoAt = session.lastCaptureAt = now;
