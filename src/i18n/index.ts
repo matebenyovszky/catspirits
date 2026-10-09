@@ -26,9 +26,9 @@ export function initializeLanguage(): void {
   try { saved = localStorage.getItem(LANGUAGE_KEY); } catch { /* Storage is optional. */ }
   setLanguage(resolveLanguage(location.search, saved, navigator.languages?.length ? navigator.languages : navigator.language));
   document.documentElement.lang = language;
-  document.title = `Catspirits · ${t('Cyber Jumper · Ugorj a jövőbe!')}`;
+  document.title = `Catspirits · ${t('Cyber Jumper · Mozdulj és játssz!')}`;
   const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-  if (description) description.content = t('Cyber Jumper: neon robotkaland öt világon át. Ugorj, gyűjts kristályokat, fedezz fel új robotruhákat! Billentyűvel, érintéssel vagy kamerával.');
+  if (description) description.content = t('Catspirits: kamerával vezérelt, mozgásos robotkaland. Ugorj, hajolj le, és dőlj oldalra öt neonvilágon át. A képfeldolgozás a gépeden történik. Billentyűvel és érintéssel is játszható.');
 }
 
 const dictionaries = { en: english, de: german };

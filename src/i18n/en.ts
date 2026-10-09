@@ -1,5 +1,17 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  '↑ ugrás · ↓ hajolás · ↔ oldalra dőlés': '↑ jump · ↓ duck · ↔ lean sideways',
+  'Cyber Jumper játékpálya. Kamerával: ugrás, lehajolás, oldalra dőlés. P: szünet.': 'Cyber Jumper course. With your camera: jump, duck and lean sideways. P: pause.',
+  'KAMERÁS MOZGÁS · 5 VILÁG': 'CAMERA MOVEMENT · 5 WORLDS',
+  'MOZDULJ A': 'MOVE INTO',
+  'A mozdulataid irányítják Bitet.': 'Your movements guide Bit.',
+  'Ugorj, hajolj le, és dőlj oldalra a kamera előtt!': 'Jump, duck and lean in front of your camera!',
+  'KAMERA INDÍTÁSA': 'START CAMERA',
+  'A kamera képe a gépeden marad.': 'Camera images stay on your device.',
+  'Kardos kaland · hamarosan': 'Sword adventure · coming soon',
+  'Opcionális játékmód színes jelölőbottal. A mozgásos alapjátékhoz nem kell kard.': 'An optional mode with a coloured marker wand. The motion game works without a sword.',
+  'Cyber Jumper · Mozdulj és játssz!': 'Cyber Jumper · Move and play!',
+  'Catspirits: kamerával vezérelt, mozgásos robotkaland. Ugorj, hajolj le, és dőlj oldalra öt neonvilágon át. A képfeldolgozás a gépeden történik. Billentyűvel és érintéssel is játszható.': 'Catspirits: a camera-controlled active robot adventure. Jump, duck and lean through five neon worlds. Images are processed on your device. Keyboard and touch also available.',
   'Cyber Jumper játékpálya. Szóköz: ugrás, le nyíl vagy S: lehajolás, bal és jobb nyíl: sávváltás, P: szünet.': 'Cyber Jumper course. Space: jump, Down or S: duck, Left and Right: change lanes, P: pause.',
   'Cyber Jumper kezdőlap': 'Catspirits home',
   'Játék menü': 'Game menu', 'Pályák': 'Worlds', 'Robotom': 'My robot',

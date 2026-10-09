@@ -1,11 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PoseFrame } from '../tracking/types';
+import type { SwordFrame } from '../tracking/sword/types';
 
 const tracker = vi.hoisted(()=>({ callbacks:null as null|{onFrame:(frame:PoseFrame)=>void;onStatus:(status:{state:string;message:string})=>void},
   dispose:vi.fn(),start:vi.fn(async()=>{}),width:vi.fn(),instances:0 }));
 vi.mock('../tracking/CameraPoseTracker',()=>({CameraPoseTracker:class{
   constructor(_video:HTMLVideoElement,callbacks:typeof tracker.callbacks){tracker.callbacks=callbacks;tracker.instances++;}
   dispose=tracker.dispose;start=tracker.start;setInputWidth=tracker.width;
+}}));
+const sword = vi.hoisted(()=>({ frames: [] as ((frame: SwordFrame | null)=>void)[], start:vi.fn(), stop:vi.fn(), fail:false }));
+vi.mock('../tracking/sword/CameraSwordTracker',()=>({CameraSwordTracker:class{
+  running=false;
+  constructor(_video:HTMLVideoElement,onFrame:(frame:SwordFrame|null)=>void){sword.frames.push(onFrame);}
+  start(){sword.start();if(sword.fail)throw new Error('sword unavailable');this.running=true;}
+  stop(){sword.stop();this.running=false;}
 }}));
 import { JumperCamera } from './JumperCamera';
 
@@ -15,9 +23,34 @@ function standing(timestampMs:number,rise=0):PoseFrame{
     landmarks[index]={x,y:y-rise,z:0,visibility:.99};
   return {timestampMs,landmarks,worldLandmarks:[],inferenceMs:5};
 }
-afterEach(()=>{vi.restoreAllMocks();vi.clearAllMocks();tracker.callbacks=null;tracker.instances=0;});
+afterEach(()=>{vi.restoreAllMocks();vi.clearAllMocks();tracker.callbacks=null;tracker.instances=0;sword.frames=[];sword.fail=false;});
 
 describe('Jumper camera adapter',()=>{
+  it('keeps sword tracking opt-in, shares the video and drops stale or canceled results',async()=>{
+    let now=100;vi.spyOn(performance,'now').mockImplementation(()=>now);
+    const camera=new JumperCamera({} as HTMLVideoElement,vi.fn(),vi.fn());
+    expect(await camera.setSwordEnabled(true)).toBe(false);
+    await camera.start();expect(sword.start).not.toHaveBeenCalled();
+    expect(await camera.setSwordEnabled(true)).toBe(true);
+    const callback=sword.frames[0];
+    const frame:SwordFrame={timestampMs:100,base:{x:.3,y:.5},tip:{x:.7,y:.5},confidence:.9,imageAspectRatio:4/3,source:'color-bands-2d'};
+    callback(frame);expect(camera.swordInput()).toEqual(frame);
+    now=221;expect(camera.swordInput()).toBe(null);
+    await camera.setSwordEnabled(false);callback({...frame,timestampMs:221});
+    expect(camera.swordInput()).toBe(null);expect(sword.stop).toHaveBeenCalled();
+    const pending=camera.setSwordEnabled(true);camera.stop();
+    expect(await pending).toBe(false);
+    expect(sword.start).toHaveBeenCalledTimes(1);
+  });
+  it('isolates sword failure from body tracking and stops sword tracking on camera errors',async()=>{
+    const camera=new JumperCamera({} as HTMLVideoElement,vi.fn(),vi.fn());await camera.start();
+    sword.fail=true;expect(await camera.setSwordEnabled(true)).toBe(false);
+    tracker.callbacks!.onFrame(standing(0));expect(camera.input(true).tracked).toBe(true);
+    sword.fail=false;expect(await camera.setSwordEnabled(true)).toBe(true);
+    tracker.callbacks!.onStatus({state:'error',message:'camera ended'});
+    expect(camera.swordInput()).toBe(null);expect(sword.stop).toHaveBeenCalledTimes(2);
+    camera.stop();
+  });
   it('calibrates locally, bridges each measured jump once and optionally auto-runs',async()=>{
     const jump=vi.fn(),status=vi.fn(),camera=new JumperCamera({} as HTMLVideoElement,jump,status);
     expect(await camera.start()).toBe(true);expect(tracker.width).toHaveBeenCalledWith(320);

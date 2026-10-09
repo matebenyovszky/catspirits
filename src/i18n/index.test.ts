@@ -32,8 +32,8 @@ describe('language choice', () => {
     initializeLanguage();
     expect(getLanguage()).toBe('de');
     expect(document.documentElement.lang).toBe('de');
-    expect(document.title).toContain('Spring in die Zukunft');
-    expect(document.querySelector('meta')!.content).toContain('fünf Welten');
+    expect(document.title).toContain('Beweg dich und spiel');
+    expect(document.querySelector('meta')!.content).toContain('Kamerasteuerung');
   });
   it('sets document metadata and honours the stored choice', () => {
     localStorage.setItem(LANGUAGE_KEY, 'en');
@@ -41,8 +41,8 @@ describe('language choice', () => {
     initializeLanguage();
     expect(getLanguage()).toBe('en');
     expect(document.documentElement.lang).toBe('en');
-    expect(document.title).toContain('Jump into the future');
-    expect(document.querySelector('meta')!.content).toContain('neon robot adventure');
+    expect(document.title).toContain('Move and play');
+    expect(document.querySelector('meta')!.content).toContain('camera-controlled');
   });
   it('works when storage is blocked', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });

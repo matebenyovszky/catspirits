@@ -53,6 +53,11 @@
 @media(max-width:800px) and (max-height:500px){.language-switch{position:fixed;bottom:45px;left:5%;margin:0}}
 @media(min-width:801px){.jumper-hero{top:19%}}
 @media(min-width:1500px){.jumper-hero{top:21%}}
-@media(max-height:700px) and (min-width:801px){.jumper-hero{top:17%}}
+@media(max-height:760px) and (min-width:801px){.jumper-hero{top:17%}}
 /* Keep the longer German title on two lines so all home controls stay visible. */
 html:lang(de) .jumper-hero h1{font-size:clamp(36px,4.8vw,68px)}
+.hero-privacy{display:block;color:#a7b5d2;font-size:9px;margin:-12px 0 20px}
+.help-sword{border-top:1px solid var(--border);padding-top:16px}
+.control-hint.camera-controls span{display:inline}
+@media(max-width:520px){.hero-privacy{font-size:8px;margin:10px 0 0}}
+@media(max-width:800px) and (max-height:500px){.hero-privacy{display:none}}

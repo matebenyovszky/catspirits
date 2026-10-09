@@ -1,8 +1,8 @@
 # Catspirits · Cyber Jumper
 
-Önálló robotkaland a **catspirits.com** számára. Öt világ, ugrás és lehajolás, kristályok, pajzsok, robotszínek, saját zene és négy szakaszt mutató pályaelőnézet. Billentyűvel, érintéssel vagy opcionálisan kamerás mozgással játszható.
+**Kamerával vezérelt, aktív mozgásjáték: a tested mozdulataival irányítod Bitet.** Ugorj, hajolj le, és dőlj oldalra öt neonvilágon át a [catspirits.com](https://catspirits.com) játékában! A mozgást a böngésző helyben követi, a kamerakép a gépeden marad. Magyarul, angolul és németül játszható. Kamera nélkül billentyűvel és érintéssel is működik.
 
-[English README](README.md) · [Vezérlés / controls](docs/game.md) · [Cloudflare útmutató](docs/cloudflare.md)
+[English README](README.md) · [Mozgás és vezérlés](docs/game.md) · [Opcionális kardkövetés előkészítése](docs/sword-tracking.md) · [Cloudflare útmutató](docs/cloudflare.md)
 
 A repó minden szükséges forrást, függőséget, tesztet és saját buildet tartalmaz. Nem kell hozzá az eredeti avataros alkalmazás, AI-fiók, API-kulcs, backend vagy helyi kamerasegéd.
 
@@ -34,6 +34,12 @@ A helyi publikálási parancs `npm run deploy:cloudflare`; a feltöltés nélkü
 
 ## Kamera és mentés
 
-A kamera csak a kamerás mód kiválasztása és az indítás után kapcsolódik be. A képet a böngésző helyben dolgozza fel, nem rögzítjük vagy küldjük játékszerverre. Az első indításhoz internet kell a MediaPipe és a modell letöltéséhez; a billentyűs/érintéses játék ezeket nem tölti le. Kamerához HTTPS vagy localhost szükséges. A szintetikus próbák mellett az emberes pontosságot még ellenőrizni kell.
+A kamerás mozgás az alapértelmezett vezérlés. Nyomd meg a **Kamera indítása** gombot, engedélyezd a hozzáférést, és állj egyenesen úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugrással, lehajolással és oldalra dőléssel játszhatsz. A kamera az indítógomb megnyomásáig nem kapcsol be. Kamera nélküli játékhoz válaszd a billentyűs/érintéses módot. A képet a böngésző helyben dolgozza fel, nem rögzítjük vagy küldjük játékszerverre. Az első indításhoz internet kell a MediaPipe és a modell letöltéséhez; a billentyűs/érintéses játék ezeket nem tölti le. Kamerához HTTPS vagy localhost szükséges. A szintetikus próbák mellett az emberes pontosságot még ellenőrizni kell.
 
 A mentés saját `catspirits.cyber-jumper.v1` kulcsot használ, az eredeti app mentését nem módosítja. A localhost és a majdani catspirits.com külön böngészős mentést kap. Nincs fiók, mérés, szerveres ranglista vagy felhőmentés.
+
+## Opcionális kardos kaland — előkészítve
+
+A következő fejlesztéshez már a repóban van a magenta–cián színsávos kardkövető, a meglévő kameraképet használó külön Worker, a mért penge mozgásának találatvizsgálata és a megjelenítő, a tesztjeikkel együtt. A bekötési pont `JumperCamera.setSwordEnabled(true)`; a normál játék ezt nem hívja meg, így a kardkövető nem töltődik le és nem fut. A kamera leállítása ezt is leállítja.
+
+A kardos mód **még nem választható, kész publikus játékmód**. A végleges játékbeli bekötés és a valódi jelölőbotos próba a következő lépés. A mozgásos alapjátékhoz nem kell kard. Részletek: [kardkövetés](docs/sword-tracking.md).

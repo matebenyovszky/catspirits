@@ -50,7 +50,7 @@ This builds the game and executes `wrangler deploy`. The repository configuratio
 
 `public/_headers` is copied into `dist` and supplies content-type protection, a referrer policy, a camera-only permissions policy and long-lived caching for hashed assets. It leaves iframe embedding available. [Workers Static Assets supports these headers](https://developers.cloudflare.com/workers/static-assets/headers/).
 
-The optional camera downloads WASM from `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm` and the Lite pose model from Google Storage. Keyboard/touch play needs neither. If a site-wide Content Security Policy is added later, allow the necessary runtime/model connections, blob workers and WebAssembly compilation; verify the camera after applying it.
+Camera movement is the default control mode. After the player presses Start camera, it downloads WASM from `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm` and the Lite pose model from Google Storage. Keyboard/touch play needs neither. If a site-wide Content Security Policy is added later, allow the necessary runtime/model connections, blob workers and WebAssembly compilation; verify the camera after applying it.
 
 An embedding site must allow the camera and full screen explicitly if it wants those features:
 

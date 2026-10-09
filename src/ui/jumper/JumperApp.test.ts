@@ -11,9 +11,10 @@ vi.mock('../../core/jumper/JumperView', () => ({ JumperView: class {
 vi.mock('../../core/jumper/JumperAudio', () => ({ JumperAudio: class {
   async unlock() {} setVolumes() {} play() {} stop() {} event() {} dispose() {} snapshot() { return {}; }
 } }));
+const cameraStart = vi.hoisted(() => vi.fn());
 vi.mock('../../core/jumper/JumperCamera', () => ({ JumperCamera: class {
   constructor(_video: unknown, _jump: unknown, private status: (message: string, state: string) => void) {}
-  async start() { this.status('Nem található kamera. Csatlakoztass egy kamerát, majd próbáld újra.', 'error'); return false; }
+  async start() { cameraStart(); this.status('Nem található kamera. Csatlakoztass egy kamerát, majd próbáld újra.', 'error'); return false; }
   input() { return { tracked: false, calibrated: false, calibrationProgress: 0, runSpeed: 0, jump: false, crouch: false, lane: 0 }; }
   setResponse() {} stop() {}
 } }));
@@ -23,10 +24,15 @@ let frame: FrameRequestCallback;
 let time: number;
 const click = (selector: string) => root.querySelector<HTMLElement>(selector)!.click();
 const text = (selector: string) => root.querySelector<HTMLElement>(selector)!.textContent ?? '';
+function chooseKeys() {
+  const option = root.querySelector<HTMLInputElement>('[value="keys"]')!;
+  option.checked = true; option.dispatchEvent(new Event('change'));
+}
 async function settle() { await Promise.resolve(); await Promise.resolve(); }
 function advance(seconds: number) { for (let i = 0; i < seconds * 20; i++) { time += 50; frame(time); if(root.dataset.phase==='game-over')break; } }
 
 beforeEach(() => {
+  cameraStart.mockClear();
   setLanguage('en'); localStorage.clear();
   document.body.innerHTML = '<main id="jumper"></main>';
   root = document.querySelector('main')!; time = 0;
@@ -43,7 +49,7 @@ describe('standalone multilingual interface', () => {
     const save = freshSave(); save.stars = [3, 3, 0, 0, 0];
     localStorage.setItem('catspirits.cyber-jumper.v1', JSON.stringify(save));
     new JumperApp(root);
-    expect(text('h1')).toBe('SPRING INDIE ZUKUNFT.');
+    expect(text('h1')).toBe('BEWEG DICHIN DIE ZUKUNFT.');
     expect(root.querySelector('[data-language="de"]')!.getAttribute('aria-pressed')).toBe('true');
     expect(text('.language-switch')).toContain('Deutsch');
     expect(root.querySelector('[data-jump]')!.getAttribute('aria-label')).toBe('Springen');
@@ -67,8 +73,13 @@ describe('standalone multilingual interface', () => {
   });
   it('renders English worlds, suits, settings and help with accessible labels', () => {
     new JumperApp(root);
-    expect(text('h1')).toBe('JUMP INTOTHE FUTURE.');
-    expect(root.querySelector('canvas')!.getAttribute('aria-label')).toContain('Down or S: duck');
+    expect(text('h1')).toBe('MOVE INTOTHE FUTURE.');
+    expect(root.querySelector<HTMLInputElement>('[value="camera"]')!.checked).toBe(true);
+    expect(cameraStart).not.toHaveBeenCalled();
+    expect(text('[data-play]')).toContain('START CAMERA');
+    expect(text('.hero-privacy')).toContain('stay on your device');
+    expect(root.querySelector('canvas')!.getAttribute('aria-label')).toContain('With your camera');
+    expect(text('.control-hint')).toContain('lean sideways');
     click('[data-worlds]'); expect(text('.world-list')).toContain('Rainbow Bridge');
     expect(root.querySelector('[data-world="1"]')!.hasAttribute('disabled')).toBe(true);
     click('[data-modal-close]'); click('[data-suits]');
@@ -78,6 +89,8 @@ describe('standalone multilingual interface', () => {
     expect(text('.jumper-modal')).toContain('Slower pace, 5 lives.');
     click('[data-modal-close]'); click('[data-help]');
     expect(text('.jumper-modal')).toContain('From world 3, duck under the gold overhead beam');
+    expect(text('.help-sword')).toContain('optional');
+    expect(text('.help-sword')).toContain('coming soon');
   });
   it('translates camera setup and errors while retaining a working keyboard fallback', async () => {
     new JumperApp(root);
@@ -98,7 +111,9 @@ describe('standalone multilingual interface', () => {
     localStorage.setItem('clubgpt.cyber-jumper.v1', JSON.stringify({ ...save, best: 99999 }));
     new JumperApp(root);
     expect(text('[data-best]')).toBe('0');
-    click('[data-worlds]'); click('[data-world="2"]'); click('[data-play]'); await settle(); advance(1);
+    click('[data-worlds]'); click('[data-world="2"]'); chooseKeys();
+    expect(text('[data-play]')).toContain('LET’S PLAY!');
+    click('[data-play]'); await settle(); advance(1);
     expect(text('[data-level-name]')).toBe('Star Harbour');
     expect(text('[data-course-preview]')).toContain('↓ DUCK');
     expect(root.querySelector('[data-section="2"]')!.getAttribute('aria-label')).toContain('overhead beam, stay ducked');
@@ -112,8 +127,8 @@ describe('standalone multilingual interface', () => {
   }, 15000);
   it('retains the Hungarian game interface', () => {
     setLanguage('hu'); new JumperApp(root);
-    expect(text('h1')).toBe('UGORJ AJÖVŐBE.');
-    expect(text('[data-play]')).toContain('JÁTSSZUNK!');
+    expect(text('h1')).toBe('MOZDULJ AJÖVŐBE.');
+    expect(text('[data-play]')).toContain('KAMERA INDÍTÁSA');
     click('[data-worlds]'); expect(text('.world-list')).toContain('Csillagkikötő');
   });
 });
