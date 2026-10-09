@@ -61,6 +61,12 @@ export class JumperAudio {
     this.nodes.clear();
   }
 
+  /** Release the browser audio thread while the page is in the background. */
+  sleep(): void {
+    this.stop();
+    void this.context?.suspend().catch(() => { /* Audio may already be closed. */ });
+  }
+
   private own(node: AudioScheduledSourceNode): void {
     this.nodes.add(node); this.scheduledNotes++;
     node.addEventListener('ended', () => { this.nodes.delete(node); node.disconnect(); }, { once: true });

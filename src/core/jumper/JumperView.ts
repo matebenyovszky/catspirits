@@ -1,3 +1,4 @@
+import { renderPixelRatio } from './renderBudget';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -54,7 +55,7 @@ export class JumperView {
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    this.renderer.setPixelRatio(1);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
     this.renderer.info.autoReset = false;
@@ -256,6 +257,8 @@ export class JumperView {
   resize(): void {
     const { width,height } = this.renderer.domElement.getBoundingClientRect();
     this.camera.aspect = Math.max(1,width)/Math.max(1,height); this.camera.updateProjectionMatrix();
+    const ratio = renderPixelRatio(width,height,devicePixelRatio);
+    this.renderer.setPixelRatio(ratio); this.composer.setPixelRatio(ratio);
     this.renderer.setSize(width,height,false); this.composer.setSize(width,height);
   }
 

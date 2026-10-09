@@ -61,3 +61,5 @@ html:lang(de) .jumper-hero h1{font-size:clamp(36px,4.8vw,68px)}
 .control-hint.camera-controls span{display:inline}
 @media(max-width:520px){.hero-privacy{font-size:8px;margin:10px 0 0}}
 @media(max-width:800px) and (max-height:500px){.hero-privacy{display:none}}
+
+.privacy-button{display:block;margin-top:14px;font-size:11px;color:#b9c1d9}.jumper-modal a{color:var(--mint);text-underline-offset:3px}.help-safety{font-size:12px;color:#b9c1d9;line-height:1.6}

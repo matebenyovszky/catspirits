@@ -1,10 +1,16 @@
 /*
   X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(self), microphone=(), geolocation=()
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), display-capture=(), payment=(), usb=()
+  Cross-Origin-Resource-Policy: same-origin
+  Content-Security-Policy: base-uri 'none'; object-src 'none'; form-action 'none'; frame-ancestors 'self'; script-src-attr 'none'; connect-src 'self' https://challenges.cloudflare.com; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; worker-src 'self' blob:; frame-src 'self' https://challenges.cloudflare.com
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
 /
+  Cache-Control: no-cache
+
+/index.html
   Cache-Control: no-cache

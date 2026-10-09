@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Exact public localStorage namespace; not an authentication key"
+regexTarget = "secret"
+regexes = ['''^catspirits\.cyber-jumper\.v1$''']

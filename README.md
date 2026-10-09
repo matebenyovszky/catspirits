@@ -45,11 +45,11 @@ The existing **catspirits** Worker is connected to this repository and **catspir
 
 ## Camera and saved data
 
-Camera movement is the default control mode. Press **Start camera**, allow access, stand upright to calibrate with your shoulders and hips visible, then jump, duck and lean to play. Nothing accesses the camera before you press the button. Select keyboard/touch to play without a camera. Images are processed in the browser using MediaPipe in a worker. Frames are not recorded or sent to a game server. The first camera start downloads the pinned MediaPipe runtime/WASM and Lite model from jsDelivr and Google Storage; keyboard and touch do not load these resources.
+Camera movement is the default control mode. Press **Start camera**, allow access, stand upright to calibrate with your shoulders and hips visible, then jump, duck and lean to play. Nothing accesses the camera before you press the button. Select keyboard/touch to play without a camera. Images are processed in the browser using MediaPipe in a worker. Frames are not recorded or sent to a game server. The first camera start downloads the pinned MediaPipe runtime/WASM and Lite model from this same site; keyboard and touch do not load these resources. The original Google model is vendored unchanged and checked against its SHA-256 at build time.
 
 Camera access requires HTTPS or localhost. The game pauses when tracking is missing, stops the camera when the page is hidden or closed, and offers a keyboard/touch fallback when the camera cannot start. Synthetic tracking tests do not establish real-person camera accuracy.
 
-Progress is stored on the current origin under `catspirits.cyber-jumper.v1`, independently of the original app. Moving from a local preview to catspirits.com starts a separate browser save. There is no account, analytics, leaderboard or server-side save.
+Progress is stored on the current origin under `catspirits.cyber-jumper.v1`, independently of the original app. Moving from a local preview to catspirits.com starts a separate browser save. There is no account, game analytics, leaderboard or server-side save. Cloudflare provides hosting/security and may process IP addresses and technical request data or set security cookies. The in-game privacy menu explains this distinction.
 
 ## Optional sword adventure — in preparation
 
@@ -66,3 +66,11 @@ The sword mode is **not yet a playable public mode**. Its final game integration
 - `public/_headers`, `wrangler.jsonc`: Cloudflare static-site configuration.
 
 The game remains Cyber Jumper within the Catspirits project; it retains all five worlds, robot colours, jump/duck obstacles, four-section previews, shields, stars, chill mode, reduced motion, music and effects.
+
+## Licence and security
+
+Catspirits-owned code is [MIT licensed](LICENSE). Runtime dependencies and the Google pose model retain their own licences; [distributed third-party notices](public/licenses/THIRD-PARTY-NOTICES.txt) and full licence texts are included in every build and linked in the game. No third-party character art, music recordings, fonts or AprilTag files are bundled. Source provenance and the limits of the review are documented in [the security review](docs/security-review.md).
+
+[Report security problems privately](SECURITY.md). CI checks dependency vulnerabilities, tests, TypeScript, production build and a Cloudflare deployment dry run. GitHub Actions are pinned to commit hashes; dependency alerts, automatic security fixes and private vulnerability reporting are enabled.
+
+Rendering is limited to at most 60 updates/s in play or camera setup and 30 updates/s in menus. Hidden pages stop rendering, camera and audio. Drawing-buffer resolution is limited to roughly 1080p pixels, including the bloom compositor's buffers. Camera inference still consumes CPU/GPU and battery while active; the game does not promise a device-independent power limit.

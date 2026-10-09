@@ -4,12 +4,13 @@ import { JumperApp } from './JumperApp';
 import { setLanguage } from '../../i18n';
 import { freshSave } from '../../core/jumper/JumperSimulation';
 
+const viewUpdate = vi.hoisted(() => vi.fn());
 vi.mock('../../core/jumper/JumperView', () => ({ JumperView: class {
   reducedMotion = false;
-  setSuit() {} resize() {} update() {} event() {} dispose() {} snapshot() { return {}; }
+  setSuit() {} resize() {} update(...args: unknown[]) { viewUpdate(...args); } event() {} dispose() {} snapshot() { return {}; }
 } }));
 vi.mock('../../core/jumper/JumperAudio', () => ({ JumperAudio: class {
-  async unlock() {} setVolumes() {} play() {} stop() {} event() {} dispose() {} snapshot() { return {}; }
+  async unlock() {} setVolumes() {} play() {} stop() {} sleep() {} event() {} dispose() {} snapshot() { return {}; }
 } }));
 const cameraStart = vi.hoisted(() => vi.fn());
 vi.mock('../../core/jumper/JumperCamera', () => ({ JumperCamera: class {
@@ -32,7 +33,7 @@ async function settle() { await Promise.resolve(); await Promise.resolve(); }
 function advance(seconds: number) { for (let i = 0; i < seconds * 20; i++) { time += 50; frame(time); if(root.dataset.phase==='game-over')break; } }
 
 beforeEach(() => {
-  cameraStart.mockClear();
+  cameraStart.mockClear(); viewUpdate.mockClear();
   setLanguage('en'); localStorage.clear();
   document.body.innerHTML = '<main id="jumper"></main>';
   root = document.querySelector('main')!; time = 0;
@@ -40,10 +41,45 @@ beforeEach(() => {
   vi.stubGlobal('cancelAnimationFrame', () => {});
 });
 afterEach(() => {
-  window.dispatchEvent(new Event('pagehide')); vi.unstubAllGlobals(); setLanguage('hu');
+  window.dispatchEvent(new Event('pagehide')); vi.unstubAllGlobals(); vi.restoreAllMocks(); setLanguage('hu');
 });
 
 describe('standalone multilingual interface', () => {
+  it('limits GPU updates on a 144 Hz display and stops rendering while hidden', async () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+    new JumperApp(root);
+    for (let i=1;i<=144;i++) frame(i*1000/144);
+    expect(viewUpdate.mock.calls.length).toBeLessThanOrEqual(31);
+    expect(viewUpdate.mock.calls.length).toBeGreaterThan(25);
+    chooseKeys();click('[data-play]');await settle();viewUpdate.mockClear();
+    for (let i=145;i<=288;i++) frame(i*1000/144);
+    expect(viewUpdate.mock.calls.length).toBeLessThanOrEqual(61);
+    expect(viewUpdate.mock.calls.length).toBeGreaterThan(40);
+    hidden.mockReturnValue(true);document.dispatchEvent(new Event('visibilitychange'));
+    const updates=viewUpdate.mock.calls.length;frame(10000);
+    expect(viewUpdate).toHaveBeenCalledTimes(updates);
+    expect(root.dataset.phase).toBe('paused');
+    hidden.mockReturnValue(false);document.dispatchEvent(new Event('visibilitychange'));frame(20000);
+    expect(viewUpdate).toHaveBeenCalledTimes(updates+1);
+    expect(viewUpdate.mock.calls[viewUpdate.mock.calls.length-1][0]).toBeLessThanOrEqual(.05);
+  });
+  it('does not start camera access if the page is hidden during audio initialization', async () => {
+    const hidden=vi.spyOn(document,'hidden','get').mockReturnValue(false);
+    new JumperApp(root);click('[data-play]');hidden.mockReturnValue(true);
+    document.dispatchEvent(new Event('visibilitychange'));await settle();
+    expect(cameraStart).not.toHaveBeenCalled();expect(root.querySelector('[data-camera-go]')).toBeNull();
+    expect(root.querySelector<HTMLElement>('.jumper-hero')!.hidden).toBe(false);
+  });
+  it('explains camera privacy and links to the distributed licences without starting the camera', () => {
+    new JumperApp(root);click('[data-privacy]');
+    expect(text('#modal-title')).toBe('Privacy and licences');
+    expect(text('.jumper-modal')).toContain('does not record or upload');
+    expect(text('.jumper-modal')).toContain('IP addresses');
+    expect(root.querySelector('a[href="./licenses/THIRD-PARTY-NOTICES.txt"]')).not.toBeNull();
+    expect(cameraStart).not.toHaveBeenCalled();click('[data-modal-close]');click('[data-help]');
+    expect(text('.help-safety')).toContain('clear space');
+  });
+
   it('renders German menus, controls, camera errors and course previews', async () => {
     setLanguage('de');
     const save = freshSave(); save.stars = [3, 3, 0, 0, 0];

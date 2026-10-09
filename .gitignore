@@ -7,3 +7,4 @@ dist/
 .DS_Store
 *.log
 artifacts/
+public/assets/mediapipe/runtime-0.10.32/

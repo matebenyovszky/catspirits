@@ -1,0 +1,26 @@
+Catspirits third-party runtime notices
+
+The Catspirits-owned source code is MIT licensed; third-party components retain their own licences. See Catspirits-MIT.txt, three-MIT.txt, MediaPipe-LICENSE.txt and Apache-2.0.txt in this directory. Build-time tools are not shipped to players; their own licences remain in their npm packages and the lockfile identifies their versions.
+
+three.js 0.182.0 — MIT
+Copyright © 2010-2025 three.js authors
+https://github.com/mrdoob/three.js
+Unmodified npm runtime and bundled Three.js addon modules. Full MIT notice: three-MIT.txt.
+
+MediaPipe Tasks Vision 0.10.32 — Apache License 2.0
+Copyright The MediaPipe Authors / Google LLC.
+https://github.com/google-ai-edge/mediapipe
+https://www.npmjs.com/package/@mediapipe/tasks-vision/v/0.10.32
+Unmodified npm runtime and its WASM loader/binaries. Full upstream v0.10.32 licence, including its additional Lucent UTF notice: MediaPipe-LICENSE.txt. The npm distribution contains no separate NOTICE file. Vendored files are copied without modification. This notice is not an exhaustive inventory of the upstream compiled WASM's internal components.
+
+MediaPipe Pose Landmarker Lite, float16, bundle version 1 — Apache License 2.0
+Model provided by Google. BlazePose GHUM model authors: Valentin Bazarevsky, Ivan Grishchenko, Eduard Gabriel Bazavan (Google).
+Official bundle documentation: https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker
+Model card linked by the official bundle documentation explicitly specifies Apache License, Version 2.0:
+https://storage.googleapis.com/mediapipe-assets/Model%20Card%20BlazePose%20GHUM%203D.pdf
+Original unmodified bundle:
+https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+SHA-256: 59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a
+Full licence: Apache-2.0.txt. No model training data is included in Catspirits.
+
+No endorsement or affiliation with Google, MediaPipe or three.js is implied.

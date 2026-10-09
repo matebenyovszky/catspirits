@@ -43,3 +43,11 @@ A mentés saját `catspirits.cyber-jumper.v1` kulcsot használ, az eredeti app m
 A következő fejlesztéshez már a repóban van a magenta–cián színsávos kardkövető, a meglévő kameraképet használó külön Worker, a mért penge mozgásának találatvizsgálata és a megjelenítő, a tesztjeikkel együtt. A bekötési pont `JumperCamera.setSwordEnabled(true)`; a normál játék ezt nem hívja meg, így a kardkövető nem töltődik le és nem fut. A kamera leállítása ezt is leállítja.
 
 A kardos mód **még nem választható, kész publikus játékmód**. A végleges játékbeli bekötés és a valódi jelölőbotos próba a következő lépés. A mozgásos alapjátékhoz nem kell kard. Részletek: [kardkövetés](docs/sword-tracking.md).
+
+## Licenc, biztonság és erőforrások
+
+A saját kód [MIT-licencű](LICENSE). A Three.js, MediaPipe és a Google testkövető modell saját licencekkel rendelkezik; a [külső licencek tájékoztatója](public/licenses/THIRD-PARTY-NOTICES.txt) és teljes szövege a webes buildben is elérhető. A kamera futtatókörnyezete és modellje ugyanerről a webhelyről töltődik le, külső CDN-kérés nélkül. A képkockák helyben maradnak. A Cloudflare tárhely és botvédelem IP-címet, technikai kérésadatokat és biztonsági sütiket kezelhet; ezt a játék adatvédelmi menüje is jelzi.
+
+Játék közben legfeljebb 60, menüben 30 renderfrissítés történik másodpercenként. Háttérbe kerülő oldalon a renderelés, kamera és hang leáll. A grafikai rajzpuffer körülbelül 1080p képpontra korlátozott. Az aktív testkövetés ettől még használ CPU/GPU-t és akkumulátort.
+
+[Biztonsági hibák privát bejelentése](SECURITY.md) · [Ellenőrzés és korlátai](docs/security-review.md).

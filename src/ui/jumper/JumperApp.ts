@@ -62,7 +62,7 @@ export class JumperApp {
         <div class="hero-badge"><span></span> KAMERÁS MOZGÁS · 5 VILÁG</div>
         <h1>MOZDULJ A<br><span>JÖVŐBE.</span></h1>
         <p>A mozdulataid irányítják Bitet.<br class="desktop-break"> Ugorj, hajolj le, és dőlj oldalra a kamera előtt!</p>
-        <div class="hero-actions"><button class="jumper-primary" data-play>${icon('play')} JÁTSSZUNK! ${icon('arrow')}</button><button class="how-button" data-help>Hogyan játszom?</button></div>
+        <div class="hero-actions"><button class="jumper-primary" data-play>${icon('play')} JÁTSSZUNK! ${icon('arrow')}</button><button class="how-button" data-help>Hogyan játszom?</button></div><button class="how-button privacy-button" data-privacy>Adatvédelem és licencek</button>
         <fieldset class="input-mode"><legend>Így játszom</legend><label><input type="radio" name="mode" value="camera" checked> Kamerás mozgás</label><label><input type="radio" name="mode" value="keys"> Billentyű / érintés</label></fieldset>
         <small class="hero-privacy">A kamera képe a gépeden marad.</small>
         <div class="hero-world"><span class="world-orbit">01</span><div><small>ITT KEZDŐDIK</small><strong data-selected-world>Neonváros</strong></div><button data-worlds-link aria-label="Másik világ választása">${icon('arrow')}</button></div>
@@ -114,7 +114,7 @@ export class JumperApp {
     this.on('[data-play]',()=>void this.start());
     this.on('[data-home]',()=>this.home()); this.on('[data-pause]',()=>this.pause());
     this.on('[data-worlds]',()=>this.showWorlds()); this.on('[data-worlds-link]',()=>this.showWorlds());
-    this.on('[data-suits]',()=>this.showSuits()); this.on('[data-settings]',()=>this.showSettings()); this.on('[data-help]',()=>this.showHelp());
+    this.on('[data-suits]',()=>this.showSuits()); this.on('[data-settings]',()=>this.showSettings()); this.on('[data-help]',()=>this.showHelp()); this.on('[data-privacy]',()=>this.showPrivacy());
     this.on('[data-fullscreen]',()=>{
       if(document.fullscreenElement) void document.exitFullscreen().catch(()=>{});
       else if(this.root.requestFullscreen) void this.root.requestFullscreen().catch(()=>this.toast('Teljes képernyő ezen a böngészőn nem érhető el.'));
@@ -154,15 +154,16 @@ export class JumperApp {
     window.addEventListener('blur',()=>{this.releaseDuckControls();this.pause();},{signal:this.abort.signal});
     window.addEventListener('resize',()=>this.view.resize(),{signal:this.abort.signal});
     document.addEventListener('visibilitychange',()=>{
-      if(document.hidden){this.pause();this.audio.stop();if(this.mode==='camera'){this.camera.stop();this.cameraMessage='A kamera leállt a lapváltáskor.';}}
+      if(document.hidden){cancelAnimationFrame(this.raf);this.raf=0;this.pause();this.audio.sleep();if(this.mode==='camera'){this.camera.stop();this.cameraMessage='A kamera leállt a lapváltáskor.';}}
+      else this.restartFrames();
     },{signal:this.abort.signal});
     window.addEventListener('pagehide',event=>{
-      if(event.persisted){this.pause();this.audio.stop();this.camera.stop();}
+      if(event.persisted){cancelAnimationFrame(this.raf);this.raf=0;this.pause();this.audio.sleep();this.camera.stop();}
       else this.dispose();
     },{signal:this.abort.signal});
-    window.addEventListener('pageshow',()=>{this.lastTime=0;},{signal:this.abort.signal});
+    window.addEventListener('pageshow',()=>this.restartFrames(),{signal:this.abort.signal});
     canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();this.contextLost=true;this.pause();this.toast('A 3D megjelenítés megállt. Frissítsd az oldalt a folytatáshoz.');},{signal:this.abort.signal});
-    this.el('.jumper-modal-backdrop').addEventListener('click',event=>{if(event.target===event.currentTarget && ['worlds','suits','settings','help'].includes(this.modalName))this.closeModal();},{signal:this.abort.signal});
+    this.el('.jumper-modal-backdrop').addEventListener('click',event=>{if(event.target===event.currentTarget && ['worlds','suits','settings','help','privacy'].includes(this.modalName))this.closeModal();},{signal:this.abort.signal});
   }
 
   private holdDuck(source:string,held:boolean):void {
@@ -205,7 +206,7 @@ export class JumperApp {
       return;
     }
     if(event.key==='Escape'){
-      if(this.cameraSetup)this.home();else if(this.modalName==='pause')this.resume();else if(['worlds','suits','settings','help'].includes(this.modalName))this.closeModal();else this.pause();
+      if(this.cameraSetup)this.home();else if(this.modalName==='pause')this.resume();else if(['worlds','suits','settings','help','privacy'].includes(this.modalName))this.closeModal();else this.pause();
       return;
     }
     if(event.key.toLowerCase()==='p' && this.modalName==='pause' && !event.repeat){event.preventDefault();this.resume();return;}
@@ -224,8 +225,10 @@ export class JumperApp {
   }
 
   private async start():Promise<void> {
-    if(this.starting)return;
+    if(this.starting || this.destroyed || document.hidden)return;
+    this.starting=true;
     await this.audio.unlock();
+    if(this.destroyed || document.hidden){this.starting=false;this.audio.sleep();return;}
     if(this.mode==='camera'){
       this.cameraSetup=true;this.starting=true;this.cameraError=false;
       this.el('.camera-preview').hidden=false;this.showCameraSetup();
@@ -259,7 +262,7 @@ export class JumperApp {
   private resume():void {
     if(this.contextLost)return;
     if(this.mode==='camera' && !this.camera.input(true).tracked){this.cameraSetup=true;this.showCameraSetup(true);void this.camera.start();return;}
-    this.closeModal(false);this.simulation.resume();this.syncPhase();void this.audio.unlock().then(()=>this.audio.play(this.simulation.level));this.el('canvas').focus();
+    this.closeModal(false);this.simulation.resume();this.syncPhase();void this.audio.unlock().then(()=>{if(!this.destroyed && !document.hidden && this.simulation.phase==='running')this.audio.play(this.simulation.level);});this.el('canvas').focus();
   }
 
   private openModal(name:string,html:string):void {
@@ -314,8 +317,13 @@ export class JumperApp {
   }
   private volumes():void {this.audio.setVolumes(this.muted?0:this.save.music,this.muted?0:this.save.effects);}
 
+  private showPrivacy():void {
+    this.openModal('privacy',`${this.closeButton()}<span class="modal-eyebrow">A TE ESZKÖZÖDÖN</span><h2 id="modal-title">Adatvédelem és licencek</h2><p>A kamera csak gombnyomás és böngészőengedély után indul. A képkockák és testpontok a böngésző memóriájában maradnak; a játék nem rögzíti és nem tölti fel őket. A mikrofont nem használjuk. Lapváltáskor vagy kilépéskor a kamera leáll.</p><p>A testkövető és a modell erről az oldalról töltődik le. Nincs reklám, felhasználói fiók vagy a játékba épített analitika.</p><p>A nyelv, eredmények és beállítások ezen a böngészőn maradnak. Törlésükhöz töröld a catspirits.com webhelyadatait a böngésződben.</p><p>A tárhelyet és a botvédelmet a Cloudflare biztosítja. Ehhez IP-címet és technikai kérésadatokat kezelhet, valamint biztonsági sütiket használhat.</p><p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare adatvédelem</a> · <a href="./licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">Külső licencek</a> · <a href="./licenses/Catspirits-MIT.txt" target="_blank" rel="noopener noreferrer">MIT-licenc</a></p>`);
+    this.modalOn('[data-modal-close]',()=>this.closeModal());
+  }
+
   private showHelp():void {
-    this.openModal('help',`${this.closeButton()}<span class="modal-eyebrow">EGY PERC, ÉS MEHETÜNK</span><h2 id="modal-title">Ugorj. Gyűjts. Ragyogj.</h2><p class="help-camera">Kamerával: állj úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugorj, hajolj le, és dőlj oldalra! A képet helyben dolgozzuk fel. Billentyűvel és érintéssel kamera nélkül is játszhatsz.</p><div class="help-steps"><p><b>01</b><span><strong>Ugorj át a fénykapun!</strong>Szóköz / ↑ / W, vagy az UGRÁS gomb. Akkor ugorj, amikor a kapu közel ér. A 3. világtól az arany felső rúd alatt hajolj le: tartsd a ↓ / S billentyűt vagy a HAJOLJ LE gombot, amíg átérsz.</span></p><p><b>02</b><span><strong>Kövesd a kristályokat!</strong>← → / A D, a képernyő nyilai vagy oldalra húzás vált sávot. A kék pajzs egy ütközést kivéd.</span></p><p><b>03</b><span><strong>Hódítsd meg az öt világot!</strong>8 kapu egy pálya. 3 csillag: hibátlan futam és legalább 15 kristály. 2 csillag: legfeljebb 2 hibázás.</span></p></div><p class="help-sword"><strong>Kardos kaland · hamarosan</strong><br>Opcionális játékmód színes jelölőbottal. A mozgásos alapjátékhoz nem kell kard.</p>`);
+    this.openModal('help',`${this.closeButton()}<span class="modal-eyebrow">EGY PERC, ÉS MEHETÜNK</span><h2 id="modal-title">Ugorj. Gyűjts. Ragyogj.</h2><p class="help-camera">Kamerával: állj úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugorj, hajolj le, és dőlj oldalra! A képet helyben dolgozzuk fel. Billentyűvel és érintéssel kamera nélkül is játszhatsz.</p><div class="help-steps"><p><b>01</b><span><strong>Ugorj át a fénykapun!</strong>Szóköz / ↑ / W, vagy az UGRÁS gomb. Akkor ugorj, amikor a kapu közel ér. A 3. világtól az arany felső rúd alatt hajolj le: tartsd a ↓ / S billentyűt vagy a HAJOLJ LE gombot, amíg átérsz.</span></p><p><b>02</b><span><strong>Kövesd a kristályokat!</strong>← → / A D, a képernyő nyilai vagy oldalra húzás vált sávot. A kék pajzs egy ütközést kivéd.</span></p><p><b>03</b><span><strong>Hódítsd meg az öt világot!</strong>8 kapu egy pálya. 3 csillag: hibátlan futam és legalább 15 kristály. 2 csillag: legfeljebb 2 hibázás.</span></p></div><p class="help-safety">Hagyj szabad helyet magad körül, stabil talajon mozogj, és ha kellemetlen, állj meg. A játékhoz nem kell magasra ugrani. Kamerával csak az legyen a képben, aki játszani szeretne.</p><p class="help-sword"><strong>Kardos kaland · hamarosan</strong><br>Opcionális játékmód színes jelölőbottal. A mozgásos alapjátékhoz nem kell kard.</p>`);
     this.modalOn('[data-modal-close]',()=>this.closeModal());
   }
 
@@ -403,8 +411,16 @@ export class JumperApp {
   }
   private toast(message:string,duration=2.1):void {const toast=this.el('.game-toast');toast.textContent=t(message);toast.hidden=false;this.toastTime=duration;}
 
+  private restartFrames():void {
+    if(this.destroyed || document.hidden || this.raf)return;
+    this.lastTime=0;this.raf=requestAnimationFrame(time=>this.frame(time));
+  }
+
   private frame(time:number):void {
-    if(this.destroyed)return;
+    if(this.destroyed || document.hidden){this.raf=0;return;}
+    // Camera inference has its own loop. Avoid extra GPU work on high-refresh displays.
+    const interval=this.simulation.phase==='running' || this.cameraSetup ? 1000/60 : 1000/30;
+    if(this.lastTime && time-this.lastTime<interval-.5){this.raf=requestAnimationFrame(next=>this.frame(next));return;}
     const dt=this.lastTime?Math.min(.05,(time-this.lastTime)/1000):1/60;this.lastTime=time;
     if(this.cameraSetup)this.updateCameraSetup();
     let input;

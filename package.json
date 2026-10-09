@@ -12,10 +12,14 @@
     "test": "vitest run",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
-    "check": "npm run test && npm run build",
+    "check": "npm run audit:dependencies && npm run test && npm run build",
     "preview:cloudflare": "wrangler dev --ip 127.0.0.1 --port 8788",
     "deploy:cloudflare": "npm run build && wrangler deploy",
-    "check:cloudflare": "wrangler deploy --dry-run"
+    "check:cloudflare": "wrangler deploy --dry-run",
+    "prepare:camera": "node scripts/prepare-camera.mjs",
+    "predev": "npm run prepare:camera",
+    "prebuild": "npm run prepare:camera",
+    "audit:dependencies": "npm audit --audit-level=moderate"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.32",
@@ -29,5 +33,6 @@
     "vite": "^8.3.4",
     "vitest": "^5.0.3",
     "wrangler": "^4.149.0"
-  }
+  },
+  "license": "MIT"
 }

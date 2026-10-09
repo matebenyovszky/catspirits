@@ -46,19 +46,12 @@ npm run deploy:cloudflare
 
 This builds the game and executes `wrangler deploy`. The repository configuration contains no credentials or account IDs.
 
-## Browser resources
+## Browser resources and security
 
-`public/_headers` is copied into `dist` and supplies content-type protection, a referrer policy, a camera-only permissions policy and long-lived caching for hashed assets. It leaves iframe embedding available. [Workers Static Assets supports these headers](https://developers.cloudflare.com/workers/static-assets/headers/).
+`public/_headers` supplies content-type protection, no-referrer, camera-only permissions, same-origin resource protection, clickjacking protection and a limited CSP. The standalone game may only be embedded by the same origin; cross-site iframes are intentionally blocked. Link to the game from other sites instead. [Workers Static Assets supports these headers](https://developers.cloudflare.com/workers/static-assets/headers/).
 
-Camera movement is the default control mode. After the player presses Start camera, it downloads WASM from `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm` and the Lite pose model from Google Storage. Keyboard/touch play needs neither. If a site-wide Content Security Policy is added later, allow the necessary runtime/model connections, blob workers and WebAssembly compilation; verify the camera after applying it.
+The enforced CSP restricts network, image, media, style, font, worker and frame destinations and prohibits inline event-handler attributes, plugins, forms and base-URL overrides. It intentionally does **not** enforce `script-src` or `default-src`: Cloudflare Bot Fight Mode injects dynamic inline JavaScript, and a completely static site cannot produce fresh response nonces. No static nonce or `unsafe-inline` script exception is added. This is a limited policy, not full protection against script injection. Stronger script enforcement needs a separate design that preserves bot protection; do not disable Bot Fight Mode or add `no-transform` just to suppress its scripts. [Cloudflare's CSP requirements for JavaScript Detections](https://developers.cloudflare.com/cloudflare-challenges/challenge-types/javascript-detections/#if-you-have-a-content-security-policy-csp).
 
-An embedding site must allow the camera and full screen explicitly if it wants those features:
+`npm run prepare:camera` runs before dev/build. It copies the unchanged WASM files from the pinned npm package and verifies the checked-in Google model SHA-256. All camera resources are served locally under versioned `assets/mediapipe/` paths and cached for one year. Change those paths whenever their contents change; do not overwrite immutable versions. Only the SIMD or non-SIMD variant needed by the browser loads. Runtime assets are generated from the lockfile, never committed. The model's official licence source is listed in the distributed notices.
 
-```html
-<iframe src="https://catspirits.com/?lang=en"
-        title="Catspirits Cyber Jumper" width="100%" height="720"
-        style="border:0;border-radius:20px" allow="camera; fullscreen" allowfullscreen>
-</iframe>
-```
-
-Remove `camera` from `allow` for keyboard/touch-only embeds.
+There is no application Worker script. [Static asset requests are free and unlimited](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/); they do not invoke user Worker code. This does not mean that every Cloudflare feature, plan or future backend is free. Keep `run_worker_first` absent and do not introduce per-request server code without reviewing costs.
