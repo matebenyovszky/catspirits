@@ -30,17 +30,18 @@ GitHub Actions runs these checks on pushes to `main` and on pull requests. It do
 
 ## Publish on Cloudflare
 
-Connect this GitHub repository to **Cloudflare Pages**, using:
+Connect this GitHub repository to **Cloudflare Workers**, using:
 
 | Setting | Value |
 | --- | --- |
 | Production branch | `main` |
 | Root directory | repository root |
 | Build command | `npm run build` |
-| Build output | `dist` |
+| Deploy command | `npx wrangler deploy` |
+| Static assets | `dist` (configured in `wrangler.jsonc`) |
 | Node version | `24.15.0` |
 
-Then add **catspirits.com** in the Pages project's Custom domains section. [The deployment guide](docs/cloudflare.md) explains the DNS requirements and local Cloudflare preview. Cloudflare deployment and the live domain have not been configured by this repository setup.
+The existing **catspirits** Worker is connected to this repository and **catspirits.com**. `wrangler.jsonc` deploys `dist` as Workers Static Assets and retains that custom domain. [The deployment guide](docs/cloudflare.md) explains the build settings and local preview.
 
 ## Camera and saved data
 

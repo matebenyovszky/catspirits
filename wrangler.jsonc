@@ -1,6 +1,16 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "catspirits",
-  "pages_build_output_dir": "./dist",
-  "compatibility_date": "2026-10-09"
+  "compatibility_date": "2026-10-09",
+  "assets": {
+    "directory": "./dist"
+  },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "catspirits.com",
+      "custom_domain": true
+    }
+  ]
 }

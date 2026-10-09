@@ -13,8 +13,9 @@
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "check": "npm run test && npm run build",
-    "preview:cloudflare": "wrangler pages dev dist --ip 127.0.0.1 --port 8788",
-    "deploy:cloudflare": "npm run build && wrangler pages deploy dist --project-name catspirits"
+    "preview:cloudflare": "wrangler dev --ip 127.0.0.1 --port 8788",
+    "deploy:cloudflare": "npm run build && wrangler deploy",
+    "check:cloudflare": "wrangler deploy --dry-run"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.32",

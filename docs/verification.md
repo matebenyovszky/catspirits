@@ -8,4 +8,8 @@
 - Cloudflare's local Pages runtime served the production build with HTTP 200 and parsed all three `_headers` rules. The game also loaded in that runtime in the browser.
 - `npm audit` reports no known vulnerabilities for the locked dependency set at the time of these checks.
 
-No live Cloudflare deployment or domain/DNS change was performed. Real-person camera accuracy remains unmeasured; synthetic tests do not establish it.
+At the time of these extraction checks, no live Cloudflare deployment or domain/DNS change had been performed. Real-person camera accuracy remains unmeasured; synthetic tests do not establish it.
+
+## Worker deployment correction — 2026-10-09
+
+The subsequently connected Cloudflare service is a Worker, with `catspirits.com` already assigned by the owner. Its first game build passed, but deployment failed because the repository configuration targeted Pages. The configuration now declares `dist` as Workers Static Assets and retains the existing custom domain and disabled preview URLs. All 117 tests, TypeScript and the production build pass. `wrangler deploy --dry-run` reads the built assets and exits successfully; GitHub Actions now also runs this check without deployment credentials.

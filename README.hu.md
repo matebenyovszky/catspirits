@@ -28,9 +28,9 @@ A feltölthető mappa: **`dist/`**. Minden eszközútvonal relatív; a játék a
 
 ## Cloudflare és catspirits.com
 
-Cloudflare Pages-ben kapcsolható ehhez a GitHub repóhoz: ág `main`, build `npm run build`, kimenet `dist`, Node `24.15.0`, projektgyökér a repó gyökere. Ezután a Pages projekt **Custom domains** részében adható hozzá a `catspirits.com`. A gyökérdomainhez ugyanabban a Cloudflare-fiókban kell lennie a domain DNS-zónájának és oda kell mutatnia a névszervereknek; a pontos lépéseket és a hivatalos forrásokat a [Cloudflare útmutató](docs/cloudflare.md) tartalmazza.
+A játék a meglévő **catspirits** Cloudflare Workerbe kerül, amelyhez már hozzá van rendelve a **catspirits.com**. A GitHub build beállításai: ág `main`, build `npm run build`, deploy `npx wrangler deploy`, Node `24.15.0`, projektgyökér a repó gyökere. A `wrangler.jsonc` a `dist` mappát Workers Static Assets tartalomként adja meg, és tartalmazza a már beállított saját domaint.
 
-Ez a projektelőkészítés még nem tett közzé élő weboldalt és nem módosította a domain DNS-ét. A GitHub-ellenőrzés tesztel és buildel; nem publikál automatikusan.
+A helyi publikálási parancs `npm run deploy:cloudflare`; a feltöltés nélküli konfigurációellenőrzés `npm run check:cloudflare`. A [Cloudflare útmutató](docs/cloudflare.md) a Worker beállításait írja le. A GitHub Actions ellenőrzés továbbra is csak tesztel és buildel; a Cloudflare-hez kötött `main` ág frissítése indít éles publikálást.
 
 ## Kamera és mentés
 
