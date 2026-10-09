@@ -19,6 +19,15 @@ Camera access is opt-in, requests video without audio, and never records or uplo
 
 Scanners cannot establish the absence of every secret or vulnerability. External package registries, browser engines, Cloudflare and upstream compiled WASM remain supply-chain dependencies.
 
+### CodeQL findings reviewed
+
+GitHub CodeQL default setup is enabled for JavaScript/TypeScript and GitHub Actions with the extended query suite. The initial analysis succeeded and reported three findings; all three were individually reviewed and dismissed as false positives, leaving **0 open findings**. No query or file was excluded from future analysis.
+
+- Alert 1 (`js/remote-property-injection`, `ColorWandDetector.ts`): the writes target `Uint8Array`/`Int32Array` buffers, using numeric pixel indices and a numeric queue counter. Dimensions and RGBA length are validated and capped at 640×480 pixels. Each pixel is marked visited before enqueue; no string object property reaches these writes.
+- Alerts 2 and 3 (`js/missing-origin-check`, pose and sword workers): both handlers run inside dedicated workers on private creator channels. They are not `Window.onmessage` handlers; the application does not forward Window messages or expose SharedWorker/BroadcastChannel entry points. Cross-origin documents cannot directly obtain these worker handles. A Window-origin check is not applicable to this transport.
+
+These assessments must be revisited if message transport, worker ownership, index validation or buffer types change. Finding descriptions and dismissal reasons are retained in GitHub's code-scanning history.
+
 ## Licences and provenance
 
 The user selected MIT for Catspirits-owned code. `LICENSE`, runtime third-party notices and full upstream licence texts ship with the website and are linked in its privacy/licences menu. Third-party components are not relicensed under MIT. The unchanged Google Pose Landmarker Lite float16 bundle v1 is self-hosted; the model card linked from the official bundle documentation specifies Apache-2.0. Its SHA-256 is verified before every dev/build preparation. Unmodified WASM assets are copied from the pinned, integrity-locked npm package. Updating MediaPipe requires reviewing asset paths, licences and model integrity; immutable asset paths must change with content.
@@ -55,4 +64,4 @@ The camera Lite model is about 5.5 MiB and the selected WASM variant about 10–
 
 There is no per-request application Worker execution. [Cloudflare says static asset requests are free and unlimited](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/); other account features or future backend code may have separate costs. Generated resources are served directly and cached; no database, per-player polling or server inference is present.
 
-Validation includes the full test suite, strict TypeScript, production Vite build, Wrangler deployment dry run, 144 Hz rendering/hidden-page regression tests, 4K/8K pixel-budget tests, and real browser CPU/GPU worker startup with one synthetic blank frame under the site's headers. Human camera quality, sustained mobile thermals and independent penetration testing remain outside this evidence.
+Validation includes 155 passing tests across 13 files, strict TypeScript, production Vite build, Wrangler deployment dry run, CodeQL JavaScript/TypeScript and Actions analysis, 144 Hz rendering/hidden-page regression tests, 4K/8K pixel-budget tests, and real browser CPU/GPU worker startup with one synthetic blank frame under the site's headers. Human camera quality, sustained mobile thermals and independent penetration testing remain outside this evidence.
