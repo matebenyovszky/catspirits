@@ -40,6 +40,14 @@ describe('Neon Blade interface and lifecycle', () => {
     click('[data-practice]'); advance(20, 10); window.dispatchEvent(new Event('pagehide'));
     expect(callbacks.size).toBe(0); expect(stop).toHaveBeenCalled(); expect(root.textContent).toContain('Your round will wait.');
   });
+  it('flushes the zero timer at round end and starts a fresh replay', () => {
+    click('[data-practice]'); advance(20, 3100);
+    expect(root.querySelector('[data-time]')!.textContent).toBe('00');
+    expect(root.textContent).toContain('That was a bright round!'); expect(callbacks.size).toBe(0);
+    click('[data-begin]'); advance(70000, 2);
+    expect(root.querySelector('[data-time]')!.textContent).toBe('60');
+    expect(root.querySelector<HTMLElement>('.blade-overlay')!.hidden).toBe(true);
+  });
   it('renders German and Hungarian camera instructions with working mode links', () => {
     for (const [language, label] of [['de', 'Kamera & Markierungsstab'], ['hu', 'Kamera és jelölőbot']] as const) {
       app.dispose(); setLanguage(language); app = new BladeApp(root); expect(root.textContent).toContain(label);

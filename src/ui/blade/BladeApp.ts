@@ -227,6 +227,9 @@ export class BladeApp {
   }
   private finish(): void {
     this.root.classList.remove('blade-calibrating'); this.phase = 'over'; this.camera.stop(); this.el('.blade-tracking').hidden = true;
+    // Flush the final values before stopping the throttled HUD/render loop.
+    this.text('[data-time]', '00'); this.text('[data-score]', String(this.game.score));
+    this.text('[data-combo]', `${this.game.combo} · ×${this.game.multiplier}`);
     this.best[this.mode] = Math.max(this.best[this.mode], this.game.score);
     try { localStorage.setItem(BEST_KEY, JSON.stringify(this.best)); } catch { /* Optional local scores. */ }
     this.panel('Fényes kör volt!', 'Még egy kör? Építs még hosszabb kombót!');
