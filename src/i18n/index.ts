@@ -20,7 +20,11 @@ export function resolveLanguage(query: string, saved: string | null, browser: st
   return 'en';
 }
 export function getLanguage(): Language { return language; }
-export function setLanguage(value: Language): void { language = value; }
+export function setLanguage(value: Language): void {
+  // Store a canonical constant, never the URL/storage string itself. Language
+  // is also used in authored links, so keep that boundary safe at runtime.
+  language = value === 'hu' ? 'hu' : value === 'de' ? 'de' : 'en';
+}
 export function initializeLanguage(): void {
   let saved: string | null = null;
   try { saved = localStorage.getItem(LANGUAGE_KEY); } catch { /* Storage is optional. */ }

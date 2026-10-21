@@ -8,6 +8,11 @@ beforeEach(() => { setLanguage('en'); localStorage.clear(); history.replaceState
 afterEach(() => { setLanguage('hu'); vi.unstubAllGlobals(); });
 
 describe('language choice', () => {
+  it('canonicalizes runtime input before language values reach authored links', () => {
+    setLanguage('\"><img src=x onerror=alert(1)>' as never);
+    expect(getLanguage()).toBe('en');
+    expect(resolveLanguage('?lang=%22%3E%3Cscript%3E', null, 'en-US')).toBe('en');
+  });
   it('prefers an explicit shareable URL, then a saved choice, then the browser language', () => {
     expect(resolveLanguage('?lang=en', 'hu', 'hu-HU')).toBe('en');
     expect(resolveLanguage('?lang=hu', 'en', 'en-GB')).toBe('hu');
