@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CameraSwordTracker } from './CameraSwordTracker';
 import type { SwordFrame } from './types';
 const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
@@ -12,7 +12,7 @@ class WorkerMock {
   }
 }
 describe('CameraSwordTracker lifecycle', () => {
-  let tracker: CameraSwordTracker, video: HTMLVideoElement, emit: Mock<(frame: SwordFrame | null) => void>;
+  let tracker: CameraSwordTracker, video: HTMLVideoElement, emit: ReturnType<typeof vi.fn<(frame: SwordFrame | null) => void>>;
   let callbacks: Map<number, FrameRequestCallback>, workers: WorkerMock[], decoded: number;
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['performance'] }); callbacks = new Map(); workers = []; decoded = 1; let id = 0;
@@ -26,6 +26,19 @@ describe('CameraSwordTracker lifecycle', () => {
   });
   afterEach(() => { tracker.stop(); vi.useRealTimers(); vi.unstubAllGlobals(); });
   function tick() { const [key, cb] = callbacks.entries().next().value!; callbacks.delete(key); cb(performance.now()); }
+  it('accepts fresh Safari callbacks with a frozen mediaTime and live playback counters', async () => {
+    let decodedFrame!: VideoFrameRequestCallback;
+    video.srcObject = {} as MediaStream;
+    video.requestVideoFrameCallback = vi.fn(cb => { decodedFrame = cb; return 123; });
+    video.cancelVideoFrameCallback = vi.fn();
+    tracker.start(); await flush(); workers[0].receive(0);
+    await vi.advanceTimersByTimeAsync(33);
+    decodedFrame(33, { mediaTime: 0 } as VideoFrameCallbackMetadata); await flush();
+    expect(workers[0].postMessage).toHaveBeenCalledTimes(2);
+    workers[0].receive(33); await flush(); expect(workers[0].postMessage).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(33); decodedFrame(66, { mediaTime: 0 } as VideoFrameCallbackMetadata); await flush();
+    expect(workers[0].postMessage).toHaveBeenCalledTimes(3);
+  });
   it('keeps one image in flight, drains the latest and does not count duplicate frames', async () => {
     tracker.start(); await flush(); const worker = workers[0]; expect(worker.postMessage).toHaveBeenCalledOnce();
     decoded = 2; await vi.advanceTimersByTimeAsync(33); tick(); await flush(); expect(worker.postMessage).toHaveBeenCalledOnce();
@@ -55,6 +68,16 @@ describe('CameraSwordTracker lifecycle', () => {
     await vi.advanceTimersByTimeAsync(160); tick(); await flush(); expect(workers[0].postMessage).toHaveBeenCalledTimes(2);
     tracker.stop(); expect(video.cancelVideoFrameCallback).toHaveBeenCalledWith(123);
   });
+  it('attaches the captured media clock without replacing arrival/freshness time',async()=>{
+    let callback:VideoFrameRequestCallback;
+    video.requestVideoFrameCallback=vi.fn(cb=>{callback=cb;return 123;});video.cancelVideoFrameCallback=vi.fn();
+    tracker.start();await flush();workers[0].receive(0);decoded=2;
+    await vi.advanceTimersByTimeAsync(40);
+    callback!(40,{mediaTime:1/30} as VideoFrameCallbackMetadata);await flush();
+    callback!(60,{mediaTime:2/30} as VideoFrameCallbackMetadata);
+    workers[0].receive(40);
+    expect(emit).toHaveBeenLastCalledWith(expect.objectContaining({timestampMs:40,mediaTimeMs:1000/30}));
+  });
   it('contains capture and worker errors without retry loops', async () => {
     vi.mocked(createImageBitmap).mockRejectedValueOnce(new Error('capture failed'));
     tracker.start(); await flush(); expect(tracker.stats.message).toContain('nem olvasható');
@@ -67,7 +90,16 @@ describe('CameraSwordTracker lifecycle', () => {
     tracker.start(); await flush();
     expect(createImageBitmap).not.toHaveBeenCalled();
     expect(workers[0].postMessage.mock.calls[0][0]).toHaveProperty('frame');
+    expect(workers[0].postMessage.mock.calls[0][0]).toHaveProperty('nativePixels',true);
     workers[0].onmessage?.({ data: { frame: null, timestampMs: 0, transport: 'videoframe-fallback', processingMs: 1, readbackMs: 1 } });
     decoded = 2; tick(); await flush(); expect(createImageBitmap).toHaveBeenCalledOnce();
+  });
+  it('switches the native pixel preference on the next capture without a new worker or stream',async()=>{
+    vi.stubGlobal('VideoFrame',class {close=vi.fn();});
+    tracker.start();tracker.setNativePixels(false);decoded=2;
+    workers[0].receive(0);await flush();
+    expect(workers).toHaveLength(1);
+    expect(workers[0].postMessage.mock.lastCall?.[0]).toHaveProperty('nativePixels',false);
+    expect(createImageBitmap).not.toHaveBeenCalled();
   });
 });

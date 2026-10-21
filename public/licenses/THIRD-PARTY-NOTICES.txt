@@ -24,3 +24,10 @@ SHA-256: 59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a
 Full licence: Apache-2.0.txt. No model training data is included in Catspirits.
 
 No endorsement or affiliation with Google, MediaPipe or three.js is implied.
+
+AssemblyScript 0.28.20 (compiler / standard-library portions of the optional wand kernel)
+Project: https://www.assemblyscript.org/
+Source: https://github.com/AssemblyScript/assemblyscript
+License: Apache License 2.0; see Apache-2.0.txt and AssemblyScript-NOTICE.txt.
+The Catspirits-authored scalar colour kernel is provided in tools/wasm/color-components.ts.
+Its compiled WebAssembly is bundled locally. No AssemblyScript runtime is downloaded at play time.

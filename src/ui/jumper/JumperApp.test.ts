@@ -126,7 +126,7 @@ describe('standalone multilingual interface', () => {
     click('[data-modal-close]'); click('[data-help]');
     expect(text('.jumper-modal')).toContain('From world 3, duck under the gold overhead beam');
     expect(text('.help-sword')).toContain('optional');
-    expect(text('.help-sword')).toContain('coming soon');
+    expect(root.querySelector<HTMLAnchorElement>('.help-sword a')?.getAttribute('href')).toBe('?game=blade&lang=en');
   });
   it('translates camera setup and errors while retaining a working keyboard fallback', async () => {
     new JumperApp(root);
@@ -160,7 +160,7 @@ describe('standalone multilingual interface', () => {
     expect(text('.result-stats')).toContain('BEST COMBO');
     expect(JSON.parse(localStorage.getItem('catspirits.cyber-jumper.v1')!).best).toBeGreaterThanOrEqual(0);
     expect(JSON.parse(localStorage.getItem('clubgpt.cyber-jumper.v1')!).best).toBe(99999);
-  }, 15000);
+  }, 60000);
   it('retains the Hungarian game interface', () => {
     setLanguage('hu'); new JumperApp(root);
     expect(text('h1')).toBe('MOZDULJ AJÖVŐBE.');

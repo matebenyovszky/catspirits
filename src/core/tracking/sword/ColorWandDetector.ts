@@ -1,6 +1,6 @@
 import { SWORD_MAX_AGE_MS, type SwordDetection, type SwordFrame } from './types';
 
-export type ColorBlob = { x: number; y: number; area: number };
+export type ColorBlob = { x: number; y: number; area: number; moments?: {xx:number;xy:number;yy:number} };
 export type ColorRegion = { x0: number; y0: number; x1: number; y1: number };
 type Blob = ColorBlob;
 type Region = ColorRegion;

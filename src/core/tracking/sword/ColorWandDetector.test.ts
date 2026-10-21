@@ -14,7 +14,7 @@ describe('ColorWandDetector', () => {
     const detector = new ColorWandDetector(), data = picture(), original = data.slice();
     const result = detector.detect(data, W, H, 100);
     expect(result.frame).toMatchObject({ source: 'color-bands-2d', confidence: 1, base: { x: 103 / W, y: 106 / H }, tip: { x: 158 / W, y: 86 / H } });
-    expect(data).toEqual(original);
+    expect(Buffer.compare(Buffer.from(data.buffer), Buffer.from(original.buffer))).toBe(0);
   });
   it('reuses a smaller ROI and immediately reacquires a swing outside it', () => {
     const detector = new ColorWandDetector();

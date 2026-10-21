@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SideGameSimulation, type SideGameInput } from './SideGameSimulation';
 import { sweptBladeHits } from './sweep';
-import { swordToScreen, validSword, type SwordFrame } from './types';
+import { clipBlade, swordToScreen, validSword, type SwordFrame } from './types';
 
 const frame = (t: number, x: number): SwordFrame => ({ timestampMs: t, base: { x, y: .25 }, tip: { x, y: .8 },
   imageAspectRatio: 4 / 3, confidence: 1, source: 'color-bands-2d' });
@@ -12,6 +12,31 @@ function targetGame() {
   Object.assign(game.targets[0], { id: 90, active: true, x: .5, y: .5 }); return game;
 }
 describe('sword geometry and game', () => {
+  const cropped = (t: number, y: number): SwordFrame => ({ ...frame(t, .5), source: 'four-ring-2d',
+    base: { x: -.2, y }, tip: { x: .6, y }, inferredEndpoints: true, supportMask: 14,
+    rings: [{ id: 1, x: .027, y }, { id: 2, x: .347, y }, { id: 3, x: .6, y }] });
+  it('accepts bounded offscreen reconstruction only with fresh visible support', () => {
+    expect(validSword(cropped(0, .5), 0)).toBe(true);
+    expect(validSword({ ...cropped(0, .5), rings: [] }, 0)).toBe(false);
+    expect(validSword({ ...cropped(0, .5), supportMask: 15 }, 0)).toBe(false);
+    expect(validSword({ ...cropped(0, .5), base: { x: -2, y: .5 } }, 0)).toBe(false);
+    expect(validSword(cropped(0, .5), 200)).toBe(false);
+  });
+  it('clips along the segment, preserving angle and never touching the measured geometry', () => {
+    const blade = { base: { x: -.2, y: .2 }, tip: { x: .6, y: .6 } };
+    const result = clipBlade(blade)!;
+    expect(result.base.x).toBeCloseTo(0); expect(result.base.y).toBeCloseTo(.3);
+    expect(result.tip).toEqual(blade.tip); expect(blade.base.x).toBe(-.2);
+    expect(clipBlade({ base: {x:-.1,y:0}, tip: {x:-.1,y:1} })).toBeNull();
+    expect(clipBlade({ base: {x:NaN,y:0}, tip: {x:1,y:1} })).toBeNull();
+  });
+  it('allows a visible cropped blade cut but no invisible offscreen target cuts', () => {
+    for (const x of [.5, 1.05]) {
+      const game = targetGame(); game.targets[0].x = x;
+      game.acceptSword(cropped(0, .3), 0); game.acceptSword(cropped(33, .7), 33);
+      expect(game.cleared).toBe(x === .5 ? 1 : 0);
+    }
+  });
   it('sweeps between camera samples even when neither endpoint pose touches the target', () => {
     expect(sweptBladeHits(frame(0, .1), frame(33, .9), { x: .5, y: .5 }, { x: .5, y: .5 }, .04)).toBe(true);
     expect(sweptBladeHits(frame(0, .1), frame(33, .9), { x: .5, y: .95 }, { x: .5, y: .95 }, .04)).toBe(false);
@@ -28,12 +53,13 @@ describe('sword geometry and game', () => {
     expect(swordToScreen(frame(0, .9)).base.x).toBeCloseTo(.1);
   });
   it('does not award stationary, stale, low-confidence or re-acquisition cuts', () => {
-    for (const variant of ['stationary', 'stale', 'confidence', 'lost', 'gap', 'aspect']) {
+    for (const variant of ['stationary', 'stale', 'confidence', 'lost', 'gap', 'aspect', 'support-change']) {
       const game = targetGame(); game.acceptSword(frame(0, variant === 'stationary' ? .5 : .9), 0);
       if (variant === 'lost') game.acceptSword(null, 10);
       const next = frame(variant === 'gap' ? 160 : 33, variant === 'stationary' ? .5 : .1);
       if (variant === 'confidence') next.confidence = .1;
       if (variant === 'aspect') next.imageAspectRatio = 1;
+      if (variant === 'support-change') next.supportMask = 7;
       game.acceptSword(next, variant === 'stale' ? 200 : next.timestampMs);
       expect(game.cleared, variant).toBe(0);
     }

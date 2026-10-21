@@ -1,10 +1,12 @@
 /// <reference types="vite/client" />
 import visionRuntimeUrl from "@mediapipe/tasks-vision?url";
+import { createPoseImageInput } from './PoseImageInput';
 import type { PoseFrame } from "./types";
 
 export type PoseWorkerMessage =
   | { type: "ready"; delegate: "GPU" | "CPU" }
   | { type: "frame"; id: number; frame: PoseFrame }
+  | { type: "input-error"; id: number; message: string }
   | { type: "error"; message: string };
 
 /**
@@ -14,17 +16,19 @@ export type PoseWorkerMessage =
  * All runtime dependencies of this function must stay inside its body because
  * the function is serialized into the worker, never executed on the UI thread.
  */
-function poseWorkerMain(loadRuntime: (url: string) => Promise<typeof import("@mediapipe/tasks-vision")>) {
+export function poseWorkerMain(loadRuntime: (url: string) => Promise<typeof import("@mediapipe/tasks-vision")>, makeInput: typeof createPoseImageInput) {
   type Vision = typeof import("@mediapipe/tasks-vision");
   type Detector = import("@mediapipe/tasks-vision").PoseLandmarker;
   type Request =
     | { type: "init"; runtimeUrl: string; wasmUrl: string; modelUrl: string; delegate: "GPU" | "CPU" }
-    | { type: "frame"; id: number; timestampMs: number; bitmap: ImageBitmap };
+    | { type: "frame"; id: number; timestampMs: number; bitmap: ImageBitmap; videoFrame?: never }
+    | { type: "frame"; id: number; timestampMs: number; videoFrame: VideoFrame; width: number; height: number; bitmap?: never };
   const scope = self as unknown as {
     onmessage: ((event: MessageEvent<Request>) => void) | null;
     postMessage(message: unknown): void;
   };
   let detector: Detector | undefined;
+  const prepareInput = makeInput();
   scope.onmessage = async (event) => {
     const request = event.data;
     try {
@@ -49,8 +53,9 @@ function poseWorkerMain(loadRuntime: (url: string) => Promise<typeof import("@me
         scope.postMessage({ type: "ready", delegate: request.delegate });
       } else {
         if (!detector) throw new Error("A testkövető még nem áll készen.");
+        const input = request.videoFrame ? prepareInput(request.videoFrame, request.width, request.height).image : request.bitmap;
         const startedAt = performance.now();
-        const result = detector.detectForVideo(request.bitmap, request.timestampMs);
+        const result = detector.detectForVideo(input, request.timestampMs);
         scope.postMessage({
           type: "frame", id: request.id,
           frame: {
@@ -62,9 +67,11 @@ function poseWorkerMain(loadRuntime: (url: string) => Promise<typeof import("@me
         });
       }
     } catch (error) {
-      scope.postMessage({ type: "error", message: error instanceof Error ? error.message : String(error) });
+      scope.postMessage({ type: request.type === "frame" && request.videoFrame ? "input-error" : "error",
+        ...(request.type === "frame" ? { id: request.id } : {}),
+        message: error instanceof Error ? error.message : String(error) });
     } finally {
-      if (request.type === "frame") request.bitmap.close();
+      if (request.type === "frame") (request.videoFrame ?? request.bitmap).close();
     }
   };
 }
@@ -72,7 +79,7 @@ function poseWorkerMain(loadRuntime: (url: string) => Promise<typeof import("@me
 export function createPoseWorker(delegate: "GPU" | "CPU"): Worker {
   // Keep the native import in generated worker source: Vite dev otherwise adds
   // an injectQuery helper from the UI module, which does not exist in the worker.
-  const source = `(${poseWorkerMain.toString()})(url => import(url))`;
+  const source = `(${poseWorkerMain.toString()})(url => import(url), ${createPoseImageInput.toString()})`;
   const url = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
   try {
     const worker = new Worker(url, { name: "camera-pose", type: "classic" });

@@ -51,6 +51,7 @@ type Session = {
   hasResult: boolean;
   captureMs: number;
   inputSize: string;
+  nativeInput?: boolean;
   cameraLabel: string;
 };
 
@@ -224,6 +225,10 @@ export class CameraPoseTracker {
         if (!this.isCurrent(session) || session.worker !== worker) return;
         const result = event.data;
         if (result.type === "ready") { ready = true; resolve(); }
+        else if (result.type === "input-error" && result.id === session.pendingId) {
+          session.nativeInput = false; session.inFlight = false;
+          this.captureLatest(session, performance.now());
+        }
         else if (result.type === "error") failed(new Error(result.message));
         else if (result.type === "frame" && result.id === session.pendingId) this.receiveFrame(session, result.frame);
       };
@@ -270,6 +275,20 @@ export class CameraPoseTracker {
     const worker = session.worker;
     try {
       const scale = Math.min(1, this.inputWidth / this.video.videoWidth, this.inputWidth * 0.75 / this.video.videoHeight);
+      // Preserve native camera storage until the worker's GPU upload boundary.
+      // A rejected native source falls back once to the established bitmap path.
+      if (session.nativeInput !== false && typeof VideoFrame !== 'undefined') {
+        let videoFrame: VideoFrame | undefined;
+        try {
+          videoFrame = new VideoFrame(this.video, { timestamp: Math.round(timestampMs * 1000) });
+          const width = Math.max(1, Math.round(this.video.videoWidth * scale));
+          const height = Math.max(1, Math.round(this.video.videoHeight * scale));
+          session.captureMs = performance.now() - timestampMs;
+          session.inputSize = `${width}×${height}`;
+          worker!.postMessage({ type: 'frame', id: ++session.pendingId, timestampMs, videoFrame, width, height }, [videoFrame]);
+          return;
+        } catch { videoFrame?.close(); session.nativeInput = false; }
+      }
       const bitmap = scale === 1 ? await createImageBitmap(this.video) : await createImageBitmap(this.video, {
         resizeWidth: Math.max(1, Math.round(this.video.videoWidth * scale)),
         resizeHeight: Math.max(1, Math.round(this.video.videoHeight * scale)), resizeQuality: "low"

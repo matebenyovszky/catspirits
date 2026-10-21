@@ -1,36 +1,52 @@
-# Optional sword adventure — preparation / Opcionális kardos kaland
+# Neon Blade — optional camera sword game
 
-The public Catspirits game focuses on body movement tracked by a camera. Sword tracking is an optional extension prepared for the next development session, not an enabled game mode. No wand is needed to jump, duck or lean.
+Open [Neon Blade](https://catspirits.com/?game=blade). The Cyber Jumper home screen links to it; both games retain English, Hungarian and German and browser-language selection. The jumping game does not require a wand.
 
-## Already included
+Neon Blade is a separate, lazy-loaded, 60-second crystal-slicing game. Three increasingly frequent waves, consecutive-hit multipliers up to 4×, and triple-value gold crystals reward moving cuts. Missing a crystal resets the combo. There is no damage, account, server leaderboard or network gameplay. Mouse/touch practice has a separate local best score from camera play.
 
-- `src/core/tracking/sword/ColorWandDetector.ts`: finds two distinct magenta/cyan bands in measured camera frames. Pure JavaScript, reused buffers, no extra neural model or service.
-- `CameraSwordTracker.ts` and `sword.worker.ts`: share the existing authorized video. At most one frame is in flight; frames are not recorded, uploaded or queued. VideoFrame readback has an ImageBitmap/canvas fallback.
-- `types.ts`: normalized, unmirrored image-plane endpoints, confidence and timestamps; stale measurements expire after 120 ms.
-- `sweep.ts` and `SideGameSimulation.ts`: test a measured blade segment's swept path against moving targets. A stationary, obscured, ambiguous or stale blade cannot award a hit.
-- `SwordGameView.ts`: pooled Three.js blade and target rendering for an image-plane game layer.
-- The detector, frame transport, worker fallback and collision tests from the original prototype, plus Catspirits camera lifecycle tests.
+## Camera setup
 
-This code is self-contained in Catspirits. It has no runtime dependency on the original application. No WASM/AprilTag or new package dependency is required by this prepared detector.
+Use the existing **50 cm, approximately 25 mm diameter, soft-ended pink/green marker wand** from Puppet2. Measured from the bottom of the grip:
 
-## Catspirits integration point
+| Band | Colour | Start–end | Centre |
+| --- | --- | --- | --- |
+| 1 | Pink | 12–18 cm | 15 cm |
+| 2 | Pink | 22–25 cm | 23.5 cm |
+| 3 | Green | 34–37 cm | 35.5 cm |
+| 4 | Green | 42–48 cm | 45 cm |
 
-`JumperCamera.setSwordEnabled(true)` lazily imports the tracker after the normal camera has been authorized and started. `swordInput()` exposes only fresh, valid measured endpoints. Passing `false`, stopping the camera or a camera failure terminates the sword worker and clears observations. Canceling an in-progress import cannot restart it. A sword failure leaves body-motion controls usable.
+Bands wrap around the wand. Show all four to acquire; three can also acquire a compatible, unambiguous fit. Two fresh identified rings may maintain an existing fit. Diffuse light and a plain background help. Use a soft play wand, leave clear space, and keep the phone stable. Only the section between the outer band centres is the virtual blade. It is a 2D image-plane measurement, not a calibrated 3D sword or a general detector for arbitrary swords.
 
-The public UI does not call this method. With the extension off, no sword worker is downloaded or started and no sword frames are processed. The help screen labels the future mode as optional and coming soon.
+Press **Camera & marker wand**, allow video access, show the bands, then start. No full-body framing or body-model download is needed. The camera image and arena share the same aspect ratio and mirrored coordinates, without cropping the camera frame. No software zoom or higher camera resolution was added.
 
-## Next development session
+Drag while pressed for mouse/touch practice. Pause stops the camera. Resume explicitly restarts it and waits for a fresh measurement. Hidden pages stop camera, audio and animation; returning to the page never silently reacquires the camera. Tracking loss freezes the game clock and targets, and breaks the collision sweep.
 
-1. Test a soft marker wand with separate magenta and cyan bands in real camera lighting, including blur, occlusion and losing/reacquiring either band.
-2. Add an explicit opt-in mode selector to camera setup, once the playable interaction is ready. Default sword tracking remains off.
-3. Connect the measured blade to the renderer and targets, decide how the sword adventure shares the current worlds, and keep the body-only game available.
-4. Test body and sword tracking together on desktop/mobile. Measure frame age, CPU use, responsiveness and real hit accuracy; synthetic tests do not establish human performance.
-5. Check all three languages, pause, hidden-tab shutdown, tracking loss, keyboard fallback and camera permission failures.
+## Ported tracking
 
-The blade is a 2D measurement on a 2.5D game layer. The prototype does not reconstruct calibrated metric 3D position, depth, axial rotation or wrist IK. Occlusion must stop hit detection; displaying an estimate must never invent a measured cut.
+- Ordered four-ring geometry, bounded projective fit, partial-occlusion identity, ring-scale diagnostics and ambiguity rejection.
+- Native NV12/BGRA pixel input for supported colour metadata and geometry. Other formats use browser RGBA conversion, with ImageBitmap/canvas and pure JavaScript fallbacks.
+- A self-hosted 6.27 kB scalar WASM kernel with fixed 7 MiB memory; one frame in flight, reused buffers, ROI search and immediate full-frame reacquisition.
+- Impossible single-measurement jumps are rejected; a second nearby sample can confirm a changed position.
+- Bounded render-only continuation between measurements (up to 50 ms / .04 image height). No predicted position is passed to scoring.
+- Swept, moving-target collisions use fresh measurements only. Stationary blades, duplicate/stale timestamps, changing support rings, aspect changes, loss/reacquisition and offscreen geometry cannot bridge a cut.
+- Safari callback serials preserve new frames even when `mediaTime` and playback counters are frozen. Capture-completion callbacks do not process the same decoded frame repeatedly.
 
-## Magyar összefoglaló
+The original two-colour detector and camera-sharing `JumperCamera.setSwordEnabled` integration remain for compatibility; the public Neon Blade mode uses the four-ring detector independently of body tracking.
 
-A kardkövetés a Catspirits önálló kódjába került, külön betölthető, kikapcsolt bővítésként. A puha jelölőbot elkülönülő magenta és cián sávját követi, ugyanazt a már engedélyezett kameraképet használja. A mozgásos alapjátékhoz nem kell kard.
+## Budget and privacy
 
-A következő alkalom feladata a valódi jelölőbotos próba, az opcionális mód választója és a játékbeli találatok/megjelenítés bekötése. A nyilvános felület addig „hamarosan, opcionális” jelzést mutat. Ez nem kalibrált térbeli kardkövetés; a tesztek szintetikus pontossága nem helyettesíti az emberes próbát.
+Neon Blade uses Canvas 2D, a fixed ten-target pool and bounded particles. No Three.js, MediaPipe model, AprilTag, native helper, WebGPU neural runtime or new npm runtime dependency is loaded for it. Rendering caps at 60 Hz; idle menus do not animate. Canvas pixels are capped at 1440×1080 / DPR 1.5. Camera frames remain on the device and are neither recorded nor uploaded. The colour kernel is hosted on the same origin, with JavaScript fallback if it cannot load.
+
+Only language and best scores are persisted; the new score key is `catspirits.neon-blade.best.v1`. Cloudflare still handles ordinary hosting/security metadata, as explained in the in-game privacy information and [security review](security-review.md).
+
+## Rebuilding the kernel
+
+Source: `tools/wasm/color-components.ts`, adapted from the current Puppet2 working tree. The committed binary was rebuilt byte-for-byte with AssemblyScript **0.28.20**:
+
+```sh
+npm exec --package=assemblyscript@0.28.20 -- asc tools/wasm/color-components.ts -o src/core/tracking/sword/color-components.wasm -O3 --runtime stub --initialMemory 112 --maximumMemory 112 --noAssert
+```
+
+AssemblyScript compilation is only needed when changing the kernel, not to install/build/play the game. Its Apache 2.0 licence and upstream NOTICE are included in distributed notices. The game-authored source remains MIT licensed.
+
+Tests cover RGB/YUV parity, colour metadata fallback, projective geometry, every ring-occlusion mask, stale samples, swept hits, lifecycle cancellation, hidden-page shutdown and all three interfaces. Synthetic camera-stream tests exercise the real browser worker. They do not establish real-person accuracy, mobile thermals or real-wand performance on every phone; those need a physical camera/wand trial.

@@ -2,7 +2,7 @@
 
 **Kamerával vezérelt, aktív mozgásjáték: a tested mozdulataival irányítod Bitet.** Ugorj, hajolj le, és dőlj oldalra öt neonvilágon át a [catspirits.com](https://catspirits.com) játékában! A mozgást a böngésző helyben követi, a kamerakép a gépeden marad. Magyarul, angolul és németül játszható. Kamera nélkül billentyűvel és érintéssel is működik.
 
-[English README](README.md) · [Mozgás és vezérlés](docs/game.md) · [Opcionális kardkövetés előkészítése](docs/sword-tracking.md) · [Cloudflare útmutató](docs/cloudflare.md)
+[English README](README.md) · [Mozgás és vezérlés](docs/game.md) · [Neon Blade kardos játék](docs/sword-tracking.md) · [Cloudflare útmutató](docs/cloudflare.md)
 
 A repó minden szükséges forrást, függőséget, tesztet és saját buildet tartalmaz. Nem kell hozzá az eredeti avataros alkalmazás, AI-fiók, API-kulcs, backend vagy helyi kamerasegéd.
 
@@ -38,11 +38,11 @@ A kamerás mozgás az alapértelmezett vezérlés. Nyomd meg a **Kamera indítá
 
 A mentés saját `catspirits.cyber-jumper.v1` kulcsot használ, az eredeti app mentését nem módosítja. A localhost és a majdani catspirits.com külön böngészős mentést kap. Nincs fiók, mérés, szerveres ranglista vagy felhőmentés.
 
-## Opcionális kardos kaland — előkészítve
+## Neon Blade · kamerás kardkaland
 
-A következő fejlesztéshez már a repóban van a magenta–cián színsávos kardkövető, a meglévő kameraképet használó külön Worker, a mért penge mozgásának találatvizsgálata és a megjelenítő, a tesztjeikkel együtt. A bekötési pont `JumperCamera.setSwordEnabled(true)`; a normál játék ezt nem hívja meg, így a kardkövető nem töltődik le és nem fut. A kamera leállítása ezt is leállítja.
+A [Neon Blade](https://catspirits.com/?game=blade&lang=hu) külön választható, egyperces kardos játék. A Puppet2-ben használt négysávos rózsaszín–zöld, puha jelölőbottal vághatók a kristályok. Három hullám, aranykristályok, kombók és legfeljebb négyszeres pontszorzó; egérrel és érintéssel is kipróbálható. A két vezérlés rekordja külön tárolódik.
 
-A kardos mód **még nem választható, kész publikus játékmód**. A végleges játékbeli bekötés és a valódi jelölőbotos próba a következő lépés. A mozgásos alapjátékhoz nem kell kard. Részletek: [kardkövetés](docs/sword-tracking.md).
+A kardkövetés helyben fut, testkövető modell és 3D motor nélkül. A gyors natív képbemenet mellett megmarad a kompatibilis tartalékút. A bot méretei és a működés részletei: [kardos útmutató](docs/sword-tracking.md). Az átvett optimalizálások: [Puppet2-port](docs/puppet2-port.md).
 
 ## Licenc, biztonság és erőforrások
 

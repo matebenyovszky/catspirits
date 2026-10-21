@@ -1,5 +1,5 @@
 import { segmentDistance, sweptBladeHits } from './sweep';
-import { SWORD_MAX_AGE_MS, swordToScreen, validSword, type Point2, type SwordFrame } from './types';
+import { clipBlade, inCamera, SWORD_MAX_AGE_MS, swordToScreen, validSword, type Point2, type SwordFrame } from './types';
 
 export type SideTarget = { id: number; active: boolean; side: 'left' | 'right'; x: number; y: number; radius: number };
 export type SideGameMode = 'off' | 'dodge' | 'slice';
@@ -68,9 +68,12 @@ export class SideGameSimulation {
     if (!measured || !validSword(measured, nowMs)) { this.previousSword = null; this.previousTargets.clear(); return; }
     if (measured.timestampMs <= this.lastTimestamp) return;
     this.lastTimestamp = measured.timestampMs;
-    const frame = swordToScreen(measured), previous = this.previousSword;
+    const screen = swordToScreen(measured), clipped = clipBlade(screen);
+    if (!clipped) { this.previousSword = null; this.previousTargets.clear(); return; }
+    const frame = { ...screen, ...clipped }, previous = this.previousSword;
     if (!this.paused && this.mode === 'slice' && previous
       && frame.timestampMs - previous.timestampMs <= SWORD_MAX_AGE_MS
+      && frame.supportMask === previous.supportMask
       && Math.abs(frame.imageAspectRatio - previous.imageAspectRatio) < .01) {
       const movement = Math.max(Math.hypot((frame.base.x - previous.base.x) * frame.imageAspectRatio, frame.base.y - previous.base.y),
         Math.hypot((frame.tip.x - previous.tip.x) * frame.imageAspectRatio, frame.tip.y - previous.tip.y));
@@ -78,7 +81,8 @@ export class SideGameSimulation {
       const speed = movement * 1000 / (frame.timestampMs - previous.timestampMs);
       if (speed >= .25) for (const target of this.targets) {
         const old = this.previousTargets.get(target.id);
-        if (target.active && old && sweptBladeHits(previous, frame, old, target, target.radius + .012)) {
+        if (target.active && old && inCamera(old) && inCamera(target)
+          && sweptBladeHits(previous, frame, old, target, target.radius + .012)) {
           target.active = false; this.cleared++;
         }
       }

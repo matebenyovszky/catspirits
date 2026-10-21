@@ -94,6 +94,19 @@ describe("CameraPoseTracker lifecycle", () => {
     entry[1](time);
   }
 
+  it('transfers native frames and falls back once on a rejected native input without restarting the GPU', async () => {
+    const close = vi.fn(); vi.stubGlobal('VideoFrame', class { close = close; });
+    await startTracking(); tickFrame(0); await flush();
+    expect(createImageBitmap).not.toHaveBeenCalled();
+    const first = workers[0].postMessage.mock.calls[0][0];
+    expect(first).toMatchObject({ type: 'frame', width: 640, height: 360 });
+    expect(first.videoFrame).toBeDefined();
+    workers[0].receive({ type: 'input-error', id: first.id, message: 'unsupported' });
+    await vi.advanceTimersByTimeAsync(33); tickFrame(33); await flush();
+    expect(createImageBitmap).toHaveBeenCalledOnce(); expect(makeWorker).toHaveBeenCalledOnce();
+    expect(workers[0].postMessage.mock.calls[1][0].bitmap).toBeDefined();
+  });
+
   it("settles stop during a permission prompt and closes a late camera grant", async () => {
     const permission = deferred<MediaStream>();
     const camera = cameraStream();
