@@ -2,7 +2,7 @@
 
 Open [Neon Blade](https://catspirits.com/?game=blade). The Cyber Jumper home screen links to it; both games retain English, Hungarian and German and browser-language selection. The jumping game does not require a wand.
 
-Neon Blade is a separate, lazy-loaded, 60-second crystal-slicing game. Three increasingly frequent waves, consecutive-hit multipliers up to 4×, and triple-value gold crystals reward moving cuts. Missing a crystal resets the combo. There is no damage, account, server leaderboard or network gameplay. Mouse/touch practice has a separate local best score from camera play.
+Neon Blade is a separate, lazy-loaded, 60-second crystal-slicing game. Three increasingly frequent waves, consecutive-hit multipliers up to 4×, and triple-value gold crystals reward moving cuts. Each crystal has a fixed arrow: cut in that direction (within 45 degrees) with a moving blade. A wrong direction or missed crystal resets the combo. Red, spiked X hazards appear from wave two: touching one costs up to 20 points and breaks the combo. Let them pass. Wiggling inside a wrongly struck crystal does not repair the cut; leave it before trying again. There is no damage, account, server leaderboard or network gameplay. Mouse/touch practice has a separate local best score from camera play.
 
 ## Camera setup
 
@@ -19,7 +19,7 @@ Bands wrap around the wand. Show all four to acquire; three can also acquire a c
 
 Press **Camera & marker wand**, allow video access, show the bands, then start. No full-body framing or body-model download is needed. The camera image and arena share the same aspect ratio and mirrored coordinates, without cropping the camera frame. No software zoom or higher camera resolution was added.
 
-Drag while pressed for mouse/touch practice. Pause stops the camera. Resume explicitly restarts it and waits for a fresh measurement. Hidden pages stop camera, audio and animation; returning to the page never silently reacquires the camera. Tracking loss freezes the game clock and targets, and breaks the collision sweep.
+Drag while pressed for mouse/touch practice. Pause stops the camera. Resume explicitly restarts it and waits for a fresh measurement. Hidden pages stop camera, audio and animation; returning to the page never silently reacquires the camera. Every rejected/missing observation immediately breaks the collision sweep. The clock and loss notice tolerate gaps up to 240 ms from the last accepted capture, so a single blurred frame does not freeze gameplay. Visible blade freshness and collision input remain limited to 120 ms; a stale or rejected frame never earns points. Longer loss freezes the clock and targets; a stopped camera pauses immediately.
 
 ## Ported tracking
 
@@ -35,9 +35,9 @@ The original two-colour detector and camera-sharing `JumperCamera.setSwordEnable
 
 ## Budget and privacy
 
-Neon Blade uses Canvas 2D, a fixed ten-target pool and bounded particles. No Three.js, MediaPipe model, AprilTag, native helper, WebGPU neural runtime or new npm runtime dependency is loaded for it. Rendering caps at 60 Hz; idle menus do not animate. Canvas pixels are capped at 1440×1080 / DPR 1.5. Camera frames remain on the device and are neither recorded nor uploaded. The colour kernel is hosted on the same origin, with JavaScript fallback if it cannot load.
+Neon Blade uses Canvas 2D, a fixed ten-target pool and bounded particles. No Three.js, MediaPipe model, AprilTag, native helper, WebGPU neural runtime or new npm runtime dependency is loaded for it. Rendering caps at 60 Hz; idle menus do not animate. Crystal glows and hit-number glyphs are pre-rendered at resize, and the adaptive collision search has a fixed 128-node budget. Unresolved grazing contacts fail closed. Canvas pixels are capped at 1440×1080 / DPR 1.5. Camera frames remain on the device and are neither recorded nor uploaded. The colour kernel is hosted on the same origin, with JavaScript fallback if it cannot load.
 
-Only language and best scores are persisted; the new score key is `catspirits.neon-blade.best.v1`. Cloudflare still handles ordinary hosting/security metadata, as explained in the in-game privacy information and [security review](security-review.md).
+Only language and best scores are persisted; the new score key is `catspirits.neon-blade.best.v2` (the direction/hazard rules start a new record; the earlier v1 score is left intact). Cloudflare still handles ordinary hosting/security metadata, as explained in the in-game privacy information and [security review](security-review.md).
 
 ## Rebuilding the kernel
 

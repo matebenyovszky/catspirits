@@ -1,5 +1,8 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  "Vágj a kristály nyilának irányába! A rossz irány és a kihagyás megszakítja a kombót. Öt találatonként nő a szorzó; az aranykristály háromszoros pontot ér. A második hullámtól kerüld a piros tüskéket: −20 pont. Tartós jelvesztéskor az idő megáll.": "Cut in the direction of each arrow! Wrong cuts and missed crystals break your combo. Every five hits raises the multiplier; gold scores triple. From wave two, avoid red spikes: −20 points. The timer pauses if tracking stays lost.",
+  "Vágj a nyíl irányába!": "Cut in the arrow’s direction!",
+  "✕ Piros tüske: kerüld! −20 pont": "✕ Avoid red spikes! −20 points",
   "A kamera leállt. A folytatáshoz indítsd újra.": "The camera stopped. Restart it to continue.",
   "Szünet": "Pause",
   "Mozdulj és vágj!": "Move and slice!",

@@ -1,5 +1,8 @@
 /** German translations use the same Hungarian phrase IDs as the other interfaces. */
 export const german: Record<string, string> = {
+  "Vágj a kristály nyilának irányába! A rossz irány és a kihagyás megszakítja a kombót. Öt találatonként nő a szorzó; az aranykristály háromszoros pontot ér. A második hullámtól kerüld a piros tüskéket: −20 pont. Tartós jelvesztéskor az idő megáll.": "Schneide in Pfeilrichtung! Falsche Schnitte und verpasste Kristalle beenden die Kombo. Je fünf Treffer erhöhen den Multiplikator; Gold zählt dreifach. Ab Welle zwei: rote Stacheln meiden, sonst −20 Punkte. Bei längerem Signalverlust pausiert die Zeit.",
+  "Vágj a nyíl irányába!": "Schneide in Pfeilrichtung!",
+  "✕ Piros tüske: kerüld! −20 pont": "✕ Rote Stacheln meiden! −20 Punkte",
   "A kamera leállt. A folytatáshoz indítsd újra.": "Die Kamera wurde angehalten. Starte sie zum Fortsetzen neu.",
   "Szünet": "Pause",
   "Mozdulj és vágj!": "Beweg dich und schwing!",

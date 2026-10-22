@@ -40,7 +40,7 @@ A mentés saját `catspirits.cyber-jumper.v1` kulcsot használ, az eredeti app m
 
 ## Neon Blade · kamerás kardkaland
 
-A [Neon Blade](https://catspirits.com/?game=blade&lang=hu) külön választható, egyperces kardos játék. A Puppet2-ben használt négysávos rózsaszín–zöld, puha jelölőbottal vághatók a kristályok. Három hullám, aranykristályok, kombók és legfeljebb négyszeres pontszorzó; egérrel és érintéssel is kipróbálható. A két vezérlés rekordja külön tárolódik.
+A [Neon Blade](https://catspirits.com/?game=blade&lang=hu) külön választható, egyperces kardos játék. A Puppet2-ben használt négysávos rózsaszín–zöld, puha jelölőbottal vághatók a kristályok. A kristályokat a nyíl irányába kell vágni; a második hullámtól a piros tüskéket kerülni kell, mert pontlevonást okoznak. Három hullám, aranykristályok, kombók és legfeljebb négyszeres pontszorzó; egérrel és érintéssel is kipróbálható. A két vezérlés rekordja külön tárolódik.
 
 A kardkövetés helyben fut, testkövető modell és 3D motor nélkül. A gyors natív képbemenet mellett megmarad a kompatibilis tartalékút. A bot méretei és a működés részletei: [kardos útmutató](docs/sword-tracking.md). Az átvett optimalizálások: [Puppet2-port](docs/puppet2-port.md).
 

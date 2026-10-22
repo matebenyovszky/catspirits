@@ -1,20 +1,22 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BladeApp } from './BladeApp';
+import type { SwordFrame } from '../../core/tracking/sword/types';
 import { setLanguage } from '../../i18n';
-const { start, stop } = vi.hoisted(() => ({ start: vi.fn(async () => false), stop: vi.fn() }));
-vi.mock('../../core/blade/BladeCamera', () => ({ BladeCamera: class { running = false; start = start; stop = stop; } }));
+const { start, stop, camera } = vi.hoisted(() => ({ start: vi.fn(async () => false), stop: vi.fn(), camera: { running: false, emit: null as ((frame: SwordFrame | null) => void) | null } }));
+vi.mock('../../core/blade/BladeCamera', () => ({ BladeCamera: class { constructor(_video: unknown, callback: (frame: SwordFrame | null) => void) { camera.emit = callback; } get running() { return camera.running; } start = start; stop() { camera.running = false; camera.emit?.(null); stop(); } } }));
 vi.mock('./BladeView', () => ({ BladeView: class { reset() {} resize() {} draw() {} } }));
-let app: BladeApp, root: HTMLElement, callbacks: Map<number, FrameRequestCallback>, id: number;
+let app: BladeApp, root: HTMLElement, callbacks: Map<number, FrameRequestCallback>, id: number, clock: number;
 beforeEach(() => {
-  localStorage.clear(); setLanguage('en'); start.mockClear(); stop.mockClear(); callbacks = new Map(); id = 0;
+  localStorage.clear(); setLanguage('en'); start.mockReset(); start.mockResolvedValue(false); stop.mockClear(); camera.running = false; callbacks = new Map(); id = 0; clock = 0;
+  vi.spyOn(performance, 'now').mockImplementation(() => clock);
   vi.stubGlobal('requestAnimationFrame', vi.fn(cb => { callbacks.set(++id, cb); return id; }));
   vi.stubGlobal('cancelAnimationFrame', vi.fn(id => callbacks.delete(id)));
   root = document.createElement('div'); document.body.replaceChildren(root); app = new BladeApp(root);
 });
-afterEach(() => { app.dispose(); vi.unstubAllGlobals(); });
+afterEach(() => { app.dispose(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const click = (selector: string) => (root.querySelector(selector) as HTMLElement).click();
-function advance(from: number, count: number) { for (let i = 0; i < count; i++) { const entry = callbacks.entries().next().value; if (!entry) break; callbacks.delete(entry[0]); entry[1](from + i * 20); } }
+function advance(from: number, count: number) { for (let i = 0; i < count; i++) { const entry = callbacks.entries().next().value; if (!entry) break; callbacks.delete(entry[0]); clock = from + i * 20; entry[1](clock); } }
 describe('Neon Blade interface and lifecycle', () => {
   it('offers the camera first, with no camera access or rendering in the menu', () => {
     expect(root.textContent).toContain('Camera & marker wand'); expect(root.querySelector('.wand-diagram')!.getAttribute('aria-label')).toContain('two pink and two green');
@@ -54,4 +56,25 @@ describe('Neon Blade interface and lifecycle', () => {
       expect(root.querySelector<HTMLAnchorElement>('.blade-games a')!.getAttribute('href')).toBe(`?lang=${language}`);
     }
   });
+});
+
+it('keeps a scored round moving through brief null samples, then pauses genuine loss and resumes without phantom hits', async () => {
+  start.mockImplementationOnce(async () => { camera.running = true; return true; });
+  click('[data-camera]'); await Promise.resolve(); await Promise.resolve();
+  const frame = (x: number): SwordFrame => ({ timestampMs: clock, base: { x: 1-x, y: .35 }, tip: { x: 1-x, y: .8 }, confidence: 1, source: 'four-ring-2d', imageAspectRatio: 4/3, supportMask: 15 });
+  camera.emit!(frame(.1)); advance(20, 1); click('[data-begin]');
+  // Keep real observations arriving while the first crystal travels into view.
+  for (let i = 1; i <= 70; i++) { clock = i * 20; camera.emit!(frame(.1)); advance(clock, 1); }
+  clock = 1433; camera.emit!(frame(.6));
+  clock = 1450; camera.emit!(null); advance(1460, 8);
+  expect(root.querySelector('[data-score]')!.textContent).toBe('10');
+  expect(root.querySelector<HTMLElement>('.blade-tracking')!.hidden).toBe(true);
+  advance(1700, 10); expect(root.querySelector<HTMLElement>('.blade-tracking')!.hidden).toBe(false);
+  const time = root.querySelector('[data-time]')!.textContent;
+  advance(2000, 60); expect(root.querySelector('[data-time]')!.textContent).toBe(time);
+  clock = 3300; camera.emit!(frame(.2)); advance(3320, 2);
+  expect(root.querySelector<HTMLElement>('.blade-tracking')!.hidden).toBe(true);
+  expect(root.querySelector('[data-score]')!.textContent).toBe('10');
+  camera.running = false; advance(3400, 1);
+  expect(root.textContent).toContain('The camera stopped. Restart it to continue.'); expect(callbacks.size).toBe(0);
 });

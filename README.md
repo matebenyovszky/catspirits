@@ -53,7 +53,7 @@ Progress is stored on the current origin under `catspirits.cyber-jumper.v1`, ind
 
 ## Neon Blade — camera sword adventure
 
-[Play Neon Blade](https://catspirits.com/?game=blade): swing a soft **four-ring pink/green marker wand** through crystals in 60-second rounds. Build combos across three waves, with gold crystals and up to 4× multipliers. The mode is linked from Cyber Jumper and has its own camera setup, mouse/touch practice, and separate local best scores.
+[Play Neon Blade](https://catspirits.com/?game=blade): swing a soft **four-ring pink/green marker wand** through crystals in 60-second rounds. Follow each crystal’s arrow to build combos across three waves, with gold crystals and up to 4× multipliers. Avoid red spiked hazards from wave two; careless sweeping costs points. The mode is linked from Cyber Jumper and has its own camera setup, mouse/touch practice, and separate local best scores.
 
 The colour tracker runs locally in a worker. It does not load the body-pose model or Three.js. Native camera pixels and a small scalar WASM kernel accelerate supported devices, with tested JavaScript/canvas fallbacks. The complete wand dimensions, lifecycle behaviour and limitations are in [the sword guide](docs/sword-tracking.md). [Port notes](docs/puppet2-port.md) explain which Puppet2 optimizations were selected.
 

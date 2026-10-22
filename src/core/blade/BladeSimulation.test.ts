@@ -47,3 +47,53 @@ describe('Neon Blade measured gameplay', () => {
     expect(game.combo).toBe(0); expect(game.bestCombo).toBe(21);
   });
 });
+
+describe('deliberate cuts and hazards', () => {
+  const directedBlade = (direction: number, offset: number, timestampMs: number): SwordFrame => {
+    const [dx, dy] = [[1, 0], [0, -1], [-1, 0], [0, 1]][direction];
+    const x = .5 + dx * offset, y = .5 + dy * offset;
+    return { ...blade(.5, timestampMs), base: { x: 1 - (x - dy * .15), y: y + dx * .15 }, tip: { x: 1 - (x + dy * .15), y: y - dx * .15 } };
+  };
+  it('requires all four arrow directions in mirrored camera coordinates', () => {
+    for (let direction = 0; direction < 4; direction++) {
+      const game = round(); game.targets[0].direction = direction;
+      game.accept(directedBlade(direction, -.3, 100), 100); game.accept(directedBlade(direction, .3, 133), 133);
+      expect(game.cuts, `direction ${direction}`).toBe(1);
+      const wrong = round(); wrong.targets[0].direction = direction; wrong.combo = 5;
+      wrong.accept(directedBlade(direction, .3, 100), 100); wrong.accept(directedBlade(direction, -.3, 133), 133);
+      expect(wrong.score).toBe(0); expect(wrong.combo).toBe(0); expect(wrong.mistakes).toBe(1); expect(wrong.targets[0].active).toBe(true);
+    }
+  });
+  it('requires leaving a wrong contact before trying again, including after a missing sample', () => {
+    const game = round(); game.accept(blade(.7, 100), 100); game.accept(blade(.5, 133), 133);
+    expect(game.mistakes).toBe(1);
+    game.accept(null, 140); game.accept(blade(.5, 150), 150); game.accept(blade(.54, 183), 183);
+    expect(game.score).toBe(0); expect(game.mistakes).toBe(1);
+    game.accept(blade(.2, 216), 216); game.accept(blade(.8, 249), 249); expect(game.score).toBe(10);
+  });
+  it('does not credit slow drift or a moving tip when the struck handle is stationary', () => {
+    const game = round(); game.accept(blade(.5, 100), 100); game.accept(blade(.51, 133), 133); expect(game.score).toBe(0);
+    const pivot = round();
+    const a = { ...blade(.5, 100), base: { x: .5, y: .5 }, tip: { x: .8, y: .7 } };
+    const b = { ...a, timestampMs: 133, tip: { x: .2, y: .7 } };
+    pivot.accept(a, 100); pivot.accept(b, 133); expect(pivot.score).toBe(0);
+  });
+  it('deducts points once for a hazard, never goes negative, and rewards leaving hazards alone', () => {
+    const game = round(); game.targets[0].hazard = true; game.score = 10; game.combo = 7;
+    game.accept(blade(.2, 100), 100); game.accept(blade(.8, 133), 133);
+    expect(game.score).toBe(0); expect(game.combo).toBe(0); expect(game.cuts).toBe(0); expect(game.mistakes).toBe(1);
+    expect(game.bursts[0].points).toBe(-10); game.accept(blade(.2, 166), 166); expect(game.mistakes).toBe(1);
+    game.combo = 3; Object.assign(game.targets[0], { active: true, y: 1.2, age: 2 }); game.update(.02, true);
+    expect(game.combo).toBe(3); expect(game.missed).toBe(0);
+  });
+  it('introduces hazards only in later waves and keeps every direction available', () => {
+    const game = new BladeSimulation(); game.start(1); const seen = new Set<number>(), directions = new Set<number>(); const hazards = [0, 0, 0];
+    for (let i = 0; i < 1200; i++) {
+      game.update(.05, true);
+      for (const target of game.targets) if (target.active && !seen.has(target.id)) {
+        seen.add(target.id); directions.add(target.direction); if (target.hazard) hazards[game.wave - 1]++;
+      }
+    }
+    expect(directions.size).toBe(4); expect(hazards[0]).toBe(0); expect(hazards[1]).toBeGreaterThan(0); expect(hazards[2]).toBeGreaterThan(hazards[1]);
+  });
+});
