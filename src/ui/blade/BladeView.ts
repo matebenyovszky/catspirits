@@ -82,6 +82,8 @@ export class BladeView {
       c.beginPath();
       if (target.hazard) {
         c.moveTo(-r * .35, -r * .35); c.lineTo(r * .35, r * .35); c.moveTo(r * .35, -r * .35); c.lineTo(-r * .35, r * .35);
+      } else if (game.level === 1) {
+        c.moveTo(-r * .3, 0); c.lineTo(r * .3, 0); c.moveTo(0, -r * .3); c.lineTo(0, r * .3);
       } else {
         const dir = CUT_DIRECTIONS[target.direction]; c.rotate(Math.atan2(dir.y, dir.x));
         c.moveTo(-r * .45, 0); c.lineTo(r * .45, 0); c.moveTo(r * .1, -r * .35); c.lineTo(r * .45, 0); c.lineTo(r * .1, r * .35);

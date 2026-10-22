@@ -2,7 +2,9 @@
 
 Open [Neon Blade](https://catspirits.com/?game=blade). The Cyber Jumper home screen links to it; both games retain English, Hungarian and German and browser-language selection. The jumping game does not require a wand.
 
-Neon Blade is a separate, lazy-loaded, 60-second crystal-slicing game. Three increasingly frequent waves, consecutive-hit multipliers up to 4×, and triple-value gold crystals reward moving cuts. Each crystal has a fixed arrow: cut in that direction (within 45 degrees) with a moving blade. A wrong direction or missed crystal resets the combo. Red, spiked X hazards appear from wave two: touching one costs up to 20 points and breaks the combo. Let them pass. Wiggling inside a wrongly struck crystal does not repair the cut; leave it before trying again. There is no damage, account, server leaderboard or network gameplay. Mouse/touch practice has a separate local best score from camera play.
+Neon Blade is a separate, lazy-loaded, 60-second crystal-slicing game with two selectable levels. Level 1 accepts moving cuts from any direction and has no hazards. Level 2 is the arrow-and-spike challenge: follow each crystal's arrow (within 45 degrees), avoid red spiked X hazards from wave two, and build up to a 4× multiplier. Gold crystals score triple; missed or wrong-direction cuts break the combo, and hazards cost up to 20 points.
+
+Every active crystal is checked independently on each measured sweep. One sweep can clear several crystals; a wrong initial contact no longer locks a crystal against a subsequent correct cut. Wrong-direction feedback is debounced per target without disabling hits. Tiny stationary jitter still does not qualify as a cut. Select a level in the menu, or open `?game=blade&level=2` directly. Camera and mouse/touch records remain separate within each level.
 
 ## Camera setup
 
@@ -37,7 +39,7 @@ The original two-colour detector and camera-sharing `JumperCamera.setSwordEnable
 
 Neon Blade uses Canvas 2D, a fixed ten-target pool and bounded particles. No Three.js, MediaPipe model, AprilTag, native helper, WebGPU neural runtime or new npm runtime dependency is loaded for it. Rendering caps at 60 Hz; idle menus do not animate. Crystal glows and hit-number glyphs are pre-rendered at resize, and the adaptive collision search has a fixed 128-node budget. Unresolved grazing contacts fail closed. Canvas pixels are capped at 1440×1080 / DPR 1.5. Camera frames remain on the device and are neither recorded nor uploaded. The colour kernel is hosted on the same origin, with JavaScript fallback if it cannot load.
 
-Only language and best scores are persisted; the new score key is `catspirits.neon-blade.best.v2` (the direction/hazard rules start a new record; the earlier v1 score is left intact). Cloudflare still handles ordinary hosting/security metadata, as explained in the in-game privacy information and [security review](security-review.md).
+Only language and best scores are persisted. Level 1 uses `catspirits.neon-blade.best.v1`; level 2 uses `catspirits.neon-blade.best.v2`, preserving both earlier records. Cloudflare still handles ordinary hosting/security metadata, as explained in the in-game privacy information and [security review](security-review.md).
 
 ## Rebuilding the kernel
 

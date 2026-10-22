@@ -3,7 +3,7 @@ import { BladeSimulation } from './BladeSimulation';
 import type { SwordFrame } from '../tracking/sword/types';
 const blade = (x: number, time: number, mask = 15): SwordFrame => ({ timestampMs: time, base: { x: 1 - x, y: .35 }, tip: { x: 1 - x, y: .65 }, confidence: 1, source: 'four-ring-2d', imageAspectRatio: 1, supportMask: mask });
 function round() {
-  const game = new BladeSimulation(); game.start(1);
+  const game = new BladeSimulation(); game.start(1, 2);
   Object.assign(game.targets[0], { active: true, id: 100, x: .5, y: .5 }); return game;
 }
 describe('Neon Blade measured gameplay', () => {
@@ -64,10 +64,10 @@ describe('deliberate cuts and hazards', () => {
       expect(wrong.score).toBe(0); expect(wrong.combo).toBe(0); expect(wrong.mistakes).toBe(1); expect(wrong.targets[0].active).toBe(true);
     }
   });
-  it('requires leaving a wrong contact before trying again, including after a missing sample', () => {
+  it('ignores tiny jitter after a wrong contact but allows a later deliberate cut', () => {
     const game = round(); game.accept(blade(.7, 100), 100); game.accept(blade(.5, 133), 133);
     expect(game.mistakes).toBe(1);
-    game.accept(null, 140); game.accept(blade(.5, 150), 150); game.accept(blade(.54, 183), 183);
+    game.accept(null, 140); game.accept(blade(.5, 150), 150); game.accept(blade(.505, 183), 183);
     expect(game.score).toBe(0); expect(game.mistakes).toBe(1);
     game.accept(blade(.2, 216), 216); game.accept(blade(.8, 249), 249); expect(game.score).toBe(10);
   });
@@ -87,7 +87,7 @@ describe('deliberate cuts and hazards', () => {
     expect(game.combo).toBe(3); expect(game.missed).toBe(0);
   });
   it('introduces hazards only in later waves and keeps every direction available', () => {
-    const game = new BladeSimulation(); game.start(1); const seen = new Set<number>(), directions = new Set<number>(); const hazards = [0, 0, 0];
+    const game = new BladeSimulation(); game.start(1, 2); const seen = new Set<number>(), directions = new Set<number>(); const hazards = [0, 0, 0];
     for (let i = 0; i < 1200; i++) {
       game.update(.05, true);
       for (const target of game.targets) if (target.active && !seen.has(target.id)) {
@@ -96,4 +96,38 @@ describe('deliberate cuts and hazards', () => {
     }
     expect(directions.size).toBe(4); expect(hazards[0]).toBe(0); expect(hazards[1]).toBeGreaterThan(0); expect(hazards[2]).toBeGreaterThan(hazards[1]);
   });
+});
+
+describe('independent simultaneous targets', () => {
+  const longBlade = (x: number, time: number): SwordFrame => ({ ...blade(x, time), base: { x: 1-x, y: .05 }, tip: { x: 1-x, y: .95 } });
+  function crowd(directions = [0, 0, 0, 0, 0]) {
+    const game = round();
+    directions.forEach((direction, i) => Object.assign(game.targets[i], { id: 100+i, active: true, x: .5, y: .15 + i*.17, direction }));
+    return game;
+  }
+  it('checks every target and can score five crystals with one correct sweep', () => {
+    const game = crowd(); game.accept(longBlade(.2, 100), 100); game.accept(longBlade(.8, 133), 133);
+    expect(game.cuts).toBe(5); expect(game.score).toBe(60);
+  });
+  it('uses each crystal’s own arrow, regardless of pool order', () => {
+    for (const directions of [[0, 2, 0, 1, 0], [2, 0, 1, 0, 0]]) {
+      const game = crowd(directions); game.accept(longBlade(.2, 100), 100); game.accept(longBlade(.8, 133), 133);
+      expect(game.cuts).toBe(3);
+      expect(game.targets.slice(0, 5).map(t => t.active)).toEqual(directions.map(d => d !== 0));
+    }
+  });
+  it('allows a fresh correct swing across all five after a wrong initial contact', () => {
+    const game = crowd(); game.accept(longBlade(.7, 100), 100); game.accept(longBlade(.5, 133), 133);
+    expect(game.cuts).toBe(0); expect(game.mistakes).toBe(5);
+    game.accept(longBlade(.54, 166), 166);
+    expect(game.cuts).toBe(5); expect(game.targets.slice(0, 5).every(t => !t.active)).toBe(true);
+  });
+});
+
+it('level one accepts either direction without hazards and level two retains arrow rules', () => {
+  const game = new BladeSimulation(); game.start(1, 1);
+  Object.assign(game.targets[0], { id: 500, active: true, x: .5, y: .5, direction: 0 });
+  game.accept(blade(.8, 100), 100); game.accept(blade(.2, 133), 133); expect(game.cuts).toBe(1);
+  for (let i = 0; i < 1200; i++) { game.update(.05, true); expect(game.targets.some(t => t.active && t.hazard)).toBe(false); }
+  game.start(1, 2); expect(game.level).toBe(2); expect(game.score).toBe(0);
 });

@@ -64,7 +64,7 @@ export class JumperApp {
         <p>A mozdulataid irányítják Bitet.<br class="desktop-break"> Ugorj, hajolj le, és dőlj oldalra a kamera előtt!</p>
         <div class="hero-actions"><button class="jumper-primary" data-play>${icon('play')} JÁTSSZUNK! ${icon('arrow')}</button><button class="how-button" data-help>Hogyan játszom?</button></div><button class="how-button privacy-button" data-privacy>Adatvédelem és licencek</button>
         <fieldset class="input-mode"><legend>Így játszom</legend><label><input type="radio" name="mode" value="camera" checked> Kamerás mozgás</label><label><input type="radio" name="mode" value="keys"> Billentyű / érintés</label></fieldset>
-        <a class="jumper-sword-link" href="?game=blade&lang=${getLanguage()}">✦ <span>NEON BLADE</span> Kamerás kardkaland →</a><small class="hero-privacy">A kamera képe a gépeden marad.</small>
+        <a class="jumper-sword-link" href="?game=blade&lang=${getLanguage()}">✦ <span>NEON BLADE</span> Kamerás kardkaland →</a><a class="jumper-sword-link" href="?game=pop&lang=${getLanguage()}">◎ <span>NEON POP</span> Célzós tesztjáték →</a><small class="hero-privacy">A kamera képe a gépeden marad.</small>
         <div class="hero-world"><span class="world-orbit">01</span><div><small>ITT KEZDŐDIK</small><strong data-selected-world>Neonváros</strong></div><button data-worlds-link aria-label="Másik világ választása">${icon('arrow')}</button></div>
       </section>
       <div class="robot-caption" aria-hidden="true"><span>ISMERD MEG BITET!</span><small>A te kis neon útitársad.</small></div>

@@ -78,3 +78,12 @@ it('keeps a scored round moving through brief null samples, then pauses genuine 
   camera.running = false; advance(3400, 1);
   expect(root.textContent).toContain('The camera stopped. Restart it to continue.'); expect(callbacks.size).toBe(0);
 });
+
+it('selects level two and saves its record separately from the free-slicing level', () => {
+  const radio = root.querySelector<HTMLInputElement>('input[value="2"]')!; radio.checked = true; radio.dispatchEvent(new Event('change'));
+  click('[data-practice]'); expect(root.querySelector('[data-mode-label]')!.textContent).toContain('LEVEL 2');
+  expect(root.querySelector<HTMLElement>('[data-hazard-rule]')!.hidden).toBe(false); advance(20, 3100);
+  expect(localStorage.getItem('catspirits.neon-blade.best.v2')).not.toBeNull(); expect(localStorage.getItem('catspirits.neon-blade.best.v1')).toBeNull();
+  click('[data-home]'); const easy = root.querySelector<HTMLInputElement>('input[value="1"]')!; easy.checked = true; easy.dispatchEvent(new Event('change')); click('[data-practice]');
+  expect(root.querySelector<HTMLElement>('[data-hazard-rule]')!.hidden).toBe(true); expect(root.querySelector('[data-rule]')!.textContent).toBe('Slice in any direction!');
+});

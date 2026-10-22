@@ -8,6 +8,9 @@ try {
   if (new URLSearchParams(location.search).get("game") === "blade") {
     const { BladeApp } = await import("./ui/blade/BladeApp");
     new BladeApp(root);
+  } else if (new URLSearchParams(location.search).get("game") === "pop") {
+    const { PopApp } = await import("./ui/pop/PopApp");
+    new PopApp(root);
   } else {
     const { JumperApp } = await import("./ui/jumper/JumperApp");
     new JumperApp(root);

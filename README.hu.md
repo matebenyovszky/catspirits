@@ -2,7 +2,7 @@
 
 **Kamerával vezérelt, aktív mozgásjáték: a tested mozdulataival irányítod Bitet.** Ugorj, hajolj le, és dőlj oldalra öt neonvilágon át a [catspirits.com](https://catspirits.com) játékában! A mozgást a böngésző helyben követi, a kamerakép a gépeden marad. Magyarul, angolul és németül játszható. Kamera nélkül billentyűvel és érintéssel is működik.
 
-[English README](README.md) · [Mozgás és vezérlés](docs/game.md) · [Neon Blade kardos játék](docs/sword-tracking.md) · [Cloudflare útmutató](docs/cloudflare.md)
+[English README](README.md) · [Mozgás és vezérlés](docs/game.md) · [Neon Blade kardos játék](docs/sword-tracking.md) · [Neon Pop célzós játék](docs/neon-pop.md) · [Cloudflare útmutató](docs/cloudflare.md)
 
 A repó minden szükséges forrást, függőséget, tesztet és saját buildet tartalmaz. Nem kell hozzá az eredeti avataros alkalmazás, AI-fiók, API-kulcs, backend vagy helyi kamerasegéd.
 
@@ -40,7 +40,7 @@ A mentés saját `catspirits.cyber-jumper.v1` kulcsot használ, az eredeti app m
 
 ## Neon Blade · kamerás kardkaland
 
-A [Neon Blade](https://catspirits.com/?game=blade&lang=hu) külön választható, egyperces kardos játék. A Puppet2-ben használt négysávos rózsaszín–zöld, puha jelölőbottal vághatók a kristályok. A kristályokat a nyíl irányába kell vágni; a második hullámtól a piros tüskéket kerülni kell, mert pontlevonást okoznak. Három hullám, aranykristályok, kombók és legfeljebb négyszeres pontszorzó; egérrel és érintéssel is kipróbálható. A két vezérlés rekordja külön tárolódik.
+A [Neon Blade](https://catspirits.com/?game=blade&lang=hu) külön választható, egyperces kardos játék. A Puppet2-ben használt négysávos rózsaszín–zöld, puha jelölőbottal vághatók a kristályok. Az 1. szinten bármilyen irányú vágás jó, tüskék nélkül. A 2. szinten a nyilakat kell követni; a második hullámtól piros tüskék is jönnek. Minden kristály külön aktív, egy suhintás többet is eltalálhat. Három hullám, aranykristályok, kombók és legfeljebb négyszeres pontszorzó; egérrel és érintéssel is kipróbálható. A két vezérlés rekordja külön tárolódik.
 
 A kardkövetés helyben fut, testkövető modell és 3D motor nélkül. A gyors natív képbemenet mellett megmarad a kompatibilis tartalékút. A bot méretei és a működés részletei: [kardos útmutató](docs/sword-tracking.md). Az átvett optimalizálások: [Puppet2-port](docs/puppet2-port.md).
 
@@ -51,3 +51,10 @@ A saját kód [MIT-licencű](LICENSE). A Three.js, MediaPipe és a Google testk�
 Játék közben legfeljebb 60, menüben 30 renderfrissítés történik másodpercenként. Háttérbe kerülő oldalon a renderelés, kamera és hang leáll. A grafikai rajzpuffer körülbelül 1080p képpontra korlátozott. Az aktív testkövetés ettől még használ CPU/GPU-t és akkumulátort.
 
 [Biztonsági hibák privát bejelentése](SECURITY.md) · [Ellenőrzés és korlátai](docs/security-review.md).
+
+
+## Neon Pop · célzós tesztjáték
+
+A [Neon Pop](https://catspirits.com/?game=pop&lang=hu) külön, 45 másodperces célzós tesztjáték. A felbukkanó fénylényeket kamerával követett kézzel vagy jelölőbottal lehet lecsapni; egérrel és érintéssel is működik. Mindkét kéz és minden célpont külön aktív, nincs kötelező vágási irány. A körív mutatja a célpont hátralévő idejét.
+
+Kézi módban a meglévő, helyben futó modell a csuklókat figyeli; a váll, könyök és kéz legyen látható. A kardos mód csak a könnyebb színkövetést használja. Nincs kameraképfeltöltés, és egyszerre csak a kiválasztott követő fut. A valódi kamerás pontosságot még érdemes különféle telefonokon kipróbálni.

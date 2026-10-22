@@ -1,12 +1,12 @@
 import { getLanguage, isLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
 import { BladeCamera } from '../../core/blade/BladeCamera';
 import { BladeTrackingState } from '../../core/blade/BladeTrackingState';
-import { BladeSimulation } from '../../core/blade/BladeSimulation';
+import { BladeSimulation, type BladeLevel } from '../../core/blade/BladeSimulation';
 import { validSword, type SwordFrame } from '../../core/tracking/sword/types';
 import { BladeView } from './BladeView';
 import './blade.css';
 
-const BEST_KEY = 'catspirits.neon-blade.best.v2';
+const BEST_KEYS = { 1: 'catspirits.neon-blade.best.v1', 2: 'catspirits.neon-blade.best.v2' } as const;
 const art = `<svg viewBox="0 0 520 490" aria-hidden="true"><defs><linearGradient id="blade-glow" x2="1" y2="1"><stop stop-color="#dcfff0"/><stop offset="1" stop-color="#57e3cc"/></linearGradient></defs><circle cx="260" cy="245" r="184" fill="none" stroke="#3b4661"/><circle cx="260" cy="245" r="144" fill="none" stroke="#35485b" stroke-dasharray="4 12"/><path d="M96 358Q308 404 411 119" fill="none" stroke="#6af2cd" stroke-width="28" opacity=".06"/><path d="M96 358Q308 404 411 119" fill="none" stroke="#6af2cd" stroke-width="2" opacity=".6"/><g transform="rotate(38 260 245)"><path d="M248 102l12-39 12 39v230h-24z" fill="url(#blade-glow)"/><path d="M260 85v235" stroke="white" stroke-width="3"/><rect x="230" y="323" width="60" height="10" rx="5" fill="#e4e6fa"/><rect x="250" y="334" width="20" height="71" rx="7" fill="#383e63"/><path d="M250 346h20m-20 12h20m-20 12h20m-20 12h20" stroke="#b88bb9" stroke-width="4"/></g><g fill="#b695ff38" stroke="#c4adff" stroke-width="2"><path d="M108 126l32 16 6 35-29 25-34-19-4-32z"/><path d="M376 286l35 9 15 36-24 28-39-13-8-34z"/></g><path d="M108 126l9 39 29 12m-29-12v37m0-37-38-14M376 286l23 35 27 10m-27-10 3 38m-3-38-44-9" stroke="#c4adff" fill="none"/><g fill="#a3e9d8"><circle cx="374" cy="128" r="3"/><circle cx="147" cy="324" r="3"/><circle cx="197" cy="85" r="2"/><circle cx="433" cy="236" r="2"/></g><path d="M305 401l7-12 7 12-7 12z" fill="#ffe1a0"/></svg>`;
 
 export class BladeApp {
@@ -24,7 +24,8 @@ export class BladeApp {
   private pointer: number | null = null;
   private generation = 0;
   private destroyed = false;
-  private best = { camera: 0, touch: 0 };
+  private level: BladeLevel = new URLSearchParams(location.search).get('level') === '2' ? 2 : 1;
+  private best = { 1: { camera: 0, touch: 0 }, 2: { camera: 0, touch: 0 } };
   private audio: AudioContext | null = null;
   private sound = false;
   private lastTone = 0;
@@ -32,19 +33,20 @@ export class BladeApp {
   constructor(private root: HTMLElement) {
     document.title = `Catspirits · Neon Blade · ${t('Mozdulj és vágj!')}`;
     root.classList.add('blade-root');
-    try { const saved = JSON.parse(localStorage.getItem(BEST_KEY) ?? '{}'); for (const key of ['camera', 'touch'] as const) if (Number.isSafeInteger(saved?.[key]) && saved[key] >= 0 && saved[key] <= 100000) this.best[key] = saved[key]; } catch { /* Optional local scores. */ }
+    for (const level of [1, 2] as const) try { const saved = JSON.parse(localStorage.getItem(BEST_KEYS[level]) ?? '{}'); for (const key of ['camera', 'touch'] as const) if (Number.isSafeInteger(saved?.[key]) && saved[key] >= 0 && saved[key] <= 100000) this.best[level][key] = saved[key]; } catch { /* Optional local scores. */ }
     root.innerHTML = localizedHtml(`
       <header class="blade-header"><a class="blade-brand" href="?lang=${getLanguage()}"><span class="blade-brand-icon">✦</span><span>CATSPIRITS<small>MOVE. PLAY. GLOW.</small></span></a>
-        <nav class="blade-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}" aria-current="page">Neon Blade</a></nav>
+        <nav class="blade-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}" aria-current="page">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}">Neon Pop</a></nav>
         <label class="blade-language"><span class="sr-only">Nyelv</span><select aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label></header>
       <main class="blade-menu">
         <section class="blade-intro"><span class="blade-eyebrow">KAMERÁS KARDKALAND</span><h1>NEON<br><span>BLADE.</span></h1><p class="blade-lead">A mozdulatod a penge.<br>Vágd át a kristályokat, és építs fénykombókat!</p>
           <div class="blade-tags"><span>60 másodperc</span><span>3 hullám</span><span>4× szorzó</span></div>
+          <fieldset class="blade-levels"><legend>Válassz szintet!</legend><label><input type="radio" name="level" value="1"> <span>1. szint · Szabad vágás<small>Bármelyik irányból, tüskék nélkül.</small></span></label><label><input type="radio" name="level" value="2"> <span>2. szint · Iránypróba<small>Nyilas kristályok és piros tüskék.</small></span></label></fieldset>
           <button class="blade-primary" data-camera>Kamera és jelölőbot <span>↗</span></button><button class="blade-secondary" data-practice>Kipróbálom egérrel / érintéssel <span>→</span></button>
           <p class="blade-private">A kamera képe a gépeden marad.</p>
         </section><div class="blade-art">${art}<span class="blade-art-label">01 / NEON BLADE</span></div>
         <section class="blade-guide"><div><span class="blade-eyebrow">AMIRE SZÜKSÉGED LESZ</span><h2>Egy kamera. Egy puha jelölőbot.</h2><p>A négy színes sávot követjük. Nem kell a teljes testednek a képbe férnie.</p></div>
-          <div class="blade-wand"><div class="wand-diagram" aria-label="50 centiméteres bot: két rózsaszín és két zöld sáv"><i></i><b class="band b1"></b><b class="band b2"></b><b class="band b3"></b><b class="band b4"></b></div><small>MARKOLAT → RÓZSASZÍN → RÓZSASZÍN → ZÖLD → ZÖLD</small><details><summary>Jelölőbot és játékszabályok</summary><p>50 cm hosszú, puha végű bot. Rózsaszín sávok: 12–18 és 22–25 cm; zöld sávok: 34–37 és 42–48 cm a markolat aljától. Átmérő: kb. 25 mm. A sávok érjenek körbe.</p><p>Induláskor mutasd mind a négy sávot. Szórt fény és egyszínű háttér segít. Csak puha játékbotot használj, és hagyj magad körül szabad helyet.</p><p>Vágj a kristály nyilának irányába! A rossz irány és a kihagyás megszakítja a kombót. Öt találatonként nő a szorzó; az aranykristály háromszoros pontot ér. A második hullámtól kerüld a piros tüskéket: −20 pont. Tartós jelvesztéskor az idő megáll.</p></details></div></section>
+          <div class="blade-wand"><div class="wand-diagram" aria-label="50 centiméteres bot: két rózsaszín és két zöld sáv"><i></i><b class="band b1"></b><b class="band b2"></b><b class="band b3"></b><b class="band b4"></b></div><small>MARKOLAT → RÓZSASZÍN → RÓZSASZÍN → ZÖLD → ZÖLD</small><details><summary>Jelölőbot és játékszabályok</summary><p>50 cm hosszú, puha végű bot. Rózsaszín sávok: 12–18 és 22–25 cm; zöld sávok: 34–37 és 42–48 cm a markolat aljától. Átmérő: kb. 25 mm. A sávok érjenek körbe.</p><p>Induláskor mutasd mind a négy sávot. Szórt fény és egyszínű háttér segít. Csak puha játékbotot használj, és hagyj magad körül szabad helyet.</p><p><strong>2. szint · Iránypróba</strong></p><p>Vágj a kristály nyilának irányába! A rossz irány és a kihagyás megszakítja a kombót. Öt találatonként nő a szorzó; az aranykristály háromszoros pontot ér. A második hullámtól kerüld a piros tüskéket: −20 pont. Tartós jelvesztéskor az idő megáll.</p></details></div></section>
         <footer class="blade-menu-footer"><span>CATSPIRITS / PLAY WITH MOVEMENT</span><a href="/licenses/THIRD-PARTY-NOTICES.txt">Licencek</a><details><summary>Adatvédelem</summary><p>A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvválasztást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.</p></details></footer>
       </main>
       <section class="blade-play" hidden>
@@ -52,9 +54,10 @@ export class BladeApp {
         <div class="blade-hud"><div><small>PONT</small><strong data-score>0</strong></div><div class="blade-timer"><small>HÁTRALÉVŐ IDŐ</small><strong data-time>60</strong></div><div><small>KOMBÓ</small><strong data-combo>0 <em>×1</em></strong></div></div>
         <div class="blade-arena-wrap"><div class="blade-arena"><video autoplay muted playsinline aria-label="Tükrözött kamera"></video><canvas tabindex="0" aria-label="Neon Blade játékpálya. Húzd végig az ujjad vagy az egeret a kristályokon."></canvas>
           <div class="blade-tracking" role="status" hidden></div><div class="blade-overlay"><div class="blade-panel"><span class="blade-eyebrow" data-panel-eyebrow>NEON BLADE</span><h2 data-panel-title></h2><p data-panel-message></p><div data-results hidden></div><button class="blade-primary" data-begin>Indulhat!</button><button class="blade-secondary" data-restart>Kamera újraindítása</button><button class="blade-text-button" data-exit>Vissza a menübe</button></div></div>
-        </div></div><div class="blade-rules"><span>Vágj a nyíl irányába!</span><span>✕ Piros tüske: kerüld! −20 pont</span></div><div class="blade-bottom"><span data-hint></span><span data-wave></span></div>
+        </div></div><div class="blade-rules"><span data-rule></span><span data-hazard-rule>✕ Piros tüske: kerüld! −20 pont</span></div><div class="blade-bottom"><span data-hint></span><span data-wave></span></div>
       </section>`);
     this.el<HTMLSelectElement>('select').value = getLanguage();
+    this.el<HTMLInputElement>(`input[name=level][value="${this.level}"]`).checked = true;
     this.view = new BladeView(this.el('canvas'));
     this.camera = new BladeCamera(this.el('video'), frame => {
       this.measured = frame;
@@ -69,6 +72,7 @@ export class BladeApp {
   private text(selector: string, value: string): void { const el = this.el(selector); if (el.textContent !== value) el.textContent = value; }
   private bind(): void {
     const signal = this.abort.signal;
+    for (const input of this.root.querySelectorAll<HTMLInputElement>('input[name=level]')) input.addEventListener('change', () => { this.level = input.value === '2' ? 2 : 1; }, { signal });
     this.on('[data-camera]', () => void this.setupCamera(false));
     this.on('[data-practice]', () => { this.enter('touch'); this.begin(); });
     this.on('[data-home]', () => this.home()); this.on('[data-exit]', () => this.home());
@@ -113,13 +117,15 @@ export class BladeApp {
     this.el('.blade-menu').hidden = true; this.el('.blade-play').hidden = false;
     this.el('video').hidden = mode !== 'camera';
     this.el('[data-results]').hidden = true;
-    this.text('[data-mode-label]', t(mode === 'camera' ? 'KAMERÁS KARDKALAND' : 'EGÉR / ÉRINTÉS · GYAKORLÁS'));
+    this.text('[data-rule]', t(this.level === 2 ? 'Vágj a nyíl irányába!' : 'Vágj bármelyik irányból!'));
+    this.el('[data-hazard-rule]').hidden = this.level !== 2;
+    this.text('[data-mode-label]', t('{level}. SZINT', { level: this.level }) + ' · ' + t(mode === 'camera' ? 'KAMERÁS KARDKALAND' : 'EGÉR / ÉRINTÉS · GYAKORLÁS'));
     this.text('[data-hint]', t(mode === 'camera' ? 'A két szélső sáv közötti fényes rész a pengéd.' : 'Tartsd lenyomva, és húzd át a kristályokon!'));
     this.resize(); this.startFrames();
   }
   private async setupCamera(resume: boolean): Promise<void> {
     const generation = ++this.generation;
-    this.enter('camera'); if (!resume) this.game.phase = 'ready';
+    this.enter('camera'); if (!resume) { this.game.start(this.aspect(), this.level); this.game.phase = 'ready'; this.game.paused = true; }
     this.panel('Mutasd a jelölőbotot!', 'Kamera engedélyezése…');
     this.el<HTMLButtonElement>('[data-begin]').disabled = true;
     this.el('[data-restart]').hidden = true;
@@ -145,7 +151,7 @@ export class BladeApp {
   }
   private begin(): void {
     if (this.mode === 'camera' && (!this.camera.running || !this.measured || !validSword(this.measured, performance.now()))) return;
-    if (this.game.phase !== 'running') this.game.start(this.aspect());
+    if (this.game.phase !== 'running') this.game.start(this.aspect(), this.level);
     else { this.game.aspect = this.aspect(); this.game.breakSweep(); }
     this.root.classList.remove('blade-calibrating'); this.phase = 'playing'; this.pointer = null; this.el('.blade-overlay').hidden = true;
     this.el('[data-results]').hidden = true; this.game.paused = false; this.previousTime = 0;
@@ -237,12 +243,12 @@ export class BladeApp {
     // Flush the final values before stopping the throttled HUD/render loop.
     this.text('[data-time]', '00'); this.text('[data-score]', String(this.game.score));
     this.text('[data-combo]', `${this.game.combo} · ×${this.game.multiplier}`);
-    this.best[this.mode] = Math.max(this.best[this.mode], this.game.score);
-    try { localStorage.setItem(BEST_KEY, JSON.stringify(this.best)); } catch { /* Optional local scores. */ }
+    this.best[this.level][this.mode] = Math.max(this.best[this.level][this.mode], this.game.score);
+    try { localStorage.setItem(BEST_KEYS[this.level], JSON.stringify(this.best[this.level])); } catch { /* Optional local scores. */ }
     this.panel('Fényes kör volt!', 'Még egy kör? Építs még hosszabb kombót!');
     this.text('[data-begin]', t('Új kör')); this.el('[data-restart]').hidden = true;
     const results = this.el('[data-results]'); results.hidden = false;
-    results.textContent = t('{score} pont · {cuts} vágás · {combo} legjobb kombó · {best} rekord', { score: this.game.score, cuts: this.game.cuts, combo: this.game.bestCombo, best: this.best[this.mode] });
+    results.textContent = t('{score} pont · {cuts} vágás · {combo} legjobb kombó · {best} rekord', { score: this.game.score, cuts: this.game.cuts, combo: this.game.bestCombo, best: this.best[this.level][this.mode] });
     this.el('[data-begin]').focus(); void this.audio?.suspend().catch(() => {});
   }
   dispose(): void { this.suspend(); this.destroyed = true; this.abort.abort(); void this.audio?.close().catch(() => {}); }
