@@ -65,3 +65,13 @@ html:lang(de) .jumper-hero h1{font-size:clamp(36px,4.8vw,68px)}
 .privacy-button{display:block;margin-top:14px;font-size:11px;color:#b9c1d9}.jumper-modal a{color:var(--mint);text-underline-offset:3px}.help-safety{font-size:12px;color:#b9c1d9;line-height:1.6}
 
 .jumper-sword-link{display:inline-flex;align-items:center;gap:10px;margin:12px 0 0;padding:10px 15px;color:#c9f5e8;text-decoration:none;font-size:12px;font-weight:700;border:1px solid #71e9cf45;border-radius:12px;background:#0d283655}.jumper-sword-link span,.help-sword a{color:#84e3cd}.jumper-sword-link:hover{background:#20434a}.jumper-sword-link:focus-visible{outline:3px solid var(--mint);outline-offset:3px}
+
+/* Game navigation is available on the home screen, without covering the HUD. */
+.jumper-header .jumper-games{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:5px;border:1px solid #ffffff12;background:#12192a;border-radius:30px;font-size:12px;font-weight:700;white-space:nowrap}
+.jumper-games a{padding:9px 17px;border-radius:30px;color:#a7b0c5;text-decoration:none}
+.jumper-games a[aria-current]{background:#263b3c;color:#8bf0d8}
+.jumper-games a:focus-visible{outline:2px solid #72efd0;outline-offset:2px}
+#jumper[data-phase]:not([data-phase="ready"]) .jumper-games{display:none}
+@media(max-width:1100px){.jumper-header .jumper-games{top:calc(100% + 10px)}.jumper-hero{top:max(24%,145px)}}
+@media(max-width:520px){.jumper-header .jumper-games{width:100%;justify-content:center;top:calc(100% + 8px)}.jumper-games a{flex:1;text-align:center;padding:9px 6px}.jumper-hero{top:max(17%,120px)}}
+@media(max-width:800px) and (max-height:500px){.jumper-header .jumper-games{width:auto;top:calc(100% + 4px)}.jumper-hero{top:max(22%,100px)}}
