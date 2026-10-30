@@ -25,6 +25,17 @@ it('offers hands, wand and touch with no camera or render loop on the menu', () 
   expect(mock.start).not.toHaveBeenCalled(); expect(callbacks.size).toBe(0);
   expect(root.querySelector('a[href="?game=blade&lang=en"]')).not.toBeNull();
 });
+it('limits level 2 to hands and restores all controls for level 1', () => {
+  const two = root.querySelector<HTMLInputElement>('input[name=level][value="2"]')!;
+  two.checked = true; two.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(root.querySelector<HTMLButtonElement>('[data-sword]')!.disabled).toBe(true);
+  expect(root.querySelector<HTMLButtonElement>('[data-touch]')!.disabled).toBe(true);
+  expect(root.querySelector<HTMLElement>('[data-level-note]')!.hidden).toBe(false);
+  const one = root.querySelector<HTMLInputElement>('input[name=level][value="1"]')!;
+  one.checked = true; one.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(root.querySelector<HTMLButtonElement>('[data-sword]')!.disabled).toBe(false);
+  expect(root.querySelector<HTMLButtonElement>('[data-touch]')!.disabled).toBe(false);
+});
 it('scores a direct touch once, stops on pause, finishes in 45 seconds and replays', () => {
   click('[data-touch]'); advance(20, 20);
   const canvas = root.querySelector('canvas')!; vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 400, height: 300 } as DOMRect);

@@ -3,6 +3,7 @@ import { clipBlade, swordToScreen, validSword, type Point2, type SwordFrame } fr
 import { HAND_RADIUS, validHands, type HandFrame, type HandPoint } from './HandInput';
 export type PopTarget = Point2 & { id: number; active: boolean; age: number; lifetime: number; radius: number; gold: boolean };
 export type PopBurst = Point2 & { age: number; points: number };
+export type PopLevel = 1 | 2;
 
 /** Fixed reachable grid and independent target lifetimes. Every hand and every
  * blade segment checks every visible target; each target can score only once. */
@@ -12,6 +13,7 @@ export class PopSimulation {
   readonly bursts: PopBurst[] = [];
   phase: 'ready' | 'running' | 'over' = 'ready';
   paused = true; elapsed = 0; score = 0; hits = 0; missed = 0; combo = 0; bestCombo = 0; aspect = 4/3;
+  level: PopLevel = 1;
   private spawnIn = .25;
   private sequence = 0;
   private previousHands = new Map<HandPoint['id'], HandPoint>();
@@ -21,7 +23,8 @@ export class PopSimulation {
   get remaining(): number { return Math.max(0, 45-this.elapsed); }
   get wave(): number { return Math.min(3, 1+Math.floor(this.elapsed/15)); }
   get multiplier(): number { return Math.min(4, 1+Math.floor(this.combo/5)); }
-  start(aspect: number): void {
+  start(aspect: number, level: PopLevel = 1): void {
+    this.level = level === 2 ? 2 : 1;
     this.aspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 4/3;
     this.elapsed = this.score = this.hits = this.missed = this.combo = this.bestCombo = this.sequence = 0;
     this.spawnIn = .25; this.lastTimestamp = -Infinity; this.phase = 'running'; this.paused = false;
@@ -67,6 +70,7 @@ export class PopSimulation {
       const speed = Math.hypot((hand.x-old.x)*this.aspect, hand.y-old.y)/dt;
       if (speed < .18 || speed > 12) continue;
       for (const target of this.targets) if (target.active && this.priorTargets.has(target.id)
+        && (this.level === 1 || hand.id === (target.id % 2 ? 'left' : 'right'))
         && segmentDistance(target, old, hand, this.aspect) <= target.radius+HAND_RADIUS) this.hit(target);
     }
     this.previousHands.clear(); this.previousSword = null;
@@ -74,6 +78,7 @@ export class PopSimulation {
     this.rememberTargets();
   }
   acceptSword(measured: SwordFrame | null, now: number): void {
+    if (this.level === 2) { this.breakInput(); return; }
     if (this.paused || this.phase !== 'running' || !measured || !validSword(measured, now)) { this.breakInput(); return; }
     if (measured.timestampMs <= this.lastTimestamp) return;
     this.lastTimestamp = measured.timestampMs;
@@ -94,6 +99,7 @@ export class PopSimulation {
     this.previousSword = frame; this.previousHands.clear(); this.rememberTargets();
   }
   tap(point: Point2): void {
+    if (this.level === 2) return;
     if (this.paused || this.phase !== 'running' || ![point.x, point.y].every(Number.isFinite)) return;
     for (const target of this.targets) if (target.active && Math.hypot((point.x-target.x)*this.aspect, point.y-target.y) <= target.radius) this.hit(target);
   }

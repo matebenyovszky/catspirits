@@ -1,5 +1,12 @@
 /** German translations use the same Hungarian phrase IDs as the other interfaces. */
 export const german: Record<string, string> = {
+  "1. szint · Szabad célzás": "Level 1 · Freies Zielen",
+  "Bármelyik kézzel, bottal vagy érintéssel.": "Mit jeder Hand, Stab oder Berührung.",
+  "2. szint · Színpárosítás": "Level 2 · Farben zuordnen",
+  "A megfelelő színű kézzel találd el!": "Triff jedes Ziel mit der passenden Handfarbe!",
+  "2. szint: csak kamerával és kézzel játszható.": "Level 2 benötigt Kamera und Hände.",
+  "2. szint: a türkiz körrel a türkiz, a rózsaszín körrel a rózsaszín célpontot találd el. Az egy és két pont is segít párosítani. A gyémánttal jelölt célpont háromszoros pontot ér.": "Level 2: Triff türkise und rosa Ziele mit dem gleichfarbigen Handkreis. Ein oder zwei Punkte helfen beim Zuordnen. Eine Raute markiert dreifache Punkte.",
+  "Türkiz egy pont · rózsaszín két pont: párosítsd a kéz és a célpont színét!": "Türkis ein Punkt · Rosa zwei Punkte: Ordne Hand und Ziel zu!",
   "Válassz szintet!": "Wähle ein Level!",
   "1. szint · Szabad vágás": "Level 1 · Freies Schneiden",
   "Bármelyik irányból, tüskék nélkül.": "Jede Richtung, keine Stacheln.",

@@ -10,6 +10,24 @@ function gameWithTargets() {
   return game;
 }
 describe('Neon Pop targets and inputs', () => {
+  it('level 2 scores only the matching hand for each target, including bonus targets', () => {
+    const game = new PopSimulation(); game.start(1, 2);
+    Object.assign(game.targets[0], { active: true, id: 101, x: .5, y: .3, radius: .06, gold: true });
+    Object.assign(game.targets[1], { active: true, id: 102, x: .5, y: .7, radius: .06 });
+    const pair = (time: number, x: number, swap: boolean): HandFrame => ({ timestampMs: time, imageAspectRatio: 1,
+      hands: [{ id: 'left', x: 1-x, y: swap ? .7 : .3 }, { id: 'right', x: 1-x, y: swap ? .3 : .7 }] });
+    game.acceptHands(pair(100, .35, true), 100); game.acceptHands(pair(133, .65, true), 133);
+    expect(game.hits).toBe(0); expect(game.targets[0].active).toBe(true); expect(game.targets[1].active).toBe(true);
+    game.acceptHands(pair(166, .35, false), 166); game.acceptHands(pair(199, .65, false), 199);
+    expect(game.hits).toBe(2); expect(game.score).toBe(40);
+    game.acceptHands(pair(232, .35, false), 232); expect(game.hits).toBe(2);
+  });
+  it('does not allow wand or touch to bypass the hand-specific level', () => {
+    const game = new PopSimulation(); game.start(1, 2);
+    Object.assign(game.targets[0], { active: true, id: 101, x: .5, y: .5, radius: .06 });
+    game.tap({ x: .5, y: .5 }); game.acceptSword(sword(100, .2), 100); game.acceptSword(sword(133, .8), 133);
+    expect(game.hits).toBe(0); expect(game.targets[0].active).toBe(true);
+  });
   it('lets one blade sweep clear five independently active targets exactly once', () => {
     const game = gameWithTargets(); game.acceptSword(sword(100, .2), 100); game.acceptSword(sword(133, .8), 133);
     expect(game.hits).toBe(5); expect(game.score).toBe(60); game.acceptSword(sword(166, .2), 166); expect(game.hits).toBe(5);

@@ -1,5 +1,12 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  "1. szint · Szabad célzás": "Level 1 · Free aiming",
+  "Bármelyik kézzel, bottal vagy érintéssel.": "Use either hand, a wand or touch.",
+  "2. szint · Színpárosítás": "Level 2 · Colour match",
+  "A megfelelő színű kézzel találd el!": "Match each target to your hand colour!",
+  "2. szint: csak kamerával és kézzel játszható.": "Level 2 requires camera and hands.",
+  "2. szint: a türkiz körrel a türkiz, a rózsaszín körrel a rózsaszín célpontot találd el. Az egy és két pont is segít párosítani. A gyémánttal jelölt célpont háromszoros pontot ér.": "Level 2: match the turquoise and pink hand circles to targets of the same colour. One or two dots also identify each match. A diamond marks triple points.",
+  "Türkiz egy pont · rózsaszín két pont: párosítsd a kéz és a célpont színét!": "Turquoise one dot · pink two dots: match your hand to the target!",
   "Válassz szintet!": "Choose a level!",
   "1. szint · Szabad vágás": "Level 1 · Free slicing",
   "Bármelyik irányból, tüskék nélkül.": "Any direction, no spikes.",

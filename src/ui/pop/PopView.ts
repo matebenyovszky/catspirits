@@ -29,16 +29,20 @@ export class PopView {
       const x = target.x*w, y = target.y*h, r = target.radius*h;
       c.strokeStyle = '#91e0db20'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, r+5, 0, Math.PI*2); c.stroke();
       if (!target.active) continue;
-      const colour = target.gold ? '#ffe4a1' : target.id%2 ? '#83e9d9' : '#b6a4ff';
+      const colour = game.level === 2 ? (target.id%2 ? '#88ffee' : '#ffb1df') : target.gold ? '#ffe4a1' : target.id%2 ? '#83e9d9' : '#b6a4ff';
       const rise = this.reduced ? 0 : Math.max(0, 1-target.age/.12)*r*.2;
       c.save(); c.translate(x, y+rise);
-      c.fillStyle = target.gold ? '#69502b' : target.id%2 ? '#24585f' : '#413a67'; c.strokeStyle = colour; c.lineWidth = 2;
+      c.fillStyle = game.level === 2 ? (target.id%2 ? '#24585f' : '#673e58') : target.gold ? '#69502b' : target.id%2 ? '#24585f' : '#413a67'; c.strokeStyle = colour; c.lineWidth = 2;
       c.beginPath(); c.arc(0, 0, r, 0, Math.PI*2); c.fill(); c.stroke();
       c.strokeStyle = colour; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath();
       c.arc(0, 0, r+5, -Math.PI/2, -Math.PI/2+Math.PI*2*(1-target.age/target.lifetime)); c.stroke();
       c.fillStyle = '#f2fff8';
       for (const sign of [-1, 1]) { c.beginPath(); c.ellipse(sign*r*.28, -r*.08, r*.075, r*.13, 0, 0, Math.PI*2); c.fill(); }
       c.lineWidth = 2; c.strokeStyle = '#f2fff8'; c.beginPath(); c.arc(0, r*.12, r*.25, .2, Math.PI-.2); c.stroke(); c.restore();
+      if (game.level === 2) {
+        c.fillStyle = '#fff'; for (let i = 0; i < (target.id%2 ? 1 : 2); i++) { c.beginPath(); c.arc(x + (target.id%2 ? 0 : (i ? 4 : -4)), y-r*.58+rise, 2, 0, Math.PI*2); c.fill(); }
+        if (target.gold) { c.fillStyle = '#ffe4a1'; c.beginPath(); c.moveTo(x, y-r-13+rise); c.lineTo(x+4, y-r-8+rise); c.lineTo(x, y-r-3+rise); c.lineTo(x-4, y-r-8+rise); c.closePath(); c.fill(); }
+      }
     }
     for (const burst of game.bursts) {
       const u = burst.age/.45, x = burst.x*w, y = burst.y*h; c.globalAlpha = 1-u;
@@ -50,6 +54,7 @@ export class PopView {
       const x = (1-hand.x)*w, y = hand.y*h, r = HAND_RADIUS*h;
       c.fillStyle = hand.id === 'left' ? '#88ffee45' : '#ffb1df45'; c.strokeStyle = hand.id === 'left' ? '#88ffee' : '#ffb1df'; c.lineWidth = 3;
       c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y, 3, 0, Math.PI*2); c.fill();
+      if (game.level === 2 && hand.id === 'right') { c.beginPath(); c.arc(x+7, y, 2, 0, Math.PI*2); c.fill(); }
     }
     if (sword && validSword(sword, now)) {
       const blade = clipBlade(swordToScreen(sword)); if (!blade) return;
