@@ -24,7 +24,7 @@ export class PopApp {
     for (const level of [1, 2] as const) try { const saved = JSON.parse(localStorage.getItem(BEST_KEYS[level]) ?? '{}'); for (const key of ['hands', 'sword', 'touch'] as const) if (Number.isSafeInteger(saved?.[key]) && saved[key] >= 0 && saved[key] <= 100000) this.best[level][key] = saved[key]; } catch { /* Optional local scores. */ }
     root.innerHTML = localizedHtml(`
       <header class="blade-header"><a class="blade-brand" href="?lang=${getLanguage()}"><span class="blade-brand-icon">✦</span><span>CATSPIRITS<small>MOVE. PLAY. GLOW.</small></span></a>
-      <nav class="blade-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}" aria-current="page">Neon Pop</a></nav>
+      <nav class="blade-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}" aria-current="page">Neon Pop</a><a href="?game=robot&lang=${getLanguage()}">Bit Rescue</a></nav>
       <label class="blade-language"><span class="sr-only">Nyelv</span><select aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label></header>
       <main class="blade-menu"><section class="blade-intro"><span class="blade-eyebrow">CÉLZÓS TESZTJÁTÉK</span><h1>NEON<br><span>POP.</span></h1>
       <p class="blade-lead">Célozz és csapj le!<br>A felbukkanó fénylényeket kézzel vagy karddal is elkaphatod.</p>

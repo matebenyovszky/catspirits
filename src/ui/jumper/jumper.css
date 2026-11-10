@@ -75,3 +75,5 @@ html:lang(de) .jumper-hero h1{font-size:clamp(36px,4.8vw,68px)}
 @media(max-width:1100px){.jumper-header .jumper-games{top:calc(100% + 10px)}.jumper-hero{top:max(24%,145px)}}
 @media(max-width:520px){.jumper-header .jumper-games{width:100%;justify-content:center;top:calc(100% + 8px)}.jumper-games a{flex:1;text-align:center;padding:9px 6px}.jumper-hero{top:max(17%,120px)}}
 @media(max-width:800px) and (max-height:500px){.jumper-header .jumper-games{width:auto;top:calc(100% + 4px)}.jumper-hero{top:max(22%,100px)}}
+
+@media(max-width:520px){.jumper-games a{font-size:10px;padding:9px 5px}}

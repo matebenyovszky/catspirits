@@ -49,7 +49,7 @@ export class JumperApp {
       <div class="jumper-vignette" aria-hidden="true"></div>
       <header class="jumper-header">
         <button class="jumper-brand" data-home aria-label="Cyber Jumper kezdőlap"><span class="brand-mark">${icon('robot')}</span><span>CATSPIRITS<strong>CYBER JUMPER<span>↗</span></strong></span></button>
-        <nav class="jumper-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}" aria-current="page">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}">Neon Pop</a></nav>
+        <nav class="jumper-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}" aria-current="page">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}">Neon Pop</a><a href="?game=robot&lang=${getLanguage()}">Bit Rescue</a></nav>
         <nav aria-label="Játék menü">
           <button data-worlds class="nav-text">${icon('world')}<span>Pályák</span></button>
           <button data-suits class="nav-text" aria-label="Robotom">${icon('robot')}<span>Robotom</span></button>

@@ -10,3 +10,6 @@
 .blade-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px;border:0;padding:0;margin:16px 0;max-width:360px}.blade-levels legend{font-size:11px;color:#9baec0;margin-bottom:8px}.blade-levels label{display:grid;grid-template-columns:14px 1fr;align-items:center;gap:8px;border:1px solid #ffffff18;border-radius:10px;padding:10px;font-size:11px;cursor:pointer}.blade-levels label:has(input:checked){border-color:#7aebce;background:#7aebce12}.blade-levels input{accent-color:#7aebce}.blade-levels small{display:block;font-size:10px;color:#9baec0;margin-top:4px}
 
 .blade-root:not(.pop-root) .blade-menu{padding-top:32px}.blade-root:not(.pop-root) .blade-intro h1{font-size:clamp(64px,6.4vw,82px);margin:20px 0}.blade-levels label:has(input:focus-visible){outline:2px solid #7aebce;outline-offset:3px}
+
+@media(max-width:900px){.blade-header{flex-wrap:wrap}.blade-games{order:3;width:100%;justify-content:center}.blade-header .blade-language{margin-left:auto}}
+@media(max-width:520px){.blade-games a{padding:9px 6px;font-size:10px;white-space:nowrap}}

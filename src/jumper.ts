@@ -11,6 +11,9 @@ try {
   } else if (new URLSearchParams(location.search).get("game") === "pop") {
     const { PopApp } = await import("./ui/pop/PopApp");
     new PopApp(root);
+  } else if (new URLSearchParams(location.search).get("game") === "robot") {
+    const { RobotApp } = await import("./ui/robot/RobotApp");
+    new RobotApp(root);
   } else {
     const { JumperApp } = await import("./ui/jumper/JumperApp");
     new JumperApp(root);

@@ -58,3 +58,8 @@ Játék közben legfeljebb 60, menüben 30 renderfrissítés történik másodpe
 A [Neon Pop](https://catspirits.com/?game=pop&lang=hu) külön, 45 másodperces célzós tesztjáték. A felbukkanó fénylényeket kamerával követett kézzel vagy jelölőbottal lehet lecsapni; egérrel és érintéssel is működik. Mindkét kéz és minden célpont külön aktív, nincs kötelező vágási irány. A körív mutatja a célpont hátralévő idejét.
 
 Kézi módban a meglévő, helyben futó modell a csuklókat figyeli; a váll, könyök és kéz legyen látható. A kardos mód csak a könnyebb színkövetést használja. Nincs kameraképfeltöltés, és egyszerre csak a kiválasztott követő fut. A valódi kamerás pontosságot még érdemes különféle telefonokon kipróbálni.
+
+
+## Bit Rescue — virtuális robotkar
+
+[Bit Rescue indítása](https://catspirits.com/?game=robot&lang=hu): kamerával követett csuklóval, egérrel, érintéssel vagy billentyűvel vigyél három energiacellát a megfelelő dokkhoz. Add át Bitnek a vezérlést, és ha elakad, vedd vissza, kerüld meg az akadályt, majd add vissza neki. Az első küldetés szabad dokkolás, a második kerülőutat igényel. A vezérlés szabályalapú, nem tanított AI; a játék nem rögzít demonstrációkat, és nem kapcsolódik fizikai robothoz. [Vezérlés és fejlesztői dokumentáció](docs/robot-rescue.md).
