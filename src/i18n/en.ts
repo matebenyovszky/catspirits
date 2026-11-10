@@ -1,5 +1,10 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  "Nézet": "View",
+  "3D · próba": "3D · test",
+  "A 3D nézet betöltése…": "Loading the 3D view…",
+  "A 3D gyorsítás nem elérhető. A játék 2D-ben folytatható.": "3D acceleration is unavailable. You can continue in 2D.",
+  "3D próba: térbeli robotkar, a fogó még az asztal síkjában mozog.": "3D preview: a spatial robot arm; the gripper still moves along the table plane.",
   "Te vagy a robotpilóta.": "You are the robot pilot.",
   "Küldetés": "Mission",
   "01 · Első dokkolás": "01 · First docking",

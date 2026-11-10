@@ -5,3 +5,6 @@
 @media(prefers-reduced-motion:reduce){.robot-root button{transition:none;transform:none}}
 
 @media(min-width:1051px){.robot-workspace{grid-template-columns:minmax(0,min(calc(100svh - 320px),calc(100% - 324px))) 300px;justify-content:center}.robot-how ol{font-size:10px}.robot-card{padding:18px}.robot-heading{margin-bottom:20px}.robot-main{padding-top:24px}.robot-heading h1{font-size:48px}}
+
+.robot-heading-controls{display:flex;align-items:end;gap:18px}.robot-view-select{display:flex;padding:4px;border:1px solid #ffffff20;border-radius:10px;background:#111e30}.robot-view-select button{background:none;color:#90aabd;border:0;border-radius:6px;padding:10px 14px;font-size:11px}.robot-view-select [aria-pressed=true]{background:#28433f;color:#a0f2db}.robot-view-note{font-size:12px;line-height:1.5;color:#a8cabf;margin:-5px 0 18px}.robot-stage canvas[data-robot3d]{position:absolute;inset:0}
+@media(max-width:750px){.robot-heading-controls{flex-direction:column;align-items:stretch;gap:9px}.robot-heading-controls .robot-mission-select{max-width:none}.robot-view-select button{padding:7px 9px;font-size:10px}.robot-mission-select label{font-size:8px;margin-bottom:6px}.robot-view-note{font-size:10px}}

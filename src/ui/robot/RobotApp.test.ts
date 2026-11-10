@@ -3,19 +3,20 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RobotApp } from './RobotApp';
 import { setLanguage } from '../../i18n';
 import type { HandFrame } from '../../core/pop/HandInput';
-const mock = vi.hoisted(() => ({ start: vi.fn(async () => false), stop: vi.fn(), running: false, emit: null as ((f: HandFrame | null) => void) | null }));
+const mock = vi.hoisted(() => ({ start: vi.fn(async () => false), stop: vi.fn(), running: false, viewError: false, emit: null as ((f: HandFrame | null) => void) | null }));
 vi.mock('../../core/pop/PopCamera', () => ({ PopCamera: class {
   constructor(_video: unknown, callback: (f: HandFrame | null) => void) { mock.emit = callback; }
   get running() { return mock.running; } start = mock.start;
   stop() { mock.running = false; mock.emit?.(null); mock.stop(); }
 } }));
+vi.mock('./RobotView3D', () => ({ RobotView3D: class { constructor() { if (mock.viewError) throw new Error('No WebGL'); } resize() {} draw() {} dispose() {} screenToWorld(x: number, y: number) { return { x, y }; } } }));
 vi.mock('./RobotView', () => ({ RobotView: class { resize() {} draw() {} } }));
 let root: HTMLElement, app: RobotApp, clock: number, sequence: number, callbacks: Map<number, FrameRequestCallback>;
 const click = (selector: string) => root.querySelector<HTMLElement>(selector)!.click();
 const advance = (count: number) => { for (let i = 0; i < count; i++) { clock += 20; const entry = callbacks.entries().next().value; if (!entry) continue; callbacks.delete(entry[0]); entry[1](clock); } };
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); };
 beforeEach(() => {
-  setLanguage('en'); history.replaceState(null, '', '/?game=robot'); mock.start.mockReset(); mock.start.mockResolvedValue(false); mock.stop.mockClear(); mock.running = false;
+  setLanguage('en'); history.replaceState(null, '', '/?game=robot'); mock.start.mockReset(); mock.start.mockResolvedValue(false); mock.stop.mockClear(); mock.running = false; mock.viewError = false;
   clock = sequence = 0; callbacks = new Map(); vi.spyOn(performance, 'now').mockImplementation(() => clock);
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++sequence, callback); return sequence; });
   vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
@@ -68,4 +69,22 @@ it('keeps camera control for the next mission and shows a completed status', asy
   expect(mock.running).toBe(false); click('[data-next]'); await settle();
   expect(mock.start).toHaveBeenCalledTimes(2); expect(root.dataset.phase).toBe('playing');
   expect(root.querySelector<HTMLVideoElement>('video')!.hidden).toBe(false);
+});
+
+it('switches 2D/3D without resetting progress or camera ownership', async () => {
+  click('[data-pointer]'); click('[data-auto]'); advance(400);
+  const count = root.querySelector('[data-count]')!.textContent;
+  click('[data-view="3d"]'); await vi.dynamicImportSettled();
+  expect(root.querySelector('[data-view="3d"]')!.getAttribute('aria-pressed')).toBe('true');
+  expect(root.querySelector('[data-count]')!.textContent).toBe(count); expect(root.dataset.control).toBe('auto');
+  expect(root.querySelector<HTMLCanvasElement>('canvas')!.hidden).toBe(true);
+  click('[data-view="2d"]'); expect(root.querySelector<HTMLCanvasElement>('canvas')!.hidden).toBe(false);
+  expect(root.querySelector('[data-count]')!.textContent).toBe(count); expect(mock.start).not.toHaveBeenCalled();
+});
+
+it('keeps the working 2D game when WebGL initialization fails', async () => {
+  mock.viewError = true; click('[data-pointer]'); click('[data-view="3d"]'); await vi.dynamicImportSettled();
+  expect(root.dataset.phase).toBe('playing'); expect(root.querySelector('[data-view="2d"]')!.getAttribute('aria-pressed')).toBe('true');
+  expect(root.querySelector<HTMLCanvasElement>('canvas')!.hidden).toBe(false); expect(root.querySelectorAll('canvas')).toHaveLength(1);
+  expect(root.textContent).toContain('3D acceleration is unavailable.');
 });

@@ -4,13 +4,21 @@ import type { HandFrame } from '../../core/pop/HandInput';
 import { RobotHandInput } from '../../core/robot/RobotHandInput';
 import { RobotSimulation, type RobotLevel } from '../../core/robot/RobotSimulation';
 import { RobotView } from './RobotView';
+import type { RobotView3D } from './RobotView3D';
+import type { Point } from '../../core/robot/RobotSimulation';
+type RobotRenderer = { resize(): void; draw(game: RobotSimulation): void; screenToWorld?(x: number, y: number): Point | null };
 import '../blade/blade.css';
 import './robot.css';
 
 type Phase = 'ready' | 'loading' | 'playing' | 'paused' | 'complete';
 export class RobotApp {
   private game = new RobotSimulation();
-  private view: RobotView;
+  private view: RobotRenderer;
+  private flatView: RobotView;
+  private spatialView: RobotView3D | null = null;
+  private spatialCanvas: HTMLCanvasElement | null = null;
+  private viewMode: '2d' | '3d' = '2d';
+  private viewLoading = false;
   private camera: PopCamera;
   private handInput = new RobotHandInput();
   private hands: HandFrame | null = null;
@@ -33,8 +41,8 @@ export class RobotApp {
         <label class="blade-language"><span class="sr-only">Nyelv</span><select data-language aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label>
       </header>
       <main class="robot-main">
-        <div class="robot-heading"><div><span class="blade-eyebrow">04 / ROBOT LAB · VIRTUAL</span><h1>BIT <span>RESCUE.</span></h1><p>Te vagy a robotpilóta.</p></div><div class="robot-mission-select"><label for="robot-level">Küldetés</label><select id="robot-level"><option value="1">01 · Első dokkolás</option><option value="2">02 · Kerülőút</option></select></div></div>
-        <div class="robot-workspace">
+        <div class="robot-heading"><div><span class="blade-eyebrow">04 / ROBOT LAB · VIRTUAL</span><h1>BIT <span>RESCUE.</span></h1><p>Te vagy a robotpilóta.</p></div><div class="robot-heading-controls"><div class="robot-view-select" aria-label="Nézet"><button data-view="2d" aria-pressed="true">2D</button><button data-view="3d" aria-pressed="false">3D · próba</button></div><div class="robot-mission-select"><label for="robot-level">Küldetés</label><select id="robot-level"><option value="1">01 · Első dokkolás</option><option value="2">02 · Kerülőút</option></select></div></div></div>
+        <p class="robot-view-note" data-view-note role="status" hidden></p><div class="robot-workspace">
           <section class="robot-board" aria-label="Robotkaros játék">
             <div class="robot-board-bar"><span class="robot-mode" data-owner>TE VEZETSZ</span><span data-clock>00:00</span><span><b data-count>0</b> / 3 <span>CELLA</span></span></div>
             <div class="robot-stage"><canvas tabindex="0" aria-label="Robotkar munkatere. Nyilak: mozgatás. Szóköz: fogás vagy elengedés. Enter: automata. M: kézi vezérlés."></canvas>
@@ -54,15 +62,18 @@ export class RobotApp {
     const level: RobotLevel = new URLSearchParams(location.search).get('level') === '2' ? 2 : 1;
     this.game.reset(level); this.el<HTMLSelectElement>('#robot-level').value = String(level);
     if (level === 2) this.text('[data-banner-title]', t('Segíts Bitnek kerülőutat találni!'));
-    this.view = new RobotView(this.el('canvas'));
+    this.flatView = new RobotView(this.el('canvas')); this.view = this.flatView;
     this.camera = new PopCamera(this.el('video'), frame => { this.hands = frame; }, () => {});
     this.bind(); this.resize(); this.hud();
+    if (new URLSearchParams(location.search).get('view') === '3d') void this.setView('3d');
   }
+  private canvas(): HTMLCanvasElement { return this.viewMode === '3d' && this.spatialCanvas ? this.spatialCanvas : this.el('canvas'); }
   private el<T extends HTMLElement>(selector: string): T { return this.root.querySelector<T>(selector)!; }
   private text(selector: string, value: string): void { const e = this.el(selector); if (e.textContent !== value) e.textContent = value; }
   private on(selector: string, callback: () => void): void { this.el(selector).addEventListener('click', callback, { signal: this.abort.signal }); }
   private bind(): void {
-    const signal = this.abort.signal, canvas = this.el<HTMLCanvasElement>('canvas');
+    const signal = this.abort.signal, stage = this.el('.robot-stage');
+    this.on('[data-view="2d"]', () => void this.setView('2d')); this.on('[data-view="3d"]', () => void this.setView('3d'));
     this.on('[data-camera]', () => void this.startCamera());
     this.on('[data-pointer]', () => this.startPointer());
     this.on('[data-manual]', () => this.mode('manual')); this.on('[data-auto]', () => this.mode('auto'));
@@ -78,16 +89,17 @@ export class RobotApp {
       const url = new URL(location.href); url.searchParams.set('lang', value); url.searchParams.set('level', String(this.game.level)); location.assign(url.href);
     }, { signal });
     const aim = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect(); if (!rect.width || !rect.height) return;
-      this.game.aim({ x: (event.clientX - rect.left) / rect.width, y: (event.clientY - rect.top) / rect.height });
+      const rect = this.canvas().getBoundingClientRect(); if (!rect.width || !rect.height) return;
+      const x = (event.clientX - rect.left) / rect.width, y = (event.clientY - rect.top) / rect.height;
+      const point = this.view.screenToWorld ? this.view.screenToWorld(x, y) : { x, y }; if (point) this.game.aim(point);
     };
-    canvas.addEventListener('pointerdown', event => {
-      if (this.phase !== 'playing' || this.source !== 'pointer' || event.button !== 0) return;
-      this.mode('manual'); this.pointer = event.pointerId; canvas.setPointerCapture?.(event.pointerId); aim(event); canvas.focus();
+    stage.addEventListener('pointerdown', event => {
+      if (event.target !== this.canvas() || this.phase !== 'playing' || this.source !== 'pointer' || event.button !== 0) return;
+      this.mode('manual'); this.pointer = event.pointerId; this.canvas().setPointerCapture?.(event.pointerId); aim(event); this.canvas().focus();
     }, { signal });
-    canvas.addEventListener('pointermove', event => { if (this.phase === 'playing' && this.source === 'pointer' && this.pointer === event.pointerId) aim(event); }, { signal });
-    canvas.addEventListener('pointerup', () => { this.pointer = null; }, { signal });
-    canvas.addEventListener('pointercancel', () => { this.pointer = null; this.game.stop(); }, { signal });
+    stage.addEventListener('pointermove', event => { if (this.phase === 'playing' && this.source === 'pointer' && this.pointer === event.pointerId) aim(event); }, { signal });
+    stage.addEventListener('pointerup', () => { this.pointer = null; }, { signal });
+    stage.addEventListener('pointercancel', () => { this.pointer = null; this.game.stop(); }, { signal });
     window.addEventListener('keydown', event => {
       if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLButtonElement || event.target instanceof HTMLAnchorElement || this.phase !== 'playing') return;
       const key = event.key.toLowerCase();
@@ -107,7 +119,44 @@ export class RobotApp {
   private mode(mode: 'manual' | 'auto'): void {
     if (this.phase !== 'playing') return;
     if (mode !== this.game.mode) { this.keys.clear(); this.pointer = null; }
-    this.game.setMode(mode); this.hud(); this.el('canvas').focus();
+    this.game.setMode(mode); this.hud(); this.canvas().focus();
+  }
+  private async setView(mode: '2d' | '3d'): Promise<void> {
+    if (this.destroyed || this.viewLoading || mode === this.viewMode) return;
+    const note = this.el('[data-view-note]');
+    if (mode === '3d' && !this.spatialView) {
+      this.viewLoading = true;
+      this.el<HTMLButtonElement>('[data-view="3d"]').disabled = true;
+      note.hidden = false; this.text('[data-view-note]', t('A 3D nézet betöltése…'));
+      let canvas: HTMLCanvasElement | null = null;
+      try {
+        const { RobotView3D } = await import('./RobotView3D');
+        if (this.destroyed) return;
+        canvas = document.createElement('canvas'); canvas.tabIndex = 0; canvas.dataset.robot3d = '';
+        canvas.setAttribute('aria-label', this.el('canvas').getAttribute('aria-label') ?? 'Bit Rescue');
+        this.el('.robot-stage').insertBefore(canvas, this.el('[data-banner]'));
+        this.spatialView = new RobotView3D(canvas); this.spatialCanvas = canvas;
+        canvas.addEventListener('webglcontextlost', event => {
+          event.preventDefault(); if (this.destroyed) return;
+          void this.setView('2d');
+          this.spatialView?.dispose(); this.spatialView = null; this.spatialCanvas?.remove(); this.spatialCanvas = null;
+          note.hidden = false; this.text('[data-view-note]', t('A 3D gyorsítás nem elérhető. A játék 2D-ben folytatható.'));
+        }, { signal: this.abort.signal });
+      } catch {
+        canvas?.remove(); this.text('[data-view-note]', t('A 3D gyorsítás nem elérhető. A játék 2D-ben folytatható.')); return;
+      } finally {
+        this.viewLoading = false; if (!this.destroyed) this.el<HTMLButtonElement>('[data-view="3d"]').disabled = false;
+      }
+    }
+    if (this.destroyed) return;
+    this.viewMode = mode; this.view = mode === '3d' && this.spatialView ? this.spatialView : this.flatView;
+    this.el<HTMLCanvasElement>('canvas').hidden = mode === '3d'; if (this.spatialCanvas) this.spatialCanvas.hidden = mode !== '3d';
+    this.el('[data-view="2d"]').setAttribute('aria-pressed', String(mode === '2d'));
+    this.el('[data-view="3d"]').setAttribute('aria-pressed', String(mode === '3d'));
+    this.keys.clear(); this.pointer = null; this.game.stop(); this.resize();
+    note.hidden = mode === '2d'; this.text('[data-view-note]', t('3D próba: térbeli robotkar, a fogó még az asztal síkjában mozog.'));
+    const url = new URL(location.href); if (mode === '3d') url.searchParams.set('view', '3d'); else url.searchParams.delete('view'); history.replaceState(null, '', url.href);
+    if (this.phase === 'playing') this.canvas().focus();
   }
   private stopCamera(): void { ++this.generation; this.camera.stop(); this.hands = null; this.handInput.reset(); this.el('video').hidden = true; }
   private startPointer(): void {
@@ -134,7 +183,7 @@ export class RobotApp {
   }
   private play(): void {
     this.phase = 'playing'; this.game.stop(); this.keys.clear(); this.pointer = null;
-    this.el('[data-banner]').hidden = true; this.previous = this.lastHud = 0; this.hud(); this.el('canvas').focus(); this.startFrames();
+    this.el('[data-banner]').hidden = true; this.previous = this.lastHud = 0; this.hud(); this.canvas().focus(); this.startFrames();
   }
   private pause(): void {
     if (this.phase !== 'playing' && this.phase !== 'loading') return;
@@ -198,5 +247,5 @@ export class RobotApp {
   }
   private draw(): void { this.view.draw(this.game); this.hud(); }
   private resize(): void { this.view.resize(); this.draw(); }
-  dispose(): void { this.destroyed = true; this.stopCamera(); this.stopFrames(); this.abort.abort(); }
+  dispose(): void { this.destroyed = true; this.stopCamera(); this.stopFrames(); this.abort.abort(); this.spatialView?.dispose(); }
 }
