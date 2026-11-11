@@ -36,13 +36,13 @@ export class RobotView3D {
     const rim = new THREE.LineSegments(new THREE.EdgesGeometry(table.geometry), new THREE.LineBasicMaterial({ color: 0x416072 })); rim.position.copy(table.position); this.scene.add(rim);
     const metal = new THREE.MeshStandardMaterial({ color: 0xaccbd1, roughness: .38, metalness: .55 });
     const joint = new THREE.MeshStandardMaterial({ color: 0x294d60, roughness: .5, metalness: .4 });
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(.40, .55, .8, 20), joint); base.position.copy(toWorld(BASE, .4)); this.scene.add(base);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(.40, .035, 8, 32), new THREE.MeshBasicMaterial({ color: 0x79ebce })); ring.rotation.x = -Math.PI / 2; ring.position.copy(toWorld(BASE, .81)); this.scene.add(ring);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.40, .55, .8, 20), joint); base.scale.y = 1.9; base.position.copy(toWorld(BASE, .76)); this.scene.add(base);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.40, .035, 8, 32), new THREE.MeshBasicMaterial({ color: 0x79ebce })); ring.rotation.x = -Math.PI / 2; ring.position.copy(toWorld(BASE, 1.54)); this.scene.add(ring);
     this.upper = new THREE.Mesh(new THREE.CylinderGeometry(.12, .16, 1, 10), metal);
     this.fore = new THREE.Mesh(new THREE.CylinderGeometry(.10, .13, 1, 10), metal);
     this.elbow = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 10), joint);
     this.scene.add(this.upper, this.fore, this.elbow, this.gripper);
-    const wrist = new THREE.Mesh(new THREE.CylinderGeometry(.15, .17, .55, 12), joint); wrist.position.y = .68; this.gripper.add(wrist);
+    const wrist = new THREE.Mesh(new THREE.CylinderGeometry(.15, .17, .55, 12), joint); wrist.position.y = 1.12; wrist.scale.y = 2.3; this.gripper.add(wrist);
     const palm = this.box(.65, .12, .18, 0x75e8cd); palm.position.y = .40; this.gripper.add(palm);
     for (const sign of [-1, 1]) {
       const finger = this.box(.10, .30, .20, 0x9cf2dd); finger.position.set(sign * .32, .26, 0); this.gripper.add(finger); this.fingers.push(finger);
@@ -81,12 +81,12 @@ export class RobotView3D {
   screenToWorld(x: number, y: number): Point | null { return tablePoint(this.camera, x, y); }
   draw(game: RobotSimulation): void {
     if (this.disposed) return;
-    const shoulder = toWorld(BASE, .88), elbow = toWorld(elbowFor(game.tool), .88), wrist = toWorld(game.tool, .88);
+    const shoulder = toWorld(BASE, 1.65), elbow = toWorld(elbowFor(game.tool), 1.65), wrist = toWorld(game.tool, 1.65);
     this.segment(this.upper, shoulder, elbow); this.segment(this.fore, elbow, wrist); this.elbow.position.copy(elbow);
-    this.gripper.position.copy(toWorld(game.tool));
+    this.gripper.position.copy(toWorld(game.tool, game.lift * 10));
     this.fingers[0].position.x = game.holding === null ? -.32 : -.27; this.fingers[1].position.x = -this.fingers[0].position.x;
     game.cells.forEach(cell => {
-      this.cellMeshes[cell.id].position.copy(toWorld(cell, game.holding === cell.id ? .07 : 0));
+      this.cellMeshes[cell.id].position.copy(toWorld(cell, cell.height * 10));
       this.dockMaterials[cell.id].opacity = cell.delivered ? .65 : .25;
     });
     this.shield.visible = game.obstacles.length > 0;

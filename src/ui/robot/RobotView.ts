@@ -57,12 +57,12 @@ export class RobotView {
     this.circle(elbow, .027, '#172d40', '#b4d5db', 3); this.circle(elbow, .010, '#79dfcd');
     for (const cell of game.cells) {
       if (cell.delivered) continue;
-      const x = cell.x * 1000, y = cell.y * 1000, colour = colours[cell.id];
-      c.save(); c.translate(x, y); c.fillStyle = '#00000035'; c.beginPath(); c.ellipse(0, 23, 32, 13, 0, 0, Math.PI * 2); c.fill();
+      const x = cell.x * 1000, y = cell.y * 1000 - cell.height * 260, colour = colours[cell.id];
+      c.save(); c.translate(x, y); c.fillStyle = '#00000035'; c.beginPath(); c.ellipse(0, 23 + cell.height * 260, 32, 13, 0, 0, Math.PI * 2); c.fill();
       c.fillStyle = '#172c3a'; c.strokeStyle = colour; c.lineWidth = 3; c.beginPath(); c.roundRect(-25, -25, 50, 50, 11); c.fill(); c.stroke();
       c.fillStyle = colour; c.fillRect(-15, -32, 30, 7); this.label(String(cell.id + 1), 0, 8, colour, 22); c.restore();
     }
-    const p = game.tool, open = game.holding === null ? 30 : 21;
+    const p = { x: game.tool.x, y: game.tool.y - game.lift * .26 }, open = game.holding === null ? 30 : 21;
     this.circle(p, .013, '#eefaf5', '#70d9c4', 3);
     c.strokeStyle = game.mode === 'auto' ? '#b9a5ff' : '#79efce'; c.lineWidth = 6;
     for (const sign of [-1, 1]) { c.beginPath(); c.moveTo(p.x * 1000 + sign * open, p.y * 1000 - 17); c.lineTo(p.x * 1000 + sign * open, p.y * 1000 + 18); c.lineTo(p.x * 1000 + sign * (open - 9), p.y * 1000 + 18); c.stroke(); }

@@ -104,7 +104,7 @@ export class CameraPoseTracker {
   };
   private readonly onPageHide = () => this.stop();
 
-  constructor(private readonly video: HTMLVideoElement, private readonly callbacks: Callbacks) {}
+  constructor(private readonly video: HTMLVideoElement, private readonly callbacks: Callbacks, private readonly workerFactory = createPoseWorker) {}
 
   private async acquireCamera(session:Session):Promise<MediaStream> {
     const video:MediaTrackConstraints={facingMode:'user',width:{ideal:640},height:{ideal:480},frameRate:{ideal:60}};
@@ -207,7 +207,7 @@ export class CameraPoseTracker {
     session.worker?.terminate();
     session.inFlight = false;
     session.hasResult = false;
-    const worker = createPoseWorker(delegate);
+    const worker = this.workerFactory(delegate);
     session.worker = worker;
     session.delegate = delegate;
     let ready = false;

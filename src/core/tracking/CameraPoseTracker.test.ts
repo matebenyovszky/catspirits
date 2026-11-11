@@ -94,6 +94,15 @@ describe("CameraPoseTracker lifecycle", () => {
     entry[1](time);
   }
 
+  it('uses the injected hand worker on GPU and CPU recovery without starting a body worker', async () => {
+    const custom = vi.fn(() => { const w = workerDouble(); workers.push(w); return w as unknown as Worker; });
+    tracker.dispose(); tracker = new CameraPoseTracker(video, { onStatus: statuses, onFrame: frames }, custom);
+    await startTracking(); expect(custom).toHaveBeenCalledWith('GPU'); expect(makeWorker).not.toHaveBeenCalled();
+    workers[0].receive({ type: 'error', message: 'GPU failure' }); await flush();
+    expect(custom).toHaveBeenLastCalledWith('CPU'); workers[1].receive({ type: 'ready', delegate: 'CPU' }); await flush();
+    expect(makeWorker).not.toHaveBeenCalled();
+  });
+
   it('transfers native frames and falls back once on a rejected native input without restarting the GPU', async () => {
     const close = vi.fn(); vi.stubGlobal('VideoFrame', class { close = close; });
     await startTracking(); tickFrame(0); await flush();

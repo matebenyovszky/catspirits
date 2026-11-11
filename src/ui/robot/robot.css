@@ -8,3 +8,5 @@
 
 .robot-heading-controls{display:flex;align-items:end;gap:18px}.robot-view-select{display:flex;padding:4px;border:1px solid #ffffff20;border-radius:10px;background:#111e30}.robot-view-select button{background:none;color:#90aabd;border:0;border-radius:6px;padding:10px 14px;font-size:11px}.robot-view-select [aria-pressed=true]{background:#28433f;color:#a0f2db}.robot-view-note{font-size:12px;line-height:1.5;color:#a8cabf;margin:-5px 0 18px}.robot-stage canvas[data-robot3d]{position:absolute;inset:0}
 @media(max-width:750px){.robot-heading-controls{flex-direction:column;align-items:stretch;gap:9px}.robot-heading-controls .robot-mission-select{max-width:none}.robot-view-select button{padding:7px 9px;font-size:10px}.robot-mission-select label{font-size:8px;margin-bottom:6px}.robot-view-note{font-size:10px}}
+
+.robot-depth-option{display:flex;gap:8px;align-items:center;font-size:11px;line-height:1.5;color:#b6ddd4;margin-top:18px}.robot-depth-option input{accent-color:#7cebd1}.robot-card [data-pinch-status]{color:#8fe9cf;font-weight:700}.robot-card [data-height]{font-variant-numeric:tabular-nums;color:#a8d9f0}

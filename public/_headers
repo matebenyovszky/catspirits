@@ -17,3 +17,6 @@
 
 /index.html
   Cache-Control: no-cache
+
+/assets/mediapipe/hand-full-v1/hand_landmarker.task
+  Content-Type: application/octet-stream

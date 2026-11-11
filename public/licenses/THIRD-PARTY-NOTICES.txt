@@ -31,3 +31,12 @@ Source: https://github.com/AssemblyScript/assemblyscript
 License: Apache License 2.0; see Apache-2.0.txt and AssemblyScript-NOTICE.txt.
 The Catspirits-authored scalar colour kernel is provided in tools/wasm/color-components.ts.
 Its compiled WebAssembly is bundled locally. No AssemblyScript runtime is downloaded at play time.
+
+MediaPipe Hand Landmarker Full, float16, bundle version 1 — Apache License 2.0
+Model provided by Google, distributed unchanged. Full licence: Apache-2.0.txt.
+Official documentation: https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker
+The official linked Hand Tracking Lite/Full model card specifies Apache License, Version 2.0:
+https://storage.googleapis.com/mediapipe-assets/Model%20Card%20Hand%20Tracking%20(Lite_Full)%20with%20Fairness%20Oct%202021.pdf
+Original bundle: https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+SHA-256: fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1
+No model training data is included. No endorsement by Google is implied.

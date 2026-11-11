@@ -8,9 +8,11 @@ if (packageJson.version !== '0.10.32') throw new Error('Review camera asset path
 const modelPath = new URL('public/assets/mediapipe/pose-lite-v1/pose_landmarker_lite.task', root);
 const expected = '59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a';
 if (createHash('sha256').update(await readFile(modelPath)).digest('hex') !== expected) throw new Error('Pose model integrity check failed.');
+const handModel = new URL('public/assets/mediapipe/hand-full-v1/hand_landmarker.task', root);
+if (createHash('sha256').update(await readFile(handModel)).digest('hex') !== 'fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1') throw new Error('Hand model integrity check failed.');
 const destination = new URL('public/assets/mediapipe/runtime-0.10.32/', root);
 await mkdir(destination, { recursive: true });
 for (const name of ['vision_wasm_internal.js', 'vision_wasm_internal.wasm', 'vision_wasm_nosimd_internal.js', 'vision_wasm_nosimd_internal.wasm']) {
   await copyFile(new URL(`node_modules/@mediapipe/tasks-vision/wasm/${name}`, root), new URL(name, destination));
 }
-console.log('Verified pinned pose model; prepared local MediaPipe assets:', fileURLToPath(destination));
+console.log('Verified pinned pose and hand models; prepared local MediaPipe assets:', fileURLToPath(destination));

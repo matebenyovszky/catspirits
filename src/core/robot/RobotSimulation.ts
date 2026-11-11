@@ -1,12 +1,12 @@
-/** Normalized, planar tool-space simulation. No network or hardware access.
+/** Normalized planar arm with a bounded vertical gripper axis. No network or hardware access.
  * A future robot adapter must supply its own calibrated limits and safety loop. */
 export type Point = { x: number; y: number };
-export type Cell = Point & { id: number; dock: Point; delivered: boolean };
+export type Cell = Point & { id: number; dock: Point; delivered: boolean; height: number };
 export type Obstacle = Point & { width: number; height: number };
 export type RobotMode = 'manual' | 'auto';
 export type RobotLevel = 1 | 2;
 export type RobotObservation = {
-  tool: Point; cells: readonly Cell[]; holding: number | null;
+  tool: Point; lift: number; cells: readonly Cell[]; holding: number | null;
   obstacles: readonly Obstacle[]; complete: boolean;
 };
 export type RobotCommand = { target: Point; grip?: 'open' | 'closed' };
@@ -45,6 +45,9 @@ export class RobotSimulation {
   cells: Cell[] = [];
   obstacles: Obstacle[] = [];
   holding: number | null = null;
+  lift = 0;
+  private depthTarget: number | null = null;
+  private landingAuto = new Set<number>();
   mode: RobotMode = 'manual';
   level: RobotLevel = 1;
   elapsed = 0;
@@ -59,14 +62,14 @@ export class RobotSimulation {
   get delivered(): number { return this.cells.filter(c => c.delivered).length; }
   get complete(): boolean { return this.delivered === this.cells.length; }
   observation(): RobotObservation {
-    return { tool: { ...this.tool }, cells: this.cells.map(c => ({ ...c, dock: { ...c.dock } })), holding: this.holding,
+    return { tool: { ...this.tool }, lift: this.lift, cells: this.cells.map(c => ({ ...c, dock: { ...c.dock } })), holding: this.holding,
       obstacles: this.obstacles.map(o => ({ ...o })), complete: this.complete };
   }
   reset(level: RobotLevel): void {
     this.level = level; this.tool = { x: .5, y: .74 }; this.target = { ...this.tool };
-    this.cells = [.30, .46, .62].map((y, id) => ({ id, x: .23, y, dock: { x: .77, y }, delivered: false }));
+    this.cells = [.30, .46, .62].map((y, id) => ({ id, x: .23, y, dock: { x: .77, y }, delivered: false, height: 0 }));
     this.obstacles = level === 2 ? [{ x: .46, y: .29, width: .08, height: .30 }] : [];
-    this.mode = 'manual'; this.holding = null; this.elapsed = this.takeovers = this.autoDeliveries = this.stall = this.dwell = this.gripCooldown = 0;
+    this.mode = 'manual'; this.holding = null; this.lift = 0; this.depthTarget = null; this.landingAuto.clear(); this.elapsed = this.takeovers = this.autoDeliveries = this.stall = this.dwell = this.gripCooldown = 0;
     this.blocked = false; this.dwellId = '';
   }
   setMode(mode: RobotMode): void {
@@ -80,6 +83,11 @@ export class RobotSimulation {
     if (this.mode !== 'manual' || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
     this.target = reachable(point);
   }
+  setDepth(height: number | null): void { this.depthTarget = height === null ? null : Number.isFinite(height) ? clamp(height, 0, .12) : this.depthTarget; }
+  /** Idempotent gesture command: repeated closed frames never toggle/release. */
+  setGripper(command: 'open' | 'closed'): void {
+    if (command === 'closed' ? this.holding === null : this.holding !== null) this.grip();
+  }
   private collision(point: Point): boolean {
     return this.obstacles.some(o => point.x > o.x - TOOL_RADIUS && point.x < o.x + o.width + TOOL_RADIUS
       && point.y > o.y - TOOL_RADIUS && point.y < o.y + o.height + TOOL_RADIUS);
@@ -89,18 +97,19 @@ export class RobotSimulation {
     const held = this.cells.find(c => c.id === this.holding);
     if (held) {
       if (distance(this.tool, held.dock) < .065) {
-        held.x = held.dock.x; held.y = held.dock.y; held.delivered = true;
-        if (this.mode === 'auto') this.autoDeliveries++;
+        held.x = held.dock.x; held.y = held.dock.y;
+        if (this.mode === 'auto') this.landingAuto.add(held.id);
       }
       this.holding = null;
     } else {
-      const cell = this.cells.find(c => !c.delivered && distance(this.tool, c) < .055);
+      if (this.lift > .015) return;
+      const cell = this.cells.find(c => !c.delivered && c.height <= .005 && distance(this.tool, c) < .055);
       if (!cell) return;
       this.holding = cell.id; cell.x = this.tool.x; cell.y = this.tool.y;
     }
     this.gripCooldown = .45; this.dwell = 0; this.dwellId = '';
   }
-  step(seconds: number, inputAvailable = true): void {
+  step(seconds: number, inputAvailable = true, dwellEnabled = true): void {
     if (this.complete || !Number.isFinite(seconds) || seconds <= 0) return;
     const dt = Math.min(seconds, .05);
     if (this.mode === 'manual' && !inputAvailable) { this.stop(); return; }
@@ -110,6 +119,15 @@ export class RobotSimulation {
       if (!command || !Number.isFinite(command.target.x) || !Number.isFinite(command.target.y)) { this.stop(); return; }
       this.target = reachable(command.target);
       if ((command.grip === 'closed' && this.holding === null) || (command.grip === 'open' && this.holding !== null)) this.grip();
+    }
+    const targetLift = this.mode === 'manual' && this.depthTarget !== null ? this.depthTarget : this.holding === null ? 0 : .06;
+    this.lift += clamp(targetLift - this.lift, -dt * .18, dt * .18);
+    for (const cell of this.cells) if (cell.id !== this.holding && !cell.delivered) {
+      cell.height = Math.max(0, cell.height - dt * .18);
+      if (cell.height === 0 && distance(cell, cell.dock) < .065) {
+        cell.x = cell.dock.x; cell.y = cell.dock.y; cell.delivered = true;
+        if (this.landingAuto.delete(cell.id)) this.autoDeliveries++;
+      }
     }
     const d = distance(this.tool, this.target), travel = Math.min(d, dt * .38);
     let collided = false;
@@ -123,14 +141,14 @@ export class RobotSimulation {
     }
     this.stall = collided ? this.stall + dt : 0; this.blocked = this.stall >= .45;
     const held = this.cells.find(c => c.id === this.holding);
-    if (held) { held.x = this.tool.x; held.y = this.tool.y; }
-    if (this.mode === 'manual') {
+    if (held) { held.x = this.tool.x; held.y = this.tool.y; held.height = this.lift; }
+    if (this.mode === 'manual' && dwellEnabled) {
       const pick = this.cells.find(c => !c.delivered && distance(this.tool, c) < .045);
       const candidate = held ? distance(this.tool, held.dock) < .05 ? `dock-${held.id}` : '' : pick ? `cell-${pick.id}` : '';
       if (candidate !== this.dwellId) this.dwell = 0;
       this.dwellId = candidate;
       this.dwell = candidate && this.gripCooldown === 0 ? this.dwell + dt : 0;
       if (this.dwell >= .65) this.grip();
-    }
+    } else { this.dwell = 0; this.dwellId = ''; }
   }
 }

@@ -46,7 +46,7 @@ A kardkövetés helyben fut, testkövető modell és 3D motor nélkül. A gyors 
 
 ## Licenc, biztonság és erőforrások
 
-A saját kód [MIT-licencű](LICENSE). A Three.js, MediaPipe és a Google testkövető modell saját licencekkel rendelkezik; a [külső licencek tájékoztatója](public/licenses/THIRD-PARTY-NOTICES.txt) és teljes szövege a webes buildben is elérhető. A kamera futtatókörnyezete és modellje ugyanerről a webhelyről töltődik le, külső CDN-kérés nélkül. A képkockák helyben maradnak. A Cloudflare tárhely és botvédelem IP-címet, technikai kérésadatokat és biztonsági sütiket kezelhet; ezt a játék adatvédelmi menüje is jelzi.
+A saját kód [MIT-licencű](LICENSE). A Three.js, MediaPipe és a Google test- és kézkövető modelljei saját licencekkel rendelkezik; a [külső licencek tájékoztatója](public/licenses/THIRD-PARTY-NOTICES.txt) és teljes szövege a webes buildben is elérhető. A kamera futtatókörnyezete és modellje ugyanerről a webhelyről töltődik le, külső CDN-kérés nélkül. A képkockák helyben maradnak. A Cloudflare tárhely és botvédelem IP-címet, technikai kérésadatokat és biztonsági sütiket kezelhet; ezt a játék adatvédelmi menüje is jelzi.
 
 Játék közben legfeljebb 60, menüben 30 renderfrissítés történik másodpercenként. Háttérbe kerülő oldalon a renderelés, kamera és hang leáll. A grafikai rajzpuffer körülbelül 1080p képpontra korlátozott. Az aktív testkövetés ettől még használ CPU/GPU-t és akkumulátort.
 
@@ -62,4 +62,4 @@ Kézi módban a meglévő, helyben futó modell a csuklókat figyeli; a váll, k
 
 ## Bit Rescue — virtuális robotkar
 
-[Bit Rescue indítása](https://catspirits.com/?game=robot&lang=hu): kamerával követett csuklóval, egérrel, érintéssel vagy billentyűvel vigyél három energiacellát a megfelelő dokkhoz. Add át Bitnek a vezérlést, és ha elakad, vedd vissza, kerüld meg az akadályt, majd add vissza neki. Az első küldetés szabad dokkolás, a második kerülőutat igényel. A vezérlés szabályalapú, nem tanított AI; a játék nem rögzít demonstrációkat, és nem kapcsolódik fizikai robothoz. [Vezérlés és fejlesztői dokumentáció](docs/robot-rescue.md).
+[Bit Rescue indítása](https://catspirits.com/?game=robot&lang=hu): kamerával követett kézzel, csippentéses fogással és automatikus emeléssel, egérrel, érintéssel vagy billentyűvel vigyél három energiacellát a megfelelő dokkhoz. Add át Bitnek a vezérlést, és ha elakad, vedd vissza, kerüld meg az akadályt, majd add vissza neki. Az első küldetés szabad dokkolás, a második kerülőutat igényel. A vezérlés szabályalapú, nem tanított AI; a játék nem rögzít demonstrációkat, és nem kapcsolódik fizikai robothoz. A 3D nézetben külön kapcsolható kísérleti magasságvezérlés is: a kalibrált tenyérméret változása vezérli az emelést. [Vezérlés és fejlesztői dokumentáció](docs/robot-rescue.md).

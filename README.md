@@ -65,11 +65,11 @@ Hand mode tracks visible wrists using the existing local pose model and needs sh
 
 ## Bit Rescue — pilot a virtual robot arm
 
-[Play Bit Rescue](https://catspirits.com/?game=robot): move a robot gripper with your camera-tracked wrist, mouse, touch or keyboard to deliver three energy cells. Hand control to Bit, take over when it gets stuck, and return control without resetting the task. Mission 1 offers clear docking; mission 2 introduces a shield that requires a manual detour. The controller is rule-based, not a trained AI. No demonstrations are recorded, and no physical robot is connected. See [controls, architecture and hardware boundaries](docs/robot-rescue.md).
+[Play Bit Rescue](https://catspirits.com/?game=robot): move a robot gripper with one camera-tracked hand, mouse, touch or keyboard to deliver three energy cells. Pinch thumb and index finger to grab and lift; spread them to release. Optional experimental depth control estimates height from calibrated palm size. Hand control to Bit, take over when it gets stuck, and return control without resetting the task. Mission 1 offers clear docking; mission 2 introduces a shield that requires a manual detour. The controller is rule-based, not a trained AI. No demonstrations are recorded, and no physical robot is connected. See [controls, architecture and hardware boundaries](docs/robot-rescue.md).
 
 ## Source layout
 
-- `src/core/robot/`, `src/ui/robot/`: Bit Rescue simulation, controller interface, camera wrist mapping, Canvas arm and interface.
+- `src/core/robot/`, `src/ui/robot/`: Bit Rescue simulation, controller interface, single-hand pinch/depth mapping, 2D/3D arm and interface.
 - `src/core/pop/`, `src/ui/pop/`: Neon Pop target simulation, hand/wand camera adapter, Canvas arena and interface.
 - `src/core/blade/`, `src/ui/blade/`: Neon Blade simulation, standalone camera, Canvas 2D arena and interface.
 - `src/core/jumper/`: course simulation, robot rendering, audio and camera adapter.
@@ -82,7 +82,7 @@ Cyber Jumper retains all five worlds, robot colours, jump/duck obstacles, four-s
 
 ## Licence and security
 
-Catspirits-owned code is [MIT licensed](LICENSE). Runtime dependencies and the Google pose model retain their own licences; [distributed third-party notices](public/licenses/THIRD-PARTY-NOTICES.txt) and full licence texts are included in every build and linked in the game. No third-party character art, music recordings, fonts or AprilTag files are bundled. Source provenance and the limits of the review are documented in [the security review](docs/security-review.md).
+Catspirits-owned code is [MIT licensed](LICENSE). Runtime dependencies and the Google pose/hand models retain their own licences; [distributed third-party notices](public/licenses/THIRD-PARTY-NOTICES.txt) and full licence texts are included in every build and linked in the game. No third-party character art, music recordings, fonts or AprilTag files are bundled. Source provenance and the limits of the review are documented in [the security review](docs/security-review.md).
 
 [Report security problems privately](SECURITY.md). CI checks dependency vulnerabilities, tests, TypeScript, production build and a Cloudflare deployment dry run. GitHub Actions are pinned to commit hashes; dependency alerts, automatic security fixes and private vulnerability reporting are enabled.
 
