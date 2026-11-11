@@ -10,3 +10,5 @@
 @media(max-width:750px){.robot-heading-controls{flex-direction:column;align-items:stretch;gap:9px}.robot-heading-controls .robot-mission-select{max-width:none}.robot-view-select button{padding:7px 9px;font-size:10px}.robot-mission-select label{font-size:8px;margin-bottom:6px}.robot-view-note{font-size:10px}}
 
 .robot-depth-option{display:flex;gap:8px;align-items:center;font-size:11px;line-height:1.5;color:#b6ddd4;margin-top:18px}.robot-depth-option input{accent-color:#7cebd1}.robot-card [data-pinch-status]{color:#8fe9cf;font-weight:700}.robot-card [data-height]{font-variant-numeric:tabular-nums;color:#a8d9f0}
+
+@media(max-width:480px){.robot-console{grid-template-columns:minmax(0,1fr)}.robot-how ol{columns:1}.robot-card p,.robot-card .blade-primary,.robot-card .blade-secondary,.robot-control-switch button{font-size:12px}.robot-card h2{font-size:18px}}
