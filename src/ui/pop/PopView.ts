@@ -1,3 +1,4 @@
+import { signedNumber } from '../../core/pop/PopMath';
 import type { PopSimulation } from '../../core/pop/PopSimulation';
 import { HAND_RADIUS, validHands, type HandFrame } from '../../core/pop/HandInput';
 import { clipBlade, swordToScreen, validSword, type SwordFrame } from '../../core/tracking/sword/types';
@@ -7,6 +8,7 @@ export class PopView {
   private c: CanvasRenderingContext2D;
   private width = 1; private height = 1; private dpr = 1;
   private labels = new Map<number, HTMLCanvasElement>();
+  private numbers = new Map<string, HTMLCanvasElement>();
   private reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   constructor(private canvas: HTMLCanvasElement) {
     const c = canvas.getContext('2d'); if (!c) throw new Error('Canvas unavailable'); this.c = c;
@@ -15,7 +17,7 @@ export class PopView {
     const rect = this.canvas.getBoundingClientRect(); this.width = Math.max(1, rect.width); this.height = Math.max(1, rect.height);
     this.dpr = Math.min(devicePixelRatio || 1, 1.5, 1440/this.width, 1080/this.height);
     this.canvas.width = Math.round(this.width*this.dpr); this.canvas.height = Math.round(this.height*this.dpr);
-    this.c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); this.labels.clear();
+    this.c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); this.labels.clear(); this.numbers.clear();
     for (const points of [10, 20, 30, 40, 60, 90, 120]) {
       const label = document.createElement('canvas'); label.width = Math.ceil(100*this.dpr); label.height = Math.ceil(42*this.dpr);
       const c = label.getContext('2d')!; c.scale(this.dpr, this.dpr); c.font = '800 22px system-ui'; c.fillStyle = '#fff4c9'; c.textAlign = 'center'; c.fillText(`+${points}`, 50, 29);
@@ -26,16 +28,28 @@ export class PopView {
     const c = this.c, w = this.width, h = this.height;
     c.clearRect(0, 0, w, h); c.fillStyle = camera ? '#081b2e70' : '#101a30'; c.fillRect(0, 0, w, h);
     for (const target of game.targets) {
+      if (game.isMath && target.value === null) continue;
       const x = target.x*w, y = target.y*h, r = target.radius*h;
       c.strokeStyle = '#91e0db20'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, r+5, 0, Math.PI*2); c.stroke();
       if (!target.active) continue;
       const colour = game.level === 2 ? (target.id%2 ? '#88ffee' : '#ffb1df') : target.gold ? '#ffe4a1' : target.id%2 ? '#83e9d9' : '#b6a4ff';
-      const rise = this.reduced ? 0 : Math.max(0, 1-target.age/.12)*r*.2;
+      const rise = game.isMath || this.reduced ? 0 : Math.max(0, 1-target.age/.12)*r*.2;
       c.save(); c.translate(x, y+rise);
       c.fillStyle = game.level === 2 ? (target.id%2 ? '#24585f' : '#673e58') : target.gold ? '#69502b' : target.id%2 ? '#24585f' : '#413a67'; c.strokeStyle = colour; c.lineWidth = 2;
       c.beginPath(); c.arc(0, 0, r, 0, Math.PI*2); c.fill(); c.stroke();
       c.strokeStyle = colour; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath();
       c.arc(0, 0, r+5, -Math.PI/2, -Math.PI/2+Math.PI*2*(1-target.age/target.lifetime)); c.stroke();
+      if (target.value !== null) {
+        const text = game.level === 4 ? signedNumber(target.value) : String(target.value);
+        let label = this.numbers.get(text);
+        if (!label) {
+          if (this.numbers.size >= 12) this.numbers.clear();
+          label = document.createElement('canvas'); label.width = Math.ceil(r*2*this.dpr); label.height = Math.ceil(r*2*this.dpr);
+          const ctx = label.getContext('2d')!; ctx.scale(this.dpr, this.dpr); ctx.font = `800 ${Math.max(12, r*.8)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText(text, r, r);
+          this.numbers.set(text, label);
+        }
+        c.drawImage(label, -r, -r, r*2, r*2); c.restore(); continue;
+      }
       c.fillStyle = '#f2fff8';
       for (const sign of [-1, 1]) { c.beginPath(); c.ellipse(sign*r*.28, -r*.08, r*.075, r*.13, 0, 0, Math.PI*2); c.fill(); }
       c.lineWidth = 2; c.strokeStyle = '#f2fff8'; c.beginPath(); c.arc(0, r*.12, r*.25, .2, Math.PI-.2); c.stroke(); c.restore();

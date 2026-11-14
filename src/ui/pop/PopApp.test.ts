@@ -67,3 +67,22 @@ it('shows the controls and rules in Hungarian and German', () => {
     app.dispose(); setLanguage(language); app = new PopApp(root); expect(root.textContent).toContain(label); expect(root.textContent).toContain(rule);
   }
 });
+it('offers maths with touch, keeps the central question and preserves a round across pause', () => {
+  const level = root.querySelector<HTMLInputElement>('input[name=level][value="4"]')!;
+  level.checked = true; level.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(root.querySelector<HTMLButtonElement>('[data-touch]')!.disabled).toBe(false);
+  click('[data-touch]'); advance(20, 30);
+  expect(root.querySelector('[data-time]')!.textContent).toBe('90');
+  expect(root.querySelector('[data-math-label]')!.textContent).toBe('TARGET SUM');
+  const question = root.querySelector('[data-math-question]')!.textContent;
+  const canvas = root.querySelector('canvas')!; vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 400, height: 300 } as DOMRect);
+  canvas.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 72, clientY: 66 }));
+  advance(650, 6); expect(root.querySelector<HTMLButtonElement>('[data-undo]')!.disabled).toBe(false);
+  expect(root.querySelector('[data-score]')!.textContent).toBe('0');
+  click('[data-undo]'); expect(root.querySelector('[data-math-total]')!.textContent).toBe('0 = 0');
+  click('[data-pause]'); click('[data-begin]'); advance(1000, 2);
+  expect(root.querySelector('[data-math-question]')!.textContent).toBe(question);
+  advance(2000, 4600); expect(root.querySelector('[data-time]')!.textContent).toBe('00');
+  expect(localStorage.getItem('catspirits.neon-pop.best.math-sum.v1')).not.toBeNull();
+  expect(localStorage.getItem('catspirits.neon-pop.best.v1')).toBeNull();
+});

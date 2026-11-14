@@ -17,3 +17,12 @@ Input is processed on the device. There is no recording, image upload, account o
 Tests cover both hand identities, five-target blade sweeps, missing/stale/implausible input, targets that appear between observations, camera cancellation and shutdown, touch scoring and all three UI languages. Synthetic wrist input verifies the control pipeline; it is not evidence of real-hand recognition quality on every phone. Physical trials with different lighting, framing and devices are still needed.
 
 Level 1 accepts either hand, the marker wand or touch. Level 2 is a camera-and-hands colour-matching challenge: the turquoise, one-dot hand circle hits turquoise, one-dot targets; the pink, two-dot hand circle hits pink, two-dot targets. A wrong hand does not score and the target remains available for the matching hand. A small gold diamond marks a triple-point target without replacing its hand colour. Level 2 scores are stored separately under `catspirits.neon-pop.best.v2`. As with level 1, the pose model must see the player's wrists and elbows; colour matching is based on each tracked hand identity, not position on the mirrored screen.
+
+## Maths with movement
+
+Levels 3 and 4 reuse the same hands, marker-wand and touch controls, with separate local records per level and input. A round lasts 90 active seconds. Six number bubbles stay on screen while you think; tracking loss and pause stop the clock as before.
+
+- **Level 3 · Answer hunt:** calculate the addition or subtraction in the centre, then hit the correct result. There is exactly one correct answer among six distinct choices. A wrong answer gives feedback and breaks the combo; the question stays available.
+- **Level 4 · Target sum:** collect signed numbers to reach the centre target, using at least two pieces. Any valid combination and order counts. Each piece can be used once. The running expression and total stay visible; Undo last number and Reset sum restore pieces without changing the question. A board is always solvable, and no single piece equals its target.
+
+Early questions use small numbers; after several solved questions the range grows and generated sum solutions can use three or four pieces. Solving a puzzle earns points and advances after a short confirmation. A brief selection delay prevents one wide sweep from collecting an entire row at once. Number labels are cached in a bounded canvas pool; no new model, dependency or network service is needed.

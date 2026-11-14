@@ -1,43 +1,57 @@
+import { createMathPuzzle, totalSelected, type MathPuzzle } from './PopMath';
 import { segmentDistance, sweptBladeContact } from '../tracking/sword/sweep';
 import { clipBlade, swordToScreen, validSword, type Point2, type SwordFrame } from '../tracking/sword/types';
 import { HAND_RADIUS, validHands, type HandFrame, type HandPoint } from './HandInput';
-export type PopTarget = Point2 & { id: number; active: boolean; age: number; lifetime: number; radius: number; gold: boolean };
+export type PopTarget = Point2 & { id: number; active: boolean; age: number; lifetime: number; radius: number; gold: boolean; value: number | null };
 export type PopBurst = Point2 & { age: number; points: number };
-export type PopLevel = 1 | 2;
+export type PopLevel = 1 | 2 | 3 | 4;
 
 /** Fixed reachable grid and independent target lifetimes. Every hand and every
  * blade segment checks every visible target; each target can score only once. */
 export class PopSimulation {
   readonly targets: PopTarget[] = Array.from({ length: 9 }, (_, i) => ({ id: 0, active: false, age: 0, lifetime: 2.5,
-    radius: .07, x: .18 + (i % 3) * .32, y: .22 + Math.floor(i / 3) * .26, gold: false }));
+    radius: .07, x: .18 + (i % 3) * .32, y: .22 + Math.floor(i / 3) * .26, gold: false, value: null }));
   readonly bursts: PopBurst[] = [];
   phase: 'ready' | 'running' | 'over' = 'ready';
   paused = true; elapsed = 0; score = 0; hits = 0; missed = 0; combo = 0; bestCombo = 0; aspect = 4/3;
   level: PopLevel = 1;
+  math: MathPuzzle | null = null;
+  mathFeedback: 'ready' | 'picked' | 'wrong' | 'solved' = 'ready';
+  private mathDelay = 0;
+  private mathRound = 0;
+  get isMath(): boolean { return this.level >= 3; }
+  get duration(): number { return this.isMath ? 90 : 45; }
   private spawnIn = .25;
   private sequence = 0;
   private previousHands = new Map<HandPoint['id'], HandPoint>();
   private previousSword: SwordFrame | null = null;
   private priorTargets = new Set<number>();
   private lastTimestamp = -Infinity;
-  get remaining(): number { return Math.max(0, 45-this.elapsed); }
+  get remaining(): number { return Math.max(0, this.duration-this.elapsed); }
   get wave(): number { return Math.min(3, 1+Math.floor(this.elapsed/15)); }
   get multiplier(): number { return Math.min(4, 1+Math.floor(this.combo/5)); }
   start(aspect: number, level: PopLevel = 1): void {
-    this.level = level === 2 ? 2 : 1;
+    this.level = level === 4 ? 4 : level === 3 ? 3 : level === 2 ? 2 : 1;
     this.aspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 4/3;
     this.elapsed = this.score = this.hits = this.missed = this.combo = this.bestCombo = this.sequence = 0;
     this.spawnIn = .25; this.lastTimestamp = -Infinity; this.phase = 'running'; this.paused = false;
-    this.targets.forEach(t => { t.active = false; }); this.bursts.length = 0; this.breakInput();
+    this.targets.forEach(t => { t.active = false; t.value = null; }); this.bursts.length = 0; this.mathRound = 0; this.math = null; this.breakInput();
+    if (this.isMath) this.nextMath();
   }
   breakInput(): void { this.previousHands.clear(); this.previousSword = null; this.priorTargets.clear(); }
   update(delta: number, active: boolean): void {
     this.paused = !active || this.phase !== 'running';
     if (this.paused) { this.breakInput(); return; }
     if (!Number.isFinite(delta) || delta <= 0) return;
-    const dt = Math.min(.05, delta); this.elapsed = Math.min(45, this.elapsed+dt);
-    if (this.elapsed >= 45) { this.phase = 'over'; this.paused = true; this.breakInput(); return; }
+    const dt = Math.min(.05, delta); this.elapsed = Math.min(this.duration, this.elapsed+dt);
+    if (this.elapsed >= this.duration) { this.phase = 'over'; this.paused = true; this.breakInput(); return; }
     for (let i = this.bursts.length-1; i >= 0; i--) if ((this.bursts[i].age += dt) > .45) this.bursts.splice(i, 1);
+    if (this.isMath) {
+      this.mathDelay = Math.max(0, this.mathDelay-dt);
+      if (!this.mathDelay && this.mathFeedback === 'solved') this.nextMath();
+      else if (!this.mathDelay && this.mathFeedback === 'wrong') this.mathFeedback = 'ready';
+      return;
+    }
     for (const target of this.targets) if (target.active && (target.age += dt) >= target.lifetime) {
       target.active = false; this.missed++; this.combo = 0;
     }
@@ -53,7 +67,38 @@ export class PopSimulation {
     }
   }
   private rememberTargets(): void { this.priorTargets.clear(); for (const t of this.targets) if (t.active) this.priorTargets.add(t.id); }
+  private nextMath(): void {
+    this.math = createMathPuzzle(this.level === 4 ? 'sum' : 'answer', this.mathRound++);
+    this.mathDelay = .4; this.mathFeedback = 'ready'; this.breakInput();
+    const slots = [0, 1, 2, 6, 7, 8];
+    this.targets.forEach(t => { t.active = false; t.value = null; });
+    this.math.choices.forEach((value, i) => Object.assign(this.targets[slots[i]], {
+      id: ++this.sequence, active: true, age: 0, lifetime: Infinity, gold: false, radius: Math.min(.08, this.aspect*.12), value
+    }));
+  }
+  undoMath(reset = false): void {
+    if (!this.math || this.paused || this.phase !== 'running' || this.mathFeedback === 'solved') return;
+    if (reset) this.math.selected.length = 0; else this.math.selected.pop();
+    this.targets.forEach(t => { if (t.value !== null) t.active = !this.math!.selected.includes(this.math!.choices.indexOf(t.value)); });
+    this.mathDelay = .35; this.mathFeedback = 'ready'; this.breakInput();
+  }
   private hit(target: PopTarget): void {
+    if (!target.active) return;
+    if (this.math) {
+      if (this.mathDelay || this.mathFeedback === 'solved' || target.value === null) return;
+      const puzzle = this.math;
+      this.mathDelay = .45; // At most one choice per observation, with a short deliberate-selection delay.
+      if (puzzle.kind === 'answer' && target.value !== puzzle.target) {
+        this.mathFeedback = 'wrong'; this.combo = 0; this.missed++; return;
+      }
+      target.active = false;
+      puzzle.selected.push(puzzle.choices.indexOf(target.value));
+      if (puzzle.kind === 'sum' && (puzzle.selected.length < 2 || totalSelected(puzzle) !== puzzle.target)) {
+        this.mathFeedback = 'picked'; return;
+      }
+      this.mathFeedback = 'solved'; this.mathDelay = 1;
+    }
+
     target.active = false; this.hits++; this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
     const points = (target.gold ? 30 : 10)*this.multiplier; this.score += points;
     if (this.bursts.length >= 18) this.bursts.shift();
@@ -70,7 +115,7 @@ export class PopSimulation {
       const speed = Math.hypot((hand.x-old.x)*this.aspect, hand.y-old.y)/dt;
       if (speed < .18 || speed > 12) continue;
       for (const target of this.targets) if (target.active && this.priorTargets.has(target.id)
-        && (this.level === 1 || hand.id === (target.id % 2 ? 'left' : 'right'))
+        && (this.level !== 2 || hand.id === (target.id % 2 ? 'left' : 'right'))
         && segmentDistance(target, old, hand, this.aspect) <= target.radius+HAND_RADIUS) this.hit(target);
     }
     this.previousHands.clear(); this.previousSword = null;
