@@ -131,3 +131,31 @@ it('level one accepts either direction without hazards and level two retains arr
   for (let i = 0; i < 1200; i++) { game.update(.05, true); expect(game.targets.some(t => t.active && t.hazard)).toBe(false); }
   game.start(1, 2); expect(game.level).toBe(2); expect(game.score).toBe(0);
 });
+
+it('scores all valid later contacts when the blade starts overlapping a stationary handle', () => {
+  const game = new BladeSimulation(); game.start(1, 2);
+  for (let i = 0; i < 3; i++) Object.assign(game.targets[i], { id: 700+i, active: true, x: .46+i*.01, y: .53+i*.01, direction: 2 });
+  const a: SwordFrame = { ...blade(.5, 100), base: { x: .5, y: .5 }, tip: { x: .1, y: .5 } };
+  const b: SwordFrame = { ...a, timestampMs: 133, tip: { x: .9, y: .8 } };
+  game.accept(a, 100); game.accept(b, 133);
+  expect(game.cuts).toBe(3);
+});
+
+it('launches red hazards from both sides and the centre, independently of crystal numbering', () => {
+  const game = new BladeSimulation(); game.start(1, 2); const seen = new Set<number>(), lanes = new Set<string>();
+  for (let i = 0; i < 1200; i++) {
+    game.update(.05, true);
+    for (const target of game.targets) if (target.active && target.hazard && !seen.has(target.id)) {
+      seen.add(target.id); lanes.add(target.x < .3 ? 'left' : target.x > .7 ? 'right' : 'centre');
+    }
+  }
+  expect([...lanes].sort()).toEqual(['centre', 'left', 'right']);
+});
+
+it('can cut an existing target as it enters the visible area during the measured sweep', () => {
+  const game = new BladeSimulation(); game.start(1, 1);
+  Object.assign(game.targets[0], { id: 900, active: true, x: .5, y: 1.02 });
+  const low = (x: number, time: number): SwordFrame => ({ ...blade(x, time), base: { x: 1-x, y: .9 }, tip: { x: 1-x, y: 1 } });
+  game.accept(low(.2, 100), 100); game.targets[0].y = .98; game.accept(low(.8, 133), 133);
+  expect(game.cuts).toBe(1);
+});

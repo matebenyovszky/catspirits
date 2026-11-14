@@ -87,3 +87,16 @@ it('selects level two and saves its record separately from the free-slicing leve
   click('[data-home]'); const easy = root.querySelector<HTMLInputElement>('input[value="1"]')!; easy.checked = true; easy.dispatchEvent(new Event('change')); click('[data-practice]');
   expect(root.querySelector<HTMLElement>('[data-hazard-rule]')!.hidden).toBe(true); expect(root.querySelector('[data-rule]')!.textContent).toBe('Slice in any direction!');
 });
+
+it('scores the release position of a fast swipe even if no intermediate pointermove arrived', () => {
+  click('[data-practice]'); advance(20, 70);
+  const canvas = root.querySelector('canvas')!;
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 400, height: 300 } as DOMRect);
+  canvas.setPointerCapture = vi.fn();
+  const pointer = (name: string, x: number) => {
+    const event = new MouseEvent(name, { bubbles: true, button: 0, clientX: x, clientY: 150 });
+    Object.defineProperty(event, 'pointerId', { value: 1 }); canvas.dispatchEvent(event);
+  };
+  clock = 1410; pointer('pointerdown', 40); clock = 1443; pointer('pointerup', 240); advance(1460, 8);
+  expect(root.querySelector('[data-score]')!.textContent).toBe('10');
+});

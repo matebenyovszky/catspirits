@@ -20,6 +20,7 @@ export class BladeSimulation {
   level: BladeLevel = 1;
   private spawnIn = .45;
   private sequence = 0;
+  private hazardSequence = 0;
   private previous: SwordFrame | null = null;
   private positions = new Map<number, Point2>();
   private lastTimestamp = -Infinity;
@@ -31,7 +32,7 @@ export class BladeSimulation {
     this.level = level === 2 ? 2 : 1;
     this.aspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 4 / 3;
     this.elapsed = this.score = this.cuts = this.missed = this.combo = this.bestCombo = this.mistakes = this.sequence = 0;
-    this.spawnIn = .45; this.lastTimestamp = -Infinity; this.phase = 'running'; this.paused = false;
+    this.hazardSequence = 0; this.spawnIn = .45; this.lastTimestamp = -Infinity; this.phase = 'running'; this.paused = false;
     this.targets.forEach(target => { target.active = false; }); this.bursts.length = 0; this.breakSweep();
   }
   breakSweep(): void { this.previous = null; this.positions.clear(); }
@@ -47,9 +48,12 @@ export class BladeSimulation {
     if (this.spawnIn <= 0) {
       const target = this.targets.find(target => !target.active);
       if (target) {
-        const id = ++this.sequence, side = id % 2 ? 1 : -1;
+        const id = ++this.sequence;
         const hazard = this.level === 2 && this.wave > 1 && id % (this.wave === 2 ? 6 : 4) === 0;
-        Object.assign(target, { id, active: true, age: 0, x: side > 0 ? .17 : .83, y: 1.09,
+        // Hazard IDs are always even; choose their lane independently.
+        const lane = hazard ? [0, 2, 1][this.hazardSequence++ % 3] : id % 2 ? 0 : 2;
+        const side = lane === 0 ? 1 : lane === 2 ? -1 : this.hazardSequence % 2 ? 1 : -1;
+        Object.assign(target, { id, active: true, age: 0, x: [.17, .5, .83][lane], y: 1.09,
           vx: side * (.11 + (id % 3) * .018), vy: -.72 - (id % 3) * .065,
           radius: hazard ? .047 : .052, gold: !hazard && id % 7 === 0, hazard, direction: (id - 1) % 4, flash: 0 });
       }
@@ -77,25 +81,26 @@ export class BladeSimulation {
       for (const target of this.targets) {
         if (!target.active) continue;
         const old = this.positions.get(target.id);
-        if (!old || target.y < 0 || target.y > 1 || old.y < 0 || old.y > 1) continue;
-        const contact = sweptBladeContact(previous, frame, old, target, target.radius + .009);
-        if (!contact) continue;
-        // Evaluate the actual blade section at the hit. A fast-moving tip must
-        // not qualify a stationary handle, nor may target motion earn points.
-        const u = contact.along;
-        const dx = ((frame.base.x - previous.base.x) * (1 - u) + (frame.tip.x - previous.tip.x) * u) * frame.imageAspectRatio;
-        const dy = (frame.base.y - previous.base.y) * (1 - u) + (frame.tip.y - previous.tip.y) * u;
-        const movement = Math.hypot(dx, dy);
-        if (!target.hazard && movement / seconds < (this.level === 2 ? .55 : .25)) continue;
-        if (this.level === 2 && !target.hazard) {
-          const direction = CUT_DIRECTIONS[target.direction];
-          if ((dx * direction.x + dy * direction.y) / movement < Math.SQRT1_2) {
-            // Feedback is debounced per crystal, never a hit lock. A new
-            // correct swing can hit immediately, even while still touching.
-            this.combo = 0;
-            if (!target.flash) { this.mistakes++; target.flash = .22; }
-            continue;
+        if (!old || (target.y < 0 && old.y < 0) || (target.y > 1 && old.y > 1)) continue;
+        let wrongDirection = false;
+        const contact = sweptBladeContact(previous, frame, old, target, target.radius + .009, hit => {
+          // A stationary handle overlap must not hide a later valid contact
+          // made by the moving section of the same blade.
+          if (target.hazard) return true;
+          const u = hit.along;
+          const dx = ((frame.base.x - previous.base.x) * (1 - u) + (frame.tip.x - previous.tip.x) * u) * frame.imageAspectRatio;
+          const dy = (frame.base.y - previous.base.y) * (1 - u) + (frame.tip.y - previous.tip.y) * u;
+          const movement = Math.hypot(dx, dy);
+          if (movement / seconds < (this.level === 2 ? .55 : .25)) return false;
+          if (this.level === 2) {
+            const direction = CUT_DIRECTIONS[target.direction];
+            if ((dx * direction.x + dy * direction.y) / movement < Math.SQRT1_2) { wrongDirection = true; return false; }
           }
+          return true;
+        });
+        if (!contact) {
+          if (wrongDirection) { this.combo = 0; if (!target.flash) { this.mistakes++; target.flash = .22; } }
+          continue;
         }
         target.active = false;
         let points: number;

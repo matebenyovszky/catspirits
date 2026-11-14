@@ -15,3 +15,8 @@ it('bounds work for an almost touching parallel sweep without inventing a hit', 
     expect(hit).toBe(false); expect(count.mock.calls.length).toBeLessThanOrEqual(133);
   } finally { count.mockRestore(); }
 });
+it('bounds the search even if every geometric contact fails gameplay eligibility', () => {
+  let calls = 0;
+  const hit = sweptBladeContact(blade(.5), blade(.5), { x: .5, y: .5 }, { x: .5, y: .5 }, .1, () => { calls++; return false; });
+  expect(hit).toBeNull(); expect(calls).toBeLessThanOrEqual(130);
+});

@@ -100,7 +100,7 @@ export class BladeApp {
     }, { signal });
     canvas.addEventListener('pointermove', event => { if (this.pointer === event.pointerId) this.movePointer(event); }, { signal });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) canvas.addEventListener(name, event => {
-      if (event.pointerId === this.pointer) { this.pointer = null; this.measured = null; this.game.breakSweep(); }
+      if (event.pointerId === this.pointer) { if (name === 'pointerup') this.movePointer(event); this.pointer = null; this.measured = null; this.game.breakSweep(); }
     }, { signal });
     window.addEventListener('keydown', event => { if (event.key === 'Escape' || (event.key.toLowerCase() === 'p' && !(event.target instanceof HTMLSelectElement))) this.pause(); }, { signal });
     window.addEventListener('resize', () => this.resize(), { signal });

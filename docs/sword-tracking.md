@@ -52,3 +52,7 @@ npm exec --package=assemblyscript@0.28.20 -- asc tools/wasm/color-components.ts 
 AssemblyScript compilation is only needed when changing the kernel, not to install/build/play the game. Its Apache 2.0 licence and upstream NOTICE are included in distributed notices. The game-authored source remains MIT licensed.
 
 Tests cover RGB/YUV parity, colour metadata fallback, projective geometry, every ring-occlusion mask, stale samples, swept hits, lifecycle cancellation, hidden-page shutdown and all three interfaces. Synthetic camera-stream tests exercise the real browser worker. They do not establish real-person accuracy, mobile thermals or real-wand performance on every phone; those need a physical camera/wand trial.
+
+### Later contacts and varied hazards
+
+Each crystal now searches for a contact that also satisfies its speed and arrow rule. A stationary handle overlapping the crystal cannot hide a later valid cut by a moving blade section. The continuous search keeps its 128-node budget and still uses fresh measured geometry only. Targets entering the viewport during a sweep are eligible too. Touch practice consumes the pointer-release position, so a quick drag can score even when the browser supplies no intermediate move event. Red hazards choose left, right and centre launch lanes independently of the crystal sequence.
