@@ -85,8 +85,8 @@ export class HandNavigation {
   }
   private frame(frame:PoseFrame):void {
     const point=this.gesture.update(frame);
-    if(!point){this.cancel();this.status.textContent=t('Mutasd a nyitott kezed a kamerának.');return;}
-    this.lastSeen=performance.now();this.point={x:point.x*innerWidth,y:point.y*innerHeight};
+    if(!point){this.cancel();const text=t('Mutasd a nyitott kezed a kamerának.');if(this.status.textContent!==text)this.status.textContent=text;return;}
+    this.lastSeen=performance.now();this.tick();this.point={x:point.x*innerWidth,y:point.y*innerHeight};
     this.cursor.hidden=false;this.cursor.style.transform=`translate3d(${this.point.x}px,${this.point.y}px,0)`;
     this.cursor.classList.toggle('target',this.pointer.move(this.point.x,this.point.y,!sharedCamera.hasGame));
     if(this.held && !point.held && point.edge!=='up')this.pointer.cancel();
@@ -100,7 +100,7 @@ export class HandNavigation {
     const run=(now:number)=>{
       this.raf=0;if(!this.enabled || document.hidden || this.disposed)return;
       const dt=Math.min(40,now-this.lastTick);this.lastTick=now;
-      if(now-this.lastSeen>400)this.cancel();
+      if(now-this.lastSeen>400){this.cancel();return;}
       if(this.point && !this.held){
         const direction=this.point.y<40?-1:this.point.y>innerHeight-40?1:0;
         if(direction!==this.edgeDirection){this.edgeDirection=direction;this.edgeSince=now;}
@@ -109,7 +109,7 @@ export class HandNavigation {
       this.raf=requestAnimationFrame(run);
     };this.raf=requestAnimationFrame(run);
   }
-  private cancel():void {this.pointer.cancel();this.gesture.reset();this.held=false;this.point=undefined;this.cursor.hidden=true;this.edgeDirection=0;}
+  private cancel():void {this.pointer.cancel();this.gesture.reset();this.held=false;this.point=undefined;if(!this.cursor.hidden)this.cursor.hidden=true;this.edgeDirection=0;}
   private suspend():void {
     this.pageActive=false;++this.generation;const tracker=this.tracker;this.tracker=undefined;
     // Release after disabling recursion: visibility or enabled flag guards sync.

@@ -32,3 +32,12 @@ it('cannot resurrect on pagehide from a late game release; resumes on pageshow',
 it('cancels a late lazy import if disabled before initialization',async()=>{
   toggle().click();toggle().click();await settle();expect(trackers).toHaveLength(0);
 });
+
+it('sleeps the cursor render loop while no hand is visible, then wakes on a fresh hand',async()=>{
+  toggle().click();await settle();expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+  vi.mocked(requestAnimationFrame).mock.calls[0][0](performance.now()+500);
+  expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+  const landmarks=Array.from({length:21},()=>({x:.5,y:.5,z:0}));landmarks[5].x=.43;landmarks[17].x=.57;landmarks[4].x=.38;
+  trackers[0].callbacks.onFrame({timestampMs:performance.now(),landmarks,worldLandmarks:[],inferenceMs:1});
+  expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+});
