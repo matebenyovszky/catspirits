@@ -62,7 +62,16 @@ export class PopView {
     c.globalAlpha = 1;
     for (const burst of game.bursts) {
       const u = burst.age/.45, x = burst.x*w, y = burst.y*h; c.globalAlpha = 1-u;
-      c.strokeStyle = '#9ef9e6'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, h*(.055+u*.08), 0, Math.PI*2); c.stroke();
+      c.strokeStyle = burst.reset ? '#ffb18c' : '#9ef9e6'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, h*(.055+u*.08), 0, Math.PI*2); c.stroke();
+      if (burst.reset && !this.reduced) {
+        c.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const angle = i*Math.PI/4, inner = h*(.035+u*.08), outer = inner+h*.025*(1-u);
+          c.moveTo(x+Math.cos(angle)*inner, y+Math.sin(angle)*inner);
+          c.lineTo(x+Math.cos(angle)*outer, y+Math.sin(angle)*outer);
+        }
+        c.stroke();
+      }
       const label = this.labels.get(burst.points); if (label) c.drawImage(label, x-50, y-30-(this.reduced ? 0 : u*30), 100, 42);
       c.globalAlpha = 1;
     }

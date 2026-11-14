@@ -182,9 +182,9 @@ export class PopApp {
     this.text('[data-math-label]', t(puzzle.kind === 'sum' ? 'CÉLÖSSZEG' : 'MENNYI AZ EREDMÉNY?'));
     this.text('[data-math-question]', puzzle.kind === 'sum' ? String(puzzle.target) : `${puzzle.expression} = ?`);
     this.text('[data-math-total]', puzzle.kind === 'sum' ? `${puzzle.selected.map(i => signedNumber(puzzle.choices[i])).join(' ') || '0'} = ${totalSelected(puzzle)}` : '');
-    this.text('[data-math-feedback]', this.game.mathIntroRemaining > 0 ? t('Új feladat · {seconds} mp', { seconds: Math.ceil(this.game.mathIntroRemaining) }) : t(this.game.mathFeedback === 'solved' ? 'Helyes! Szép munka!' : this.game.mathFeedback === 'wrong' ? 'Próbáld újra!' : puzzle.kind === 'sum' ? 'Legalább két számot válassz!' : 'Találd el a helyes számot!'));
+    this.text('[data-math-feedback]', this.game.mathIntroRemaining > 0 ? t('Új feladat · {seconds} mp', { seconds: Math.ceil(this.game.mathIntroRemaining) }) : t(this.game.mathFeedback === 'solved' ? 'Helyes! Szép munka!' : this.game.mathFeedback === 'resetting' ? 'Innen már nem jön ki. Újrakezdjük!' : this.game.mathFeedback === 'wrong' ? 'Próbáld újra!' : puzzle.kind === 'sum' ? 'Legalább két számot válassz!' : 'Találd el a helyes számot!'));
     this.el('.pop-math-panel').dataset.feedback = this.game.mathFeedback;
-    for (const selector of ['[data-undo]', '[data-clear]']) this.el<HTMLButtonElement>(selector).disabled = this.phase !== 'playing' || this.game.mathFeedback === 'solved' || puzzle.selected.length === 0;
+    for (const selector of ['[data-undo]', '[data-clear]']) this.el<HTMLButtonElement>(selector).disabled = this.phase !== 'playing' || this.game.mathFeedback === 'solved' || this.game.mathFeedback === 'resetting' || puzzle.selected.length === 0;
   }
   private finish(): void {
     this.audio.stop(); this.audio.cue('finish');

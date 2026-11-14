@@ -1,5 +1,6 @@
 /** German translations use the same Hungarian phrase IDs as the other interfaces. */
 export const german: Record<string, string> = {
+  "Innen már nem jön ki. Újrakezdjük!": "So geht es nicht mehr auf. Noch einmal!",
   "Új feladat · {seconds} mp": "Neue Aufgabe · {seconds} Sek.",
   "Fogásvezérlés": "Greifersteuerung",
   "Kéznyitás / kézcsukás": "Hand öffnen / schließen",

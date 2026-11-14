@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { createMathPuzzle, signedNumber, totalSelected } from './PopMath';
+import { canCompleteSum, createMathPuzzle, signedNumber, totalSelected } from './PopMath';
 import { PopSimulation } from './PopSimulation';
 import type { HandFrame } from './HandInput';
 let seed = 12345;
 const random = () => { seed = (Math.imul(seed, 1664525)+1013904223) >>> 0; return seed/2**32; };
 const advance = (game: PopSimulation, seconds: number) => { for (let i = 0; i < Math.ceil(seconds/.05); i++) game.update(.05, true); };
 const tapValue = (game: PopSimulation, value: number) => { const t = game.targets.find(t => t.active && t.value === value)!; game.tap(t); };
+function placeThirty(game: PopSimulation, index: number): void {
+  if (game.level !== 4) return;
+  const other = game.targets.find(t => t.value === 30)!;
+  [other.value, game.targets[index].value] = [game.targets[index].value, other.value];
+}
 function solution(values: number[], target: number): number[] {
   for (let mask = 1; mask < 1 << values.length; mask++) {
     const selected = values.filter((_, i) => mask & 1 << i);
@@ -60,6 +65,7 @@ describe('Neon Pop math integration', () => {
   });
   it('pauses math clocks and prevents a single long camera sweep from selecting several pieces', () => {
     const game = new PopSimulation(); game.start(1, 4); advance(game, 2.1);
+    placeThirty(game, 0);
     const frame = (timestampMs: number, x: number): HandFrame => ({ timestampMs, imageAspectRatio: 1, hands: [{ id: 'left', x: 1-x, y: .22 }] });
     game.acceptHands(frame(100, .05), 100); game.acceptHands(frame(180, .95), 180);
     expect(game.math!.selected).toHaveLength(1);
@@ -72,6 +78,7 @@ describe('Neon Pop math integration', () => {
 it('math accepts either hand irrespective of target parity and selects the earliest swept number', () => {
   for (const level of [3,4] as const) for (const id of ['left','right'] as const) {
     const game=new PopSimulation(); game.start(1,level); advance(game, 2.1);
+    placeThirty(game, 2);
     const rightmost=game.targets[2];
     if(level===3) game.math!.target=rightmost.value!;
     const frame=(timestampMs:number,x:number):HandFrame=>({timestampMs,imageAspectRatio:1,hands:[{id,x:1-x,y:.22}]});
@@ -93,13 +100,13 @@ it('emits exactly one wrong/correct cue per accepted answer and one undo cue per
   tapValue(game,game.math!.choices.find(v=>v!==game.math!.target)!);expect(game.drainEvents()).toEqual(['wrong']);
   tapValue(game,game.math!.target);expect(game.drainEvents()).toEqual([]);
   advance(game,.5);tapValue(game,game.math!.target);expect(game.drainEvents()).toEqual(['correct']);
-  game.start(1,4);advance(game, 2.1);tapValue(game,game.math!.choices[0]);expect(game.drainEvents()).toEqual(['pick']);
+  game.start(1,4);advance(game, 2.1);tapValue(game,30);expect(game.drainEvents()).toEqual(['pick']);
   game.undoMath();expect(game.drainEvents()).toEqual(['undo']);game.undoMath();expect(game.drainEvents()).toEqual([]);
 });
 
 it('ignores positions for two seconds on every new math board and requires a fresh movement afterwards', () => {
   for (const level of [3,4] as const) {
-    const game = new PopSimulation(); game.start(1,level);
+    const game = new PopSimulation(); game.start(1,level); placeThirty(game, 2);
     const frame = (timestampMs:number,x:number):HandFrame => ({timestampMs,imageAspectRatio:1,hands:[{id:'left',x:1-x,y:.22}]});
     advance(game,1.9); game.acceptHands(frame(1900,.05),1900); game.acceptHands(frame(1933,.95),1933);
     for (const t of game.targets) game.tap(t);
@@ -114,4 +121,51 @@ it('ignores positions for two seconds on every new math board and requires a fre
       expect(game.math!.selected).toHaveLength(0); expect(game.hits).toBe(1);
     }
   }
+});
+
+it('detects exactly which signed-number prefixes still have a solution', () => {
+  for (let round = 0; round < 100; round++) {
+    const puzzle = createMathPuzzle('sum', round, random);
+    const solutions: number[] = [];
+    for (let mask = 0; mask < 64; mask++) {
+      const pieces = puzzle.choices.filter((_, i) => mask & (1 << i));
+      if (pieces.length >= 2 && pieces.reduce((a,b) => a+b,0) === puzzle.target) solutions.push(mask);
+    }
+    for (let selected = 0; selected < 64; selected++) {
+      puzzle.selected = puzzle.choices.map((_,i) => i).filter(i => selected & (1 << i));
+      expect(canCompleteSum(puzzle)).toBe(solutions.some(mask => (mask & selected) === selected));
+    }
+  }
+});
+it('bursts once on a dead end, then restores the same puzzle with a protected introduction', () => {
+  const game = new PopSimulation(); game.start(1,4); advance(game,2.1);
+  const puzzle = game.math!, choices = [...puzzle.choices], ids = game.targets.map(t => t.id);
+  game.score = 40; game.combo = 3;
+  tapValue(game,30); expect(game.mathFeedback).toBe('picked'); // overshoot is recoverable with −20
+  advance(game,.5); tapValue(game,-4); // no remaining subset can add −16
+  expect(game.mathFeedback).toBe('resetting'); expect(game.missed).toBe(1); expect(game.combo).toBe(0);
+  expect(game.score).toBe(40); expect(game.hits).toBe(0); expect(game.bursts).toHaveLength(6);
+  expect(game.bursts.every(b => b.reset && b.points === 0)).toBe(true);
+  expect(game.targets.some(t => t.active)).toBe(false); expect(game.drainEvents()).toEqual(['pick','wrong']);
+  const selection = [...puzzle.selected]; game.undoMath(true); game.targets.forEach(t => game.tap(t));
+  expect(puzzle.selected).toEqual(selection); expect(game.drainEvents()).toEqual([]);
+  const elapsed = game.elapsed; game.update(.05,false); expect(game.elapsed).toBe(elapsed);
+  expect(game.mathFeedback).toBe('resetting');
+  advance(game,.75); expect(game.math).toBe(puzzle); expect(puzzle.choices).toEqual(choices);
+  expect(puzzle.selected).toEqual([]); expect(game.targets.filter(t => t.active)).toHaveLength(6);
+  expect(game.targets.map(t => t.id)).not.toEqual(ids); expect(game.bursts).toHaveLength(0);
+  expect(game.mathIntroRemaining).toBeGreaterThan(1.9);
+  advance(game,1.8); tapValue(game,30); expect(puzzle.selected).toHaveLength(0);
+  advance(game,.3); tapValue(game,30); advance(game,.5); tapValue(game,-20);
+  expect(game.mathFeedback).toBe('solved'); expect(game.hits).toBe(1); expect(game.score).toBe(50);
+});
+it('also resets when an exhausted selection has no valid total', () => {
+  const game = new PopSimulation(); game.start(1,4); advance(game,2.1);
+  const puzzle = game.math!;
+  // Exercise an already exhausted/stuck board, including choices selected before the guard.
+  puzzle.selected = puzzle.choices.map((_,i) => i).slice(1);
+  game.targets.forEach(t => { t.active = t.value === puzzle.choices[0]; });
+  tapValue(game,puzzle.choices[0]); expect(puzzle.selected).toHaveLength(6);
+  expect(game.mathFeedback).toBe('resetting'); advance(game,.75);
+  expect(puzzle.selected).toHaveLength(0); expect(game.targets.filter(t => t.active)).toHaveLength(6);
 });

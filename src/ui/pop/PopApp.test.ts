@@ -11,6 +11,7 @@ vi.mock('../../core/pop/PopCamera', () => ({ PopCamera: class {
 vi.mock('./PopView', () => ({ PopView: class { resize() {} draw() {} } }));
 let app: PopApp, root: HTMLElement, callbacks: Map<number, FrameRequestCallback>, clock: number, sequence: number;
 beforeEach(() => {
+  vi.spyOn(Math, 'random').mockReturnValue(.999);
   localStorage.clear(); setLanguage('en'); mock.start.mockReset(); mock.start.mockResolvedValue(false); mock.stop.mockClear(); mock.running = false;
   callbacks = new Map(); sequence = clock = 0; vi.spyOn(performance, 'now').mockImplementation(() => clock);
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++sequence, callback); return sequence; });
@@ -85,4 +86,22 @@ it('offers maths with touch, keeps the central question and preserves a round ac
   advance(4000, 4600); expect(root.querySelector('[data-time]')!.textContent).toBe('00');
   expect(localStorage.getItem('catspirits.neon-pop.best.math-sum.v1')).not.toBeNull();
   expect(localStorage.getItem('catspirits.neon-pop.best.v1')).toBeNull();
+});
+
+it('explains an impossible sum, blocks undo during the burst and restores the same question', () => {
+  const level = root.querySelector<HTMLInputElement>('input[name=level][value="4"]')!;
+  level.checked = true; level.dispatchEvent(new Event('change',{bubbles:true}));
+  click('[data-touch]'); advance(20,120);
+  const canvas = root.querySelector('canvas')!;
+  vi.spyOn(canvas,'getBoundingClientRect').mockReturnValue({left:0,top:0,width:400,height:300} as DOMRect);
+  canvas.dispatchEvent(new MouseEvent('pointerdown',{bubbles:true,button:0,clientX:72,clientY:222})); // −4
+  advance(2450,6);
+  expect(root.querySelector('[data-math-feedback]')!.textContent).toBe('No solution left. Let’s try again!');
+  expect(root.querySelector<HTMLButtonElement>('[data-undo]')!.disabled).toBe(true);
+  expect(root.querySelector<HTMLButtonElement>('[data-clear]')!.disabled).toBe(true);
+  advance(2600,40);
+  expect(root.querySelector('[data-math-question]')!.textContent).toBe('10');
+  expect(root.querySelector('[data-math-total]')!.textContent).toBe('0 = 0');
+  expect(root.querySelector('[data-math-feedback]')!.textContent).toBe('New puzzle · 2s');
+  expect(root.querySelector('[data-score]')!.textContent).toBe('0');
 });

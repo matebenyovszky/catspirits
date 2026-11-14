@@ -2,6 +2,18 @@ export type MathKind = 'answer' | 'sum';
 export type MathPuzzle = { kind: MathKind; expression: string; target: number; choices: number[]; selected: number[] };
 export const signedNumber = (value: number): string => value < 0 ? `−${Math.abs(value)}` : `+${value}`;
 export const totalSelected = (puzzle: MathPuzzle): number => puzzle.selected.reduce((sum, index) => sum + puzzle.choices[index], 0);
+/** At most 64 subsets on the six-choice board; evaluated only on selection.
+ * Signed values mean overshooting the target is not itself a dead end. */
+export function canCompleteSum(puzzle: MathPuzzle): boolean {
+  const remaining = puzzle.choices.filter((_, i) => !puzzle.selected.includes(i));
+  const current = totalSelected(puzzle);
+  for (let mask = 0; mask < 2**remaining.length; mask++) {
+    let sum = current, count = puzzle.selected.length;
+    for (let i = 0; i < remaining.length; i++) if (mask & (1 << i)) { sum += remaining[i]; count++; }
+    if (count >= 2 && sum === puzzle.target) return true;
+  }
+  return false;
+}
 function shuffle<T>(items: T[], random: () => number): T[] {
   for (let i = items.length-1; i > 0; i--) { const j = Math.floor(random()*(i+1)); [items[i], items[j]] = [items[j], items[i]]; }
   return items;

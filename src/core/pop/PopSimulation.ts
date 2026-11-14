@@ -1,9 +1,9 @@
-import { createMathPuzzle, totalSelected, type MathPuzzle } from './PopMath';
+import { canCompleteSum, createMathPuzzle, totalSelected, type MathPuzzle } from './PopMath';
 import { segmentDistance, sweptBladeContact } from '../tracking/sword/sweep';
 import { clipBlade, swordToScreen, validSword, type Point2, type SwordFrame } from '../tracking/sword/types';
 import { HAND_RADIUS, validHands, type HandFrame, type HandPoint } from './HandInput';
 export type PopTarget = Point2 & { id: number; active: boolean; age: number; lifetime: number; radius: number; gold: boolean; value: number | null };
-export type PopBurst = Point2 & { age: number; points: number };
+export type PopBurst = Point2 & { age: number; points: number; reset?: boolean };
 export type PopEvent = 'pop' | 'correct' | 'wrong' | 'pick' | 'undo' | 'miss';
 export type PopLevel = 1 | 2 | 3 | 4;
 
@@ -17,7 +17,7 @@ export class PopSimulation {
   paused = true; elapsed = 0; score = 0; hits = 0; missed = 0; combo = 0; bestCombo = 0; aspect = 4/3;
   level: PopLevel = 1;
   math: MathPuzzle | null = null;
-  mathFeedback: 'ready' | 'picked' | 'wrong' | 'solved' = 'ready';
+  mathFeedback: 'ready' | 'picked' | 'wrong' | 'solved' | 'resetting' = 'ready';
   private events: PopEvent[] = [];
   drainEvents(): PopEvent[] { return this.events.splice(0); }
   private emit(event: PopEvent): void { if (this.events.length < 24) this.events.push(event); }
@@ -58,6 +58,7 @@ export class PopSimulation {
       if (wasIntro && this.mathIntroRemaining === 0) this.breakInput();
       this.mathDelay = Math.max(0, this.mathDelay-dt);
       if (!this.mathDelay && this.mathFeedback === 'solved') this.nextMath();
+      else if (!this.mathDelay && this.mathFeedback === 'resetting') this.prepareMath();
       else if (!this.mathDelay && this.mathFeedback === 'wrong') this.mathFeedback = 'ready';
       return;
     }
@@ -78,15 +79,19 @@ export class PopSimulation {
   private rememberTargets(): void { this.priorTargets.clear(); for (const t of this.targets) if (t.active) this.priorTargets.add(t.id); }
   private nextMath(): void {
     this.math = createMathPuzzle(this.level === 4 ? 'sum' : 'answer', this.mathRound++);
+    this.prepareMath();
+  }
+  private prepareMath(): void {
+    this.math!.selected.length = 0;
     this.mathDelay = this.mathIntroRemaining = 2; this.mathFeedback = 'ready'; this.breakInput();
     const slots = [0, 1, 2, 6, 7, 8];
     this.targets.forEach(t => { t.active = false; t.value = null; });
-    this.math.choices.forEach((value, i) => Object.assign(this.targets[slots[i]], {
+    this.math!.choices.forEach((value, i) => Object.assign(this.targets[slots[i]], {
       id: ++this.sequence, active: true, age: 0, lifetime: Infinity, gold: false, radius: Math.min(.08, this.aspect*.12), value
     }));
   }
   undoMath(reset = false): void {
-    if (!this.math || this.mathIntroRemaining > 0 || this.paused || this.phase !== 'running' || this.mathFeedback === 'solved') return;
+    if (!this.math || this.mathIntroRemaining > 0 || this.paused || this.phase !== 'running' || (this.mathFeedback === 'solved' || this.mathFeedback === 'resetting')) return;
     if (this.math.selected.length) this.emit('undo');
     if (reset) this.math.selected.length = 0; else this.math.selected.pop();
     this.targets.forEach(t => { if (t.value !== null) t.active = !this.math!.selected.includes(this.math!.choices.indexOf(t.value)); });
@@ -104,7 +109,15 @@ export class PopSimulation {
       target.active = false;
       puzzle.selected.push(puzzle.choices.indexOf(target.value));
       if (puzzle.kind === 'sum' && (puzzle.selected.length < 2 || totalSelected(puzzle) !== puzzle.target)) {
-        this.mathFeedback = 'picked'; this.emit('pick'); return;
+        if (!canCompleteSum(puzzle)) {
+          this.mathFeedback = 'resetting'; this.mathDelay = .7;
+          this.combo = 0; this.missed++; this.emit('wrong'); this.breakInput();
+          this.bursts.length = 0;
+          for (const t of this.targets) if (t.value !== null) {
+            t.active = false; this.bursts.push({ x: t.x, y: t.y, age: 0, points: 0, reset: true });
+          }
+        } else { this.mathFeedback = 'picked'; this.emit('pick'); }
+        return;
       }
       this.mathFeedback = 'solved'; this.mathDelay = 1; this.emit('correct');
     }
