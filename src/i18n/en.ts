@@ -1,5 +1,17 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  "Fogásvezérlés": "Gripper control",
+  "Kéznyitás / kézcsukás": "Open / close hand",
+  "Csippentés": "Pinch",
+  "Mutasd a vállad, könyököd és kezed. A kezed a fogót, a könyököd a robotkar hajlását irányítja.": "Show your shoulder, elbow and hand. Your hand guides the gripper; your elbow guides the arm bend.",
+  "Alapból zárd össze a kezed a fogáshoz, nyisd ki az elengedéshez. A csippentés külön választható. Egérrel rövid várakozással is megfoghatsz egy cellát.": "By default, close your hand to grab and open it to release. Pinch control is optional. With a mouse, briefly hover to pick up a cell.",
+  "A 3D gyorsítás nem elérhető. Kapcsold be a hardveres gyorsítást, majd próbáld újra.": "3D acceleration is unavailable. Enable hardware acceleration and try again.",
+  "A folytatáshoz csukd be a kezed. A tárgyat megtartom.": "Close your hand again to resume. I am keeping hold of the object.",
+  "Nyisd ki a kezed a kezdéshez.": "Open your hand to begin.",
+  "Mutasd a vállad, könyököd és kezed a kamerának.": "Show your shoulder, elbow and hand to the camera.",
+  "CSUKOTT KÉZ · FOGÁS": "CLOSED HAND · GRAB",
+  "Megvan a karod. Kézcsukással foghatsz, kéznyitással engedhetsz el.": "Arm tracked. Close your hand to grab, open it to release.",
+  "Vezesd a fogót a cellához, és csukd be a kezed!": "Guide the gripper to a cell and close your hand!",
   "90 másodperces matekkör. Bármelyik kéz jó, a színek nem számítanak. Bottal és érintéssel is játszhatsz.": "90-second maths round. Either hand works; colours do not matter. Wand and touch controls work too.",
   "Bármelyik kézzel választhatsz. A színek nem számítanak.": "Choose with either hand. Colours do not matter.",
 
@@ -160,7 +172,7 @@ export const english: Record<string, string> = {
   "Vágj mozgó pengével a kristályokba! Öt egymás utáni találatonként nő a szorzó. Az aranykristály háromszor annyit ér; egy kihagyás megszakítja a kombót. Jelvesztéskor az idő megáll.": "Swing through the crystals! Every five consecutive hits increases your multiplier. Gold crystals are worth triple; a miss breaks your combo. The timer pauses if tracking is lost.",
   "Adatvédelem": "Privacy",
   "Licencek": "Licences",
-  "A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvet, a hangbeállítást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.": "Camera images stay on your device. The game does not record or upload them. Your browser stores your language, sound preference and best scores. Cloudflare provides hosting and processes network data to deliver and protect the site.",
+  "A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvválasztást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.": "Camera images stay on your device. The game does not record or upload them. Your browser stores your language and best scores. Cloudflare provides hosting and processes network data to deliver and protect the site.",
   "← Menü": "← Menu",
   "Hang: ki": "Sound: off",
   "Hang: be": "Sound: on",

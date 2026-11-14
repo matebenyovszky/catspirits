@@ -65,11 +65,11 @@ Hand mode tracks visible wrists using the existing local pose model and needs sh
 
 ## Bit Rescue — pilot a virtual robot arm
 
-[Play Bit Rescue](https://catspirits.com/?game=robot): move a robot gripper with one camera-tracked hand, mouse, touch or keyboard to deliver three energy cells. Pinch thumb and index finger to grab and lift; spread them to release. Optional experimental depth control estimates height from calibrated palm size. Hand control to Bit, take over when it gets stuck, and return control without resetting the task. Mission 1 offers clear docking; mission 2 introduces a shield that requires a manual detour. The controller is rule-based, not a trained AI. No demonstrations are recorded, and no physical robot is connected. See [controls, architecture and hardware boundaries](docs/robot-rescue.md).
+[Play Bit Rescue](https://catspirits.com/?game=robot): pilot a 3D robot arm with a camera-tracked shoulder, elbow and hand, mouse, touch or keyboard to deliver three energy cells. By default, close your hand to grab and open it to release. Pinch control is also available. Optional experimental depth control estimates height from calibrated palm size. Hand control to Bit, take over when it gets stuck, and return control without resetting the task. Mission 1 offers clear docking; mission 2 introduces a shield that requires a manual detour. The controller is rule-based, not a trained AI. No demonstrations are recorded, and no physical robot is connected. See [controls, architecture and hardware boundaries](docs/robot-rescue.md).
 
 ## Source layout
 
-- `src/core/robot/`, `src/ui/robot/`: Bit Rescue simulation, controller interface, single-hand pinch/depth mapping, 2D/3D arm and interface.
+- `src/core/robot/`, `src/ui/robot/`: Bit Rescue simulation, controller interface, measured elbow retargeting, open/closed-hand or optional pinch control, 3D arm and interface.
 - `src/core/pop/`, `src/ui/pop/`: Neon Pop target simulation, hand/wand camera adapter, Canvas arena and interface.
 - `src/core/blade/`, `src/ui/blade/`: Neon Blade simulation, standalone camera, Canvas 2D arena and interface.
 - `src/core/jumper/`: course simulation, robot rendering, audio and camera adapter.

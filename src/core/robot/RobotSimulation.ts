@@ -1,5 +1,6 @@
 /** Normalized planar arm with a bounded vertical gripper axis. No network or hardware access.
  * A future robot adapter must supply its own calibrated limits and safety loop. */
+import type { ArmDirection } from './RobotArmInput';
 export type Point = { x: number; y: number };
 export type Cell = Point & { id: number; dock: Point; delivered: boolean; height: number };
 export type Obstacle = Point & { width: number; height: number };
@@ -46,6 +47,8 @@ export class RobotSimulation {
   obstacles: Obstacle[] = [];
   holding: number | null = null;
   lift = 0;
+  armDirection: ArmDirection | null = null;
+  gripperClosed = false;
   private depthTarget: number | null = null;
   private landingAuto = new Set<number>();
   mode: RobotMode = 'manual';
@@ -66,6 +69,7 @@ export class RobotSimulation {
       obstacles: this.obstacles.map(o => ({ ...o })), complete: this.complete };
   }
   reset(level: RobotLevel): void {
+    this.armDirection = null; this.gripperClosed = false;
     this.level = level; this.tool = { x: .5, y: .74 }; this.target = { ...this.tool };
     this.cells = [.30, .46, .62].map((y, id) => ({ id, x: .23, y, dock: { x: .77, y }, delivered: false, height: 0 }));
     this.obstacles = level === 2 ? [{ x: .46, y: .29, width: .08, height: .30 }] : [];
@@ -75,7 +79,7 @@ export class RobotSimulation {
   setMode(mode: RobotMode): void {
     if (mode === this.mode || this.complete) return;
     if (mode === 'manual') this.takeovers++;
-    this.mode = mode; this.stop();
+    this.mode = mode; if (mode === 'auto') this.armDirection = null; this.stop();
   }
   /** Flush stale targets whenever input ownership changes or tracking is lost. */
   stop(): void { this.target = { ...this.tool }; this.dwell = this.stall = 0; this.blocked = false; this.dwellId = ''; }
@@ -87,6 +91,7 @@ export class RobotSimulation {
   /** Idempotent gesture command: repeated closed frames never toggle/release. */
   setGripper(command: 'open' | 'closed'): void {
     if (command === 'closed' ? this.holding === null : this.holding !== null) this.grip();
+    this.gripperClosed = command === 'closed';
   }
   private collision(point: Point): boolean {
     return this.obstacles.some(o => point.x > o.x - TOOL_RADIUS && point.x < o.x + o.width + TOOL_RADIUS
@@ -100,12 +105,12 @@ export class RobotSimulation {
         held.x = held.dock.x; held.y = held.dock.y;
         if (this.mode === 'auto') this.landingAuto.add(held.id);
       }
-      this.holding = null;
+      this.holding = null; this.gripperClosed = false;
     } else {
       if (this.lift > .015) return;
       const cell = this.cells.find(c => !c.delivered && c.height <= .005 && distance(this.tool, c) < .055);
       if (!cell) return;
-      this.holding = cell.id; cell.x = this.tool.x; cell.y = this.tool.y;
+      this.holding = cell.id; this.gripperClosed = true; cell.x = this.tool.x; cell.y = this.tool.y;
     }
     this.gripCooldown = .45; this.dwell = 0; this.dwellId = '';
   }

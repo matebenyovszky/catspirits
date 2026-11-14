@@ -4,17 +4,28 @@ import { createPoseImageInput } from './PoseImageInput';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('hand worker image ownership and fallback', () => {
-  async function setup() {
+  async function setup(withArm = false) {
     const scope = { onmessage: null as unknown as (e: {data: unknown}) => Promise<void>, postMessage: vi.fn() };
     vi.stubGlobal('self', scope); vi.stubGlobal('OffscreenCanvas', class {});
     const detectForVideo = vi.fn(() => ({ landmarks: [], worldLandmarks: [], handedness: [[{categoryName:"Right",score:.98}]] }));
-    const runtime = { FilesetResolver: { forVisionTasks: vi.fn() },
+    const detectBody = vi.fn(() => ({ landmarks: [], worldLandmarks: [] }));
+    const runtime = { PoseLandmarker: { createFromOptions: vi.fn(async () => ({ detectForVideo: detectBody })) }, FilesetResolver: { forVisionTasks: vi.fn() },
       HandLandmarker: { createFromOptions: vi.fn(async () => ({ detectForVideo })) } };
     handWorkerMain(vi.fn(async () => runtime) as never, createPoseImageInput);
-    await scope.onmessage({ data: { type:'init', runtimeUrl:'local-test', delegate:'GPU' } });
+    await scope.onmessage({ data: { type:'init', runtimeUrl:'local-test', delegate:'GPU', ...(withArm ? {poseModelUrl:'local-pose-model'} : {}) } });
     expect(runtime.HandLandmarker.createFromOptions).toHaveBeenCalledWith(undefined, expect.objectContaining({ numHands: 1, runningMode: 'VIDEO', baseOptions: expect.objectContaining({ delegate: 'GPU' }) }));
-    return { scope, detectForVideo };
+    return { scope, detectForVideo, detectBody };
   }
+  it('shares robot hand/body inference and throttles body work without extending its timestamp', async () => {
+    const {scope, detectForVideo, detectBody} = await setup(true);
+    for (const timestampMs of [100,133,166,233]) {
+      const bitmap = {close:vi.fn()};
+      await scope.onmessage({data:{type:'frame',id:timestampMs,timestampMs,bitmap}});
+      expect(bitmap.close).toHaveBeenCalledOnce();
+    }
+    expect(detectForVideo).toHaveBeenCalledTimes(4); expect(detectBody).toHaveBeenCalledTimes(2);
+    expect(scope.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({type:'frame', frame:expect.objectContaining({armTimestampMs:233, armLandmarks:[]})}));
+  });
   it('uses direct native frames and always closes transferred ownership, including failed inference', async () => {
     const {scope,detectForVideo} = await setup();
     const videoFrame = {displayWidth:640,displayHeight:480,format:'NV12',close:vi.fn()};

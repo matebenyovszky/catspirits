@@ -17,12 +17,12 @@ let root: HTMLElement, app: RobotApp, clock: number, sequence: number, callbacks
 const click = (selector: string) => root.querySelector<HTMLElement>(selector)!.click();
 const advance = (count: number) => { for (let i = 0; i < count; i++) { clock += 20; const entry = callbacks.entries().next().value; if (!entry) continue; callbacks.delete(entry[0]); entry[1](clock); } };
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); };
-beforeEach(() => {
+beforeEach(async () => {
   setLanguage('en'); history.replaceState(null, '', '/?game=robot'); mock.start.mockReset(); mock.start.mockResolvedValue(false); mock.stop.mockClear(); mock.running = false; mock.viewError = false;
   clock = sequence = 0; callbacks = new Map(); vi.spyOn(performance, 'now').mockImplementation(() => clock);
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++sequence, callback); return sequence; });
   vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-  root = document.createElement('main'); document.body.replaceChildren(root); app = new RobotApp(root);
+  root = document.createElement('main'); document.body.replaceChildren(root); app = new RobotApp(root); await vi.dynamicImportSettled();
 });
 afterEach(() => { app.dispose(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 it('offers all four games without camera or background rendering on arrival', () => {
@@ -73,32 +73,31 @@ it('keeps camera control for the next mission and shows a completed status', asy
   expect(root.querySelector<HTMLVideoElement>('video')!.hidden).toBe(false);
 });
 
-it('switches 2D/3D without resetting progress or camera ownership', async () => {
-  click('[data-pointer]'); click('[data-auto]'); advance(400);
-  const count = root.querySelector('[data-count]')!.textContent;
-  click('[data-view="3d"]'); await vi.dynamicImportSettled();
-  expect(root.querySelector('[data-view="3d"]')!.getAttribute('aria-pressed')).toBe('true');
-  expect(root.querySelector('[data-count]')!.textContent).toBe(count); expect(root.dataset.control).toBe('auto');
-  expect(root.querySelector<HTMLCanvasElement>('canvas')!.hidden).toBe(true);
-  click('[data-view="2d"]'); expect(root.querySelector<HTMLCanvasElement>('canvas')!.hidden).toBe(false);
-  expect(root.querySelector('[data-count]')!.textContent).toBe(count); expect(mock.start).not.toHaveBeenCalled();
+it('loads only the 3D game by default without a view selector or camera request', () => {
+  expect(root.querySelector('[data-view="2d"]')).toBeNull();
+  expect(root.querySelector('[data-view="3d"]')).toBeNull();
+  expect(new URL(location.href).searchParams.get('view')).toBe('3d');
+  expect(root.querySelector<HTMLSelectElement>('[data-gesture]')!.value).toBe('hand');
+  expect(mock.start).not.toHaveBeenCalled(); expect(root.querySelectorAll('canvas')).toHaveLength(1);
 });
 
-it('keeps the working 2D game when WebGL initialization fails', async () => {
-  mock.viewError = true; click('[data-pointer]'); click('[data-view="3d"]'); await vi.dynamicImportSettled();
-  expect(root.dataset.phase).toBe('playing'); expect(root.querySelector('[data-view="2d"]')!.getAttribute('aria-pressed')).toBe('true');
-  expect(root.querySelector<HTMLCanvasElement>('canvas')!.hidden).toBe(false); expect(root.querySelectorAll('canvas')).toHaveLength(1);
+it('shows a 3D error and keeps controls stopped if WebGL initialization fails', async () => {
+  app.dispose(); mock.viewError = true; app = new RobotApp(root); await vi.dynamicImportSettled();
+  expect(root.querySelector<HTMLButtonElement>('[data-pointer]')!.disabled).toBe(true);
+  expect(root.querySelector<HTMLButtonElement>('[data-camera]')!.disabled).toBe(true);
+  expect(root.querySelector<HTMLElement>('[data-view-retry]')!.hidden).toBe(false);
   expect(root.textContent).toContain('3D acceleration is unavailable.');
+  expect(callbacks.size).toBe(0);
 });
 
-it('grabs with one-hand pinch, lifts, preserves grip through loss, and releases on an intentional new opening', async () => {
+it('grabs with the default open/closed hand, lifts, preserves grip through loss, and releases on an intentional new opening', async () => {
   mock.start.mockImplementation(async () => { mock.running = true; return true; }); click('[data-camera]'); await settle();
   const feed = (count: number, closed: boolean, x = .8375) => { for (let i = 0; i < count; i++) { mock.emit!(handFixture(clock, closed, x, (.3 - .17) / .61)); advance(1); } };
   feed(150, false); expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 0%');
   feed(60, true); expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 50%');
   mock.emit!(null); advance(50); feed(30, false);
   expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 50%');
-  expect(root.textContent).toContain('Pinch again to resume.');
+  expect(root.textContent).toContain('Close your hand again to resume.');
   feed(20, true); feed(120, true, .1625); feed(40, false, .1625);
   expect(root.querySelector('[data-count]')!.textContent).toBe('1');
   expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 0%');
@@ -109,7 +108,7 @@ it('retains an opening gesture through the brief gripper cooldown', async () => 
   const feed = (count: number, closed: boolean) => { for (let i = 0; i < count; i++) { mock.emit!(handFixture(clock, closed, .8375, (.3 - .17) / .61)); advance(1); } };
   feed(150, false); feed(8, true); feed(50, false);
   expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 0%');
-  expect(root.querySelector('[data-task]')!.textContent).toContain('pinch');
+  expect(root.querySelector('[data-task]')!.textContent).toContain('close your hand');
 });
 
 it('waits for depth calibration and then raises the third axis with apparent palm size', async () => {
@@ -120,6 +119,21 @@ it('waits for depth calibration and then raises the third axis with apparent pal
   feed(25, 1); feed(50, 1.4);
   expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 80%');
   click('[data-depth]'); feed(50, 1.4); expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 0%');
+});
+
+it('does not release a held cell when the elbow disappears while the hand stays visible', async () => {
+  mock.start.mockImplementation(async () => { mock.running = true; return true; }); click('[data-camera]'); await settle();
+  const feed = (count: number, closed: boolean, elbow = true) => {
+    for (let i = 0; i < count; i++) {
+      const frame = handFixture(clock,closed,.8375,(.3-.17)/.61);
+      if (!elbow) frame.armLandmarks = [];
+      mock.emit!(frame); advance(1);
+    }
+  };
+  feed(150,false); feed(60,true); expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 50%');
+  feed(30,false,false); feed(30,false,true);
+  expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 50%');
+  expect(root.textContent).toContain('Close your hand again to resume.');
 });
 
 it('signals actual robot actions once and suspends audio on pause', () => {

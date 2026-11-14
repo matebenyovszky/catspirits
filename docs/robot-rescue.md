@@ -4,10 +4,10 @@ Open `/?game=robot` (English/Hungarian/German), or choose **Bit Rescue** in any 
 
 ## Play
 
-Guide three numbered energy cells to matching docks. Choose **Start camera** to steer with one tracked hand, or **Mouse / touch / keyboard**. Show the palm and fingers of one hand. The hand side is locked per camera session. The preview is mirrored. The dedicated Hand Landmarker model runs instead of the body model, locally in the existing GPU/CPU worker transport.
+Guide three numbered energy cells to matching docks. Choose **Start camera** to steer with one tracked hand, or **Mouse / touch / keyboard**. Show one hand together with its shoulder and elbow. The hand side is locked per camera session. The preview is mirrored. The self-hosted Hand Landmarker and Pose Lite models share one camera, worker and frame-in-flight transport. Hand detection runs on available frames; body inference is serial and capped at 10 Hz. Each body observation retains its own timestamp, so cached elbow landmarks cannot become fresh just because a new hand frame arrived.
 
 - Mouse/touch: click a destination or drag. Keyboard: arrows or WASD.
-- Camera: spread thumb and index finger to arm control, then pinch to grab and spread to release. Pinch distance is normalized to palm size; distinct thresholds and at least three measured frames over 100 ms reject jitter. On tracking loss the arm and held object freeze. Reacquisition while holding requires a closed pinch first, then a new opening to release.
+- Camera: by default open the hand to arm control, close it to grab and open it to release. At least three extended or folded fingers determine the full-hand state; ambiguous shapes do not change it. Optional pinch mode retains thumb/index-distance control. Both modes use hysteresis and at least three measured frames over 100 ms to reject jitter. On tracking loss the arm and held object freeze. Reacquisition while holding requires the closed gesture first, then a new opening to release.
 - Mouse/touch: hold the gripper still near a cell for 0.65 seconds to grab; hold it at the matching dock to deliver. The ring indicates progress. **Space** or **Grab / release** operates the gripper explicitly.
 - **Bit controls** / **Enter** hands control to the autopilot. **I control** / **M**, a movement key or a pointer press takes control back. Ownership changes preserve the held cell, deliveries, pose and time; stale destinations are flushed.
 - **Mission 1: First docking** has a clear workspace. Bit can complete it independently.
@@ -20,7 +20,7 @@ The autopilot is **rule-based, not a learned AI**. It selects the next cell or t
 
 `src/core/robot/RobotSimulation.ts` defines `RobotObservation`, `RobotCommand` and `RobotController`. The injected `DirectController` can later be replaced by a learned controller. Observations are detached snapshots of the tool, cells, docks, fields and grip state. Commands request a tool-space target and optional grip action. The simulation applies reach limits, bounded speed and swept tool collision checks regardless of control ownership.
 
-The Canvas view uses inverse kinematics for two fixed-length links. Rendering is capped at 60 updates/s, DPR at 1.5 and HUD at 10 updates/s. The welcome screen has no animation loop. The robot route is lazy-loaded; pointer controls do not start MediaPipe. Three.js loads only when the optional 3D view is selected.
+The 3D view uses inverse kinematics for two fixed-length links. A visible body wrist is matched geometrically to the tracked hand, and that arm identity stays locked for the session. Measured shoulder–elbow direction controls the elbow bend plane while the tool retains its bounded table-space mapping. Missing or stale shoulder/elbow/wrist observations stop manual movement and preserve held objects. This is retargeting to robot link lengths and workspace limits, not calibrated one-to-one reconstruction of a human arm. Rendering is capped at 60 updates/s, DPR at 1.25 and HUD at 10 updates/s. The welcome screen has no animation loop. The robot route is lazy-loaded; pointer controls do not start MediaPipe. The robot route loads Three.js and its 3D view automatically. There is no 2D view selector or automatic 2D fallback; WebGL failure stops control and offers retry.
 
 Physical integration is absent. A hardware adapter will need calibrated coordinates, joint/velocity/force limits, collision handling, stale-command timeouts, explicit enable and an independent stop mechanism. Simulation limits are not a hardware safety system. The existing site policy still disables USB. Hardware integration and demonstration collection are separate implementation tasks.
 
@@ -29,9 +29,9 @@ Physical integration is absent. A hardware adapter will need calibrated coordina
 Tests cover autonomous completion, a blocked route followed by manual recovery and handback, docking/dwell, ownership continuity, stale camera input, invalid commands, bounded timesteps, swept collisions, inverse kinematics, camera races, pause/resume, fallback, missions and all three languages. The single-hand worker was also checked in a browser with the official public hand test image (GPU delegate and 21 landmarks). Pinch/lift/loss/reacquisition and docking use deterministic injected landmarks. Synthetic hand frames do not establish tracking accuracy on a real person/device.
 
 
-## Optional 3D preview
+## 3D robot and gripper
 
-Select **3D · test** or open `/?game=robot&view=3d`. The arm has planar articulated joints and a vertical gripper axis. Cells have height, rise after grasp and settle before a dock is scored. The default automatically raises the held cell; it is not six-degree-of-freedom manipulation. Pointer clicks are raycast onto that plane; camera and keyboard controls keep their table-space mapping. Switching views preserves mission state and controller ownership. WebGL failure/context loss falls back to 2D. The 3D renderer uses no post-processing or shadow maps, caps DPR at 1.25, shares the existing frame loop and releases GPU resources on disposal. The original 2D renderer remains the default.
+Open `/?game=robot` for the 3D game. Cells rise after grasp and settle before delivery is scored. The default automatically raises a held cell; optional depth control below adds a hand-controlled vertical axis. Pointer clicks are raycast onto the table, and camera/keyboard controls retain that task mapping. Open/closed finger animation follows the commanded gripper even when it holds no cell. The renderer uses no post-processing or shadow maps and releases GPU resources on disposal.
 
 ### Experimental depth control
 

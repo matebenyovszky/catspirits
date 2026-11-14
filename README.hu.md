@@ -62,7 +62,8 @@ Kézi módban a meglévő, helyben futó modell a csuklókat figyeli; a váll, k
 
 ## Bit Rescue — virtuális robotkar
 
-[Bit Rescue indítása](https://catspirits.com/?game=robot&lang=hu): kamerával követett kézzel, csippentéses fogással és automatikus emeléssel, egérrel, érintéssel vagy billentyűvel vigyél három energiacellát a megfelelő dokkhoz. Add át Bitnek a vezérlést, és ha elakad, vedd vissza, kerüld meg az akadályt, majd add vissza neki. Az első küldetés szabad dokkolás, a második kerülőutat igényel. A vezérlés szabályalapú, nem tanított AI; a játék nem rögzít demonstrációkat, és nem kapcsolódik fizikai robothoz. A 3D nézetben külön kapcsolható kísérleti magasságvezérlés is: a kalibrált tenyérméret változása vezérli az emelést. [Vezérlés és fejlesztői dokumentáció](docs/robot-rescue.md).
+[Bit Rescue indítása](https://catspirits.com/?game=robot&lang=hu): 3D-s robotkarral, kamerával követett váll–könyök–kéz mozgással, alapértelmezett kézcsukásos fogással és automatikus emeléssel, egérrel, érintéssel vagy billentyűvel vigyél három energiacellát a megfelelő dokkhoz. Add át Bitnek a vezérlést, és ha elakad, vedd vissza, kerüld meg az akadályt, majd add vissza neki. Az első küldetés szabad dokkolás, a második kerülőutat igényel. A vezérlés szabályalapú, nem tanított AI; a játék nem rögzít demonstrációkat, és nem kapcsolódik fizikai robothoz. A 3D nézetben külön kapcsolható kísérleti magasságvezérlés is: a kalibrált tenyérméret változása vezérli az emelést. [Vezérlés és fejlesztői dokumentáció](docs/robot-rescue.md).
+
 
 ### Saját 8 bites zene és játékhangok
 

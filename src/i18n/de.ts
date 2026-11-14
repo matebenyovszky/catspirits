@@ -1,5 +1,17 @@
 /** German translations use the same Hungarian phrase IDs as the other interfaces. */
 export const german: Record<string, string> = {
+  "Fogásvezérlés": "Greifersteuerung",
+  "Kéznyitás / kézcsukás": "Hand öffnen / schließen",
+  "Csippentés": "Pinzettengriff",
+  "Mutasd a vállad, könyököd és kezed. A kezed a fogót, a könyököd a robotkar hajlását irányítja.": "Zeige Schulter, Ellbogen und Hand. Die Hand steuert den Greifer, der Ellbogen die Armbeugung.",
+  "Alapból zárd össze a kezed a fogáshoz, nyisd ki az elengedéshez. A csippentés külön választható. Egérrel rövid várakozással is megfoghatsz egy cellát.": "Standardmäßig Hand zum Greifen schließen und zum Loslassen öffnen. Der Pinzettengriff ist optional. Mit der Maus kannst du eine Zelle durch kurzes Verweilen aufnehmen.",
+  "A 3D gyorsítás nem elérhető. Kapcsold be a hardveres gyorsítást, majd próbáld újra.": "3D-Beschleunigung ist nicht verfügbar. Aktiviere die Hardwarebeschleunigung und versuche es erneut.",
+  "A folytatáshoz csukd be a kezed. A tárgyat megtartom.": "Schließe die Hand erneut, um fortzufahren. Ich halte das Objekt fest.",
+  "Nyisd ki a kezed a kezdéshez.": "Öffne die Hand, um zu beginnen.",
+  "Mutasd a vállad, könyököd és kezed a kamerának.": "Zeige der Kamera Schulter, Ellbogen und Hand.",
+  "CSUKOTT KÉZ · FOGÁS": "GESCHLOSSENE HAND · GREIFEN",
+  "Megvan a karod. Kézcsukással foghatsz, kéznyitással engedhetsz el.": "Arm erkannt. Schließe die Hand zum Greifen und öffne sie zum Loslassen.",
+  "Vezesd a fogót a cellához, és csukd be a kezed!": "Führe den Greifer zur Zelle und schließe die Hand!",
   "90 másodperces matekkör. Bármelyik kéz jó, a színek nem számítanak. Bottal és érintéssel is játszhatsz.": "90 Sekunden Mathe. Beide Hände funktionieren; Farben spielen keine Rolle. Auch mit Stab oder per Touch spielbar.",
   "Bármelyik kézzel választhatsz. A színek nem számítanak.": "Wähle mit einer beliebigen Hand. Die Farben spielen keine Rolle.",
 
@@ -160,7 +172,7 @@ export const german: Record<string, string> = {
   "Vágj mozgó pengével a kristályokba! Öt egymás utáni találatonként nő a szorzó. Az aranykristály háromszor annyit ér; egy kihagyás megszakítja a kombót. Jelvesztéskor az idő megáll.": "Schwinge durch die Kristalle! Je fünf Treffer in Folge erhöhen deinen Multiplikator. Goldene Kristalle zählen dreifach; ein verpasster Kristall beendet die Kombo. Geht die Erkennung verloren, pausiert die Zeit.",
   "Adatvédelem": "Datenschutz",
   "Licencek": "Lizenzen",
-  "A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvet, a hangbeállítást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.": "Kamerabilder bleiben auf deinem Gerät. Das Spiel zeichnet sie nicht auf und lädt sie nicht hoch. Dein Browser speichert Sprache, Toneinstellung und Bestwerte. Cloudflare stellt das Hosting bereit und verarbeitet Netzwerkdaten zur Bereitstellung und zum Schutz der Website.",
+  "A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvválasztást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.": "Kamerabilder bleiben auf deinem Gerät. Das Spiel zeichnet sie nicht auf und lädt sie nicht hoch. Dein Browser speichert Sprache und Bestwerte. Cloudflare stellt das Hosting bereit und verarbeitet Netzwerkdaten zur Bereitstellung und zum Schutz der Website.",
   "← Menü": "← Menü",
   "Hang: ki": "Ton: aus",
   "Hang: be": "Ton: an",

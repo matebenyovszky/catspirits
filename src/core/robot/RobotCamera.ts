@@ -1,7 +1,8 @@
 import type { CameraPoseTracker } from '../tracking/CameraPoseTracker';
 import type { PoseFrame } from '../tracking/types';
 /** Reuses the tested Safari capture, cancellation and GPU/CPU recovery transport,
- * but starts only the single-hand model. No parallel body inference. */
+ * with serial hand inference plus body landmarks at up to 10 Hz on that same
+ * worker and stream. No parallel camera or frame queue. */
 export class RobotCamera {
   private tracker: CameraPoseTracker | null = null;
   private generation = 0;
@@ -16,7 +17,7 @@ export class RobotCamera {
     this.tracker = new CameraPoseTracker(this.video, {
       onFrame: frame => { if (current()) this.onFrame(frame); },
       onStatus: status => { if (current()) { this.tracking = status.state === 'tracking'; if (!this.tracking) this.onFrame(null); } }
-    }, createHandWorker);
+    }, delegate => createHandWorker(delegate, true));
     this.tracker.setInputWidth(480); await this.tracker.start();
     return current() && this.tracking;
   }

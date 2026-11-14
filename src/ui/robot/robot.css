@@ -12,3 +12,4 @@
 .robot-depth-option{display:flex;gap:8px;align-items:center;font-size:11px;line-height:1.5;color:#b6ddd4;margin-top:18px}.robot-depth-option input{accent-color:#7cebd1}.robot-card [data-pinch-status]{color:#8fe9cf;font-weight:700}.robot-card [data-height]{font-variant-numeric:tabular-nums;color:#a8d9f0}
 
 @media(max-width:480px){.robot-console{grid-template-columns:minmax(0,1fr)}.robot-how ol{columns:1}.robot-card p,.robot-card .blade-primary,.robot-card .blade-secondary,.robot-control-switch button{font-size:12px}.robot-card h2{font-size:18px}}
+.robot-gesture-option{display:flex;flex-direction:column;gap:8px;color:#c8d8e3;font-size:12px;margin:14px 0}.robot-gesture-option select{max-width:100%;padding:10px;border-radius:9px;background:#15273c;color:#e8f4f4;border:1px solid #ffffff24;font:inherit}.robot-root [data-view-retry]{margin-bottom:14px}

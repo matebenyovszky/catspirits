@@ -4,6 +4,8 @@ export type PinchState = { point: Point; grip: 'open' | 'closed' | null; armed: 
 /** Single-hand control with image-aspect normalization, hysteresis and measured-
  * frame debounce. Reacquisition must match the held gripper before any new edge. */
 export class RobotPinchInput {
+  constructor(private gesture: 'hand' | 'pinch' = 'pinch') {}
+  setGesture(gesture: 'hand' | 'pinch'): void { this.gesture = gesture; this.rearm(); }
   private side: string | null = null;
   private stamp = -Infinity;
   private last: PinchState | null = null;
@@ -39,7 +41,18 @@ export class RobotPinchInput {
     this.stamp = frame.timestampMs; this.side = frame.handedness!;
     this.palm = this.palm ? { x: this.palm.x * .3 + palm.x * .7, y: this.palm.y * .3 + palm.y * .7 } : palm;
     const ratio = length(4, 8) / size;
-    const candidate = ratio < .30 ? true : ratio > .55 ? false : null;
+    let candidate: boolean | null = ratio < .30 ? true : ratio > .55 ? false : null;
+    if (this.gesture === 'hand') {
+      const fingers = [[8,6,5], [12,10,9], [16,14,13], [20,18,17]];
+      if (!fingers.flat().every(i => points[i] && [points[i].x, points[i].y, points[i].z].every(Number.isFinite)
+        && points[i].x >= 0 && points[i].x <= 1 && points[i].y >= 0 && points[i].y <= 1)) { this.rearm(); return null; }
+      let extended = 0, folded = 0;
+      for (const [tip, pip, mcp] of fingers) {
+        if (length(tip, 0) > length(pip, 0)*1.15 && length(tip, mcp) > size*.5) extended++;
+        else if (length(tip, 0) < length(pip, 0)*1.05 || length(tip, mcp) < size*.45) folded++;
+      }
+      candidate = extended >= 3 ? false : folded >= 3 ? true : null;
+    }
     let grip: PinchState['grip'] = null;
     if (candidate === null) { this.candidate = null; this.samples = 0; }
     else {

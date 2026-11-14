@@ -36,3 +36,13 @@ it('rejects corrupt, future and too-small landmarks instead of making a gesture'
   expect(input.update(f, 10, false)).toBeNull(); expect(input.update(handFixture(500), 100, false)).toBeNull();
   expect(input.update(handFixture(500, false, .5, .5, .01), 500, false)).toBeNull();
 });
+it('uses full hand opening/closing when selected, with reacquisition and optional pinch mode', () => {
+  const input = new RobotPinchInput('hand');
+  expect(stable(input,0,true).armed).toBe(false);
+  expect(stable(input,200,false).armed).toBe(true);
+  expect(stable(input,400,true)).toMatchObject({armed:true,closed:true});
+  input.update(null,600,true); expect(stable(input,640,false,true).armed).toBe(false);
+  expect(stable(input,840,true,true).armed).toBe(true);
+  expect(stable(input,1040,false,true).closed).toBe(false);
+  input.setGesture('pinch'); expect(stable(input,1240,false).armed).toBe(true);
+});

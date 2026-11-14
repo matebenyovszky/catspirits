@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { BASE, elbowFor, type Point, type RobotSimulation } from '../../core/robot/RobotSimulation';
+import type { ArmDirection } from '../../core/robot/RobotArmInput';
+import { BASE, LINKS, elbowFor, type Point, type RobotSimulation } from '../../core/robot/RobotSimulation';
 const colours = [0x73efd2, 0xb4a0ff, 0xffc879];
 export const toWorld = (p: Point, height = 0): THREE.Vector3 => new THREE.Vector3((p.x - .5) * 10, height, (p.y - .5) * 10);
 export function tablePoint(camera: THREE.Camera, x: number, y: number): Point | null {
@@ -8,7 +9,32 @@ export function tablePoint(camera: THREE.Camera, x: number, y: number): Point | 
   const hit = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
   return hit ? { x: hit.x / 10 + .5, y: hit.z / 10 + .5 } : null;
 }
-/** Optional 3D renderer. Task physics intentionally remain planar. */
+/** Preserve robot link lengths while following the measured elbow bend plane.
+ * The hand still controls the bounded task target; body coordinates are retargeted,
+ * not claimed to be a calibrated one-to-one spatial reconstruction. */
+export function retargetElbow(tool: Point, direction: ArmDirection | null): THREE.Vector3 {
+  const start = toWorld(BASE, 1.65), end = toWorld(tool, 1.65);
+  if (!direction) return toWorld(elbowFor(tool), 1.65);
+  const axis = end.clone().sub(start), distance = axis.length(); if (distance < 1e-6) return toWorld(elbowFor(tool), 1.65);
+  axis.divideScalar(distance);
+  const upper = LINKS[0]*10, fore = LINKS[1]*10;
+  const along = Math.max(-upper, Math.min(upper, (upper*upper+distance*distance-fore*fore)/(2*distance)));
+  const radius = Math.sqrt(Math.max(0, upper*upper-along*along));
+  let bend = new THREE.Vector3(direction.x, direction.y, direction.z); bend.addScaledVector(axis, -bend.dot(axis));
+  if (bend.lengthSq() < 1e-8) { bend = toWorld(elbowFor(tool), 1.65).sub(start); bend.addScaledVector(axis, -bend.dot(axis)); }
+  bend.normalize();
+  // Keep the elbow above the virtual table, even when the measured upper arm
+  // points below the robot's physical workspace.
+  if (radius > 0 && 1.65+bend.y*radius < .6) {
+    const y = (.6-1.65)/radius;
+    if (Math.hypot(bend.x,bend.z) < 1e-8) { bend.x = -axis.z; bend.z = axis.x; }
+    const horizontal = Math.hypot(bend.x,bend.z);
+    const scale = Math.sqrt(Math.max(0,1-y*y))/(horizontal || 1);
+    bend.set(bend.x*scale,y,bend.z*scale);
+  }
+  return start.addScaledVector(axis, along).addScaledVector(bend, radius);
+}
+/** 3D renderer. Task physics keep bounded table-space targets. */
 export class RobotView3D {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -81,10 +107,10 @@ export class RobotView3D {
   screenToWorld(x: number, y: number): Point | null { return tablePoint(this.camera, x, y); }
   draw(game: RobotSimulation): void {
     if (this.disposed) return;
-    const shoulder = toWorld(BASE, 1.65), elbow = toWorld(elbowFor(game.tool), 1.65), wrist = toWorld(game.tool, 1.65);
+    const shoulder = toWorld(BASE, 1.65), elbow = retargetElbow(game.tool, game.armDirection), wrist = toWorld(game.tool, 1.65);
     this.segment(this.upper, shoulder, elbow); this.segment(this.fore, elbow, wrist); this.elbow.position.copy(elbow);
     this.gripper.position.copy(toWorld(game.tool, game.lift * 10));
-    this.fingers[0].position.x = game.holding === null ? -.32 : -.27; this.fingers[1].position.x = -this.fingers[0].position.x;
+    this.fingers[0].position.x = game.gripperClosed ? -.23 : -.38; this.fingers[1].position.x = -this.fingers[0].position.x;
     game.cells.forEach(cell => {
       this.cellMeshes[cell.id].position.copy(toWorld(cell, cell.height * 10));
       this.dockMaterials[cell.id].opacity = cell.delivered ? .65 : .25;

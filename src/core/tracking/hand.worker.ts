@@ -20,7 +20,7 @@ export function handWorkerMain(loadRuntime: (url: string) => Promise<typeof impo
   type Vision = typeof import("@mediapipe/tasks-vision");
   type Detector = import("@mediapipe/tasks-vision").HandLandmarker;
   type Request =
-    | { type: "init"; runtimeUrl: string; wasmUrl: string; modelUrl: string; delegate: "GPU" | "CPU" }
+    | { type: "init"; runtimeUrl: string; wasmUrl: string; modelUrl: string; poseModelUrl?: string; delegate: "GPU" | "CPU" }
     | { type: "frame"; id: number; timestampMs: number; bitmap: ImageBitmap; videoFrame?: never }
     | { type: "frame"; id: number; timestampMs: number; videoFrame: VideoFrame; width: number; height: number; bitmap?: never };
   const scope = self as unknown as {
@@ -28,6 +28,8 @@ export function handWorkerMain(loadRuntime: (url: string) => Promise<typeof impo
     postMessage(message: unknown): void;
   };
   let detector: Detector | undefined;
+  let pose: import('@mediapipe/tasks-vision').PoseLandmarker | undefined;
+  let armLandmarks: PoseFrame['landmarks'] = [], armWorldLandmarks: PoseFrame['worldLandmarks'] = [], armTimestampMs = -Infinity;
   const prepareInput = makeInput();
   scope.onmessage = async (event) => {
     const request = event.data;
@@ -49,12 +51,23 @@ export function handWorkerMain(loadRuntime: (url: string) => Promise<typeof impo
           minHandPresenceConfidence: 0.55,
           minTrackingConfidence: 0.6
         });
+        if (request.poseModelUrl) pose = await runtime.PoseLandmarker.createFromOptions(files, {
+          baseOptions: { modelAssetPath: request.poseModelUrl, delegate: request.delegate },
+          canvas: new OffscreenCanvas(640, 480), runningMode: 'VIDEO', numPoses: 1,
+          minPoseDetectionConfidence: .55, minPosePresenceConfidence: .55, minTrackingConfidence: .55, outputSegmentationMasks: false
+        });
         scope.postMessage({ type: "ready", delegate: request.delegate });
       } else {
         if (!detector) throw new Error("A kézkövető még nem áll készen.");
         const input = request.videoFrame ? prepareInput(request.videoFrame, request.width, request.height).image : request.bitmap;
         const startedAt = performance.now();
         const result = detector.detectForVideo(input, request.timestampMs);
+        // Shared capture, serial inference, one frame in flight. Body inference
+        // is capped at 10 Hz; no extra stream or queue on the main thread.
+        if (pose && request.timestampMs-armTimestampMs >= 100) {
+          const body = pose.detectForVideo(input, request.timestampMs);
+          armLandmarks = body.landmarks[0] ?? []; armWorldLandmarks = body.worldLandmarks[0] ?? []; armTimestampMs = request.timestampMs;
+        }
         scope.postMessage({
           type: "frame", id: request.id,
           frame: {
@@ -63,7 +76,8 @@ export function handWorkerMain(loadRuntime: (url: string) => Promise<typeof impo
             worldLandmarks: result.worldLandmarks[0] ?? [],
             inferenceMs: performance.now() - startedAt,
             handedness: result.handedness[0]?.[0]?.categoryName.toLowerCase(),
-            handednessScore: result.handedness[0]?.[0]?.score
+            handednessScore: result.handedness[0]?.[0]?.score,
+            ...(pose ? { armLandmarks, armWorldLandmarks, armTimestampMs } : {})
           }
         });
       }
@@ -77,7 +91,7 @@ export function handWorkerMain(loadRuntime: (url: string) => Promise<typeof impo
   };
 }
 
-export function createHandWorker(delegate: "GPU" | "CPU"): Worker {
+export function createHandWorker(delegate: "GPU" | "CPU", withArm = false): Worker {
   // Keep the native import in generated worker source: Vite dev otherwise adds
   // an injectQuery helper from the UI module, which does not exist in the worker.
   const source = `(${handWorkerMain.toString()})(url => import(url), ${createPoseImageInput.toString()})`;
@@ -87,6 +101,7 @@ export function createHandWorker(delegate: "GPU" | "CPU"): Worker {
     worker.postMessage({
       type: "init", delegate, runtimeUrl: new URL(visionRuntimeUrl, document.baseURI).href,
       wasmUrl: new URL(`${import.meta.env.BASE_URL}assets/mediapipe/runtime-0.10.32/`, document.baseURI).href,
+      ...(withArm ? { poseModelUrl: new URL(`${import.meta.env.BASE_URL}assets/mediapipe/pose-lite-v1/pose_landmarker_lite.task`, document.baseURI).href } : {}),
       modelUrl: new URL(`${import.meta.env.BASE_URL}assets/mediapipe/hand-full-v1/hand_landmarker.task`, document.baseURI).href,
     });
     return worker;

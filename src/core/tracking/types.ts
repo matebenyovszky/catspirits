@@ -4,6 +4,10 @@ export type PoseFrame = {
   /** Optional single-hand detector metadata; absent for body tracking. */
   handedness?: "left" | "right";
   handednessScore?: number;
+  /** Optional body observations sharing the robot hand camera; separately aged. */
+  armLandmarks?: PoseLandmark[];
+  armWorldLandmarks?: PoseLandmark[];
+  armTimestampMs?: number;
   timestampMs: number;
   /** Present only on display estimates; original measured image timestamp. */
   observationTimestampMs?: number;
