@@ -1,5 +1,6 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  "Új feladat · {seconds} mp": "New puzzle · {seconds}s",
   "Fogásvezérlés": "Gripper control",
   "Kéznyitás / kézcsukás": "Open / close hand",
   "Csippentés": "Pinch",

@@ -1,5 +1,6 @@
 /** German translations use the same Hungarian phrase IDs as the other interfaces. */
 export const german: Record<string, string> = {
+  "Új feladat · {seconds} mp": "Neue Aufgabe · {seconds} Sek.",
   "Fogásvezérlés": "Greifersteuerung",
   "Kéznyitás / kézcsukás": "Hand öffnen / schließen",
   "Csippentés": "Pinzettengriff",

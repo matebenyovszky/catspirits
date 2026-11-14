@@ -47,7 +47,7 @@ describe('Neon Pop math integration', () => {
     advance(game, 90); expect(game.phase).toBe('over'); expect(game.remaining).toBe(0);
   });
   it('accepts signed pieces in any order and supports undo/reset without reusing pieces', () => {
-    const game = new PopSimulation(); game.start(1, 4); advance(game, .5);
+    const game = new PopSimulation(); game.start(1, 4); advance(game, 2.1);
     const puzzle = game.math!; const values = solution(puzzle.choices, puzzle.target).reverse();
     tapValue(game, values[0]); expect(totalSelected(puzzle)).toBe(values[0]); expect(game.hits).toBe(0);
     advance(game, .5); const first = game.targets.find(t => t.value === values[0])!; game.tap(first); // inactive choice cannot be scored twice
@@ -59,7 +59,7 @@ describe('Neon Pop math integration', () => {
     game.undoMath(true); expect(game.hits).toBe(1); expect(game.mathFeedback).toBe('solved');
   });
   it('pauses math clocks and prevents a single long camera sweep from selecting several pieces', () => {
-    const game = new PopSimulation(); game.start(1, 4); advance(game, .5);
+    const game = new PopSimulation(); game.start(1, 4); advance(game, 2.1);
     const frame = (timestampMs: number, x: number): HandFrame => ({ timestampMs, imageAspectRatio: 1, hands: [{ id: 'left', x: 1-x, y: .22 }] });
     game.acceptHands(frame(100, .05), 100); game.acceptHands(frame(180, .95), 180);
     expect(game.math!.selected).toHaveLength(1);
@@ -71,7 +71,7 @@ describe('Neon Pop math integration', () => {
 
 it('math accepts either hand irrespective of target parity and selects the earliest swept number', () => {
   for (const level of [3,4] as const) for (const id of ['left','right'] as const) {
-    const game=new PopSimulation(); game.start(1,level); advance(game,.5);
+    const game=new PopSimulation(); game.start(1,level); advance(game, 2.1);
     const rightmost=game.targets[2];
     if(level===3) game.math!.target=rightmost.value!;
     const frame=(timestampMs:number,x:number):HandFrame=>({timestampMs,imageAspectRatio:1,hands:[{id,x:1-x,y:.22}]});
@@ -82,17 +82,36 @@ it('math accepts either hand irrespective of target parity and selects the earli
 });
 it('does not use stale or reacquired math hand positions as a selection sweep', () => {
   for(const id of ['left','right'] as const){
-    const game=new PopSimulation();game.start(1,4);advance(game,.5);
+    const game=new PopSimulation();game.start(1,4);advance(game, 2.1);
     const frame=(timestampMs:number,x:number):HandFrame=>({timestampMs,imageAspectRatio:1,hands:[{id,x:1-x,y:.22}]});
     game.acceptHands(frame(100,.05),100);game.acceptHands(frame(150,.3),500);expect(game.math!.selected).toHaveLength(0);
     game.acceptHands(frame(520,.3),520);expect(game.math!.selected).toHaveLength(0);
   }
 });
 it('emits exactly one wrong/correct cue per accepted answer and one undo cue per change', () => {
-  const game=new PopSimulation();game.start(1,3);advance(game,.5);
+  const game=new PopSimulation();game.start(1,3);advance(game, 2.1);
   tapValue(game,game.math!.choices.find(v=>v!==game.math!.target)!);expect(game.drainEvents()).toEqual(['wrong']);
   tapValue(game,game.math!.target);expect(game.drainEvents()).toEqual([]);
   advance(game,.5);tapValue(game,game.math!.target);expect(game.drainEvents()).toEqual(['correct']);
-  game.start(1,4);advance(game,.5);tapValue(game,game.math!.choices[0]);expect(game.drainEvents()).toEqual(['pick']);
+  game.start(1,4);advance(game, 2.1);tapValue(game,game.math!.choices[0]);expect(game.drainEvents()).toEqual(['pick']);
   game.undoMath();expect(game.drainEvents()).toEqual(['undo']);game.undoMath();expect(game.drainEvents()).toEqual([]);
+});
+
+it('ignores positions for two seconds on every new math board and requires a fresh movement afterwards', () => {
+  for (const level of [3,4] as const) {
+    const game = new PopSimulation(); game.start(1,level);
+    const frame = (timestampMs:number,x:number):HandFrame => ({timestampMs,imageAspectRatio:1,hands:[{id:'left',x:1-x,y:.22}]});
+    advance(game,1.9); game.acceptHands(frame(1900,.05),1900); game.acceptHands(frame(1933,.95),1933);
+    for (const t of game.targets) game.tap(t);
+    expect(game.hits).toBe(0); expect(game.math!.selected).toHaveLength(0);
+    advance(game,.2); game.acceptHands(frame(2100,.82),2100); game.acceptHands(frame(2133,.82),2133);
+    expect(game.math!.selected).toHaveLength(0); // no old sweep or stationary-hand selection
+    if (level === 3) game.math!.target = game.targets[2].value!;
+    game.acceptHands(frame(2200,.60),2200); expect(game.math!.selected).toHaveLength(1);
+    if (level === 3) {
+      advance(game,1.1); expect(game.mathIntroRemaining).toBeGreaterThan(1.8);
+      game.acceptHands(frame(3300,.05),3300); game.acceptHands(frame(3333,.95),3333);
+      expect(game.math!.selected).toHaveLength(0); expect(game.hits).toBe(1);
+    }
+  }
 });

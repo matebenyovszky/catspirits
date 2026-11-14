@@ -27,6 +27,7 @@ export class PopView {
   draw(game: PopSimulation, hands: HandFrame | null, sword: SwordFrame | null, now: number, camera: boolean): void {
     const c = this.c, w = this.width, h = this.height;
     c.clearRect(0, 0, w, h); c.fillStyle = camera ? '#081b2e70' : '#101a30'; c.fillRect(0, 0, w, h);
+    c.globalAlpha = game.mathIntroRemaining > 0 ? .4 : 1;
     for (const target of game.targets) {
       if (game.isMath && target.value === null) continue;
       const x = target.x*w, y = target.y*h, r = target.radius*h;
@@ -58,6 +59,7 @@ export class PopView {
         if (target.gold) { c.fillStyle = '#ffe4a1'; c.beginPath(); c.moveTo(x, y-r-13+rise); c.lineTo(x+4, y-r-8+rise); c.lineTo(x, y-r-3+rise); c.lineTo(x-4, y-r-8+rise); c.closePath(); c.fill(); }
       }
     }
+    c.globalAlpha = 1;
     for (const burst of game.bursts) {
       const u = burst.age/.45, x = burst.x*w, y = burst.y*h; c.globalAlpha = 1-u;
       c.strokeStyle = '#9ef9e6'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, h*(.055+u*.08), 0, Math.PI*2); c.stroke();

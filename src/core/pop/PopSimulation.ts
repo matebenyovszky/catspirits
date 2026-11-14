@@ -22,6 +22,7 @@ export class PopSimulation {
   drainEvents(): PopEvent[] { return this.events.splice(0); }
   private emit(event: PopEvent): void { if (this.events.length < 24) this.events.push(event); }
   private mathDelay = 0;
+  mathIntroRemaining = 0;
   private mathRound = 0;
   get isMath(): boolean { return this.level >= 3; }
   get duration(): number { return this.isMath ? 90 : 45; }
@@ -40,7 +41,7 @@ export class PopSimulation {
     this.aspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 4/3;
     this.elapsed = this.score = this.hits = this.missed = this.combo = this.bestCombo = this.sequence = 0;
     this.spawnIn = .25; this.lastTimestamp = -Infinity; this.phase = 'running'; this.paused = false;
-    this.targets.forEach(t => { t.active = false; t.value = null; }); this.bursts.length = 0; this.mathRound = 0; this.math = null; this.breakInput();
+    this.targets.forEach(t => { t.active = false; t.value = null; }); this.bursts.length = 0; this.mathRound = 0; this.math = null; this.mathIntroRemaining = 0; this.breakInput();
     if (this.isMath) this.nextMath();
   }
   breakInput(): void { this.previousHands.clear(); this.previousSword = null; this.priorTargets.clear(); }
@@ -52,6 +53,9 @@ export class PopSimulation {
     if (this.elapsed >= this.duration) { this.phase = 'over'; this.paused = true; this.breakInput(); return; }
     for (let i = this.bursts.length-1; i >= 0; i--) if ((this.bursts[i].age += dt) > .45) this.bursts.splice(i, 1);
     if (this.isMath) {
+      const wasIntro = this.mathIntroRemaining > 0;
+      this.mathIntroRemaining = Math.max(0, this.mathIntroRemaining-dt);
+      if (wasIntro && this.mathIntroRemaining === 0) this.breakInput();
       this.mathDelay = Math.max(0, this.mathDelay-dt);
       if (!this.mathDelay && this.mathFeedback === 'solved') this.nextMath();
       else if (!this.mathDelay && this.mathFeedback === 'wrong') this.mathFeedback = 'ready';
@@ -74,7 +78,7 @@ export class PopSimulation {
   private rememberTargets(): void { this.priorTargets.clear(); for (const t of this.targets) if (t.active) this.priorTargets.add(t.id); }
   private nextMath(): void {
     this.math = createMathPuzzle(this.level === 4 ? 'sum' : 'answer', this.mathRound++);
-    this.mathDelay = .4; this.mathFeedback = 'ready'; this.breakInput();
+    this.mathDelay = this.mathIntroRemaining = 2; this.mathFeedback = 'ready'; this.breakInput();
     const slots = [0, 1, 2, 6, 7, 8];
     this.targets.forEach(t => { t.active = false; t.value = null; });
     this.math.choices.forEach((value, i) => Object.assign(this.targets[slots[i]], {
@@ -82,14 +86,14 @@ export class PopSimulation {
     }));
   }
   undoMath(reset = false): void {
-    if (!this.math || this.paused || this.phase !== 'running' || this.mathFeedback === 'solved') return;
+    if (!this.math || this.mathIntroRemaining > 0 || this.paused || this.phase !== 'running' || this.mathFeedback === 'solved') return;
     if (this.math.selected.length) this.emit('undo');
     if (reset) this.math.selected.length = 0; else this.math.selected.pop();
     this.targets.forEach(t => { if (t.value !== null) t.active = !this.math!.selected.includes(this.math!.choices.indexOf(t.value)); });
     this.mathDelay = .35; this.mathFeedback = 'ready'; this.breakInput();
   }
   private hit(target: PopTarget): void {
-    if (!target.active) return;
+    if (!target.active || this.mathIntroRemaining > 0) return;
     if (this.math) {
       if (this.mathDelay || this.mathFeedback === 'solved' || target.value === null) return;
       const puzzle = this.math;
@@ -112,6 +116,7 @@ export class PopSimulation {
     this.bursts.push({ x: target.x, y: target.y, age: 0, points });
   }
   acceptHands(frame: HandFrame | null, now: number): void {
+    if (this.mathIntroRemaining > 0) { this.breakInput(); return; }
     if (this.paused || this.phase !== 'running' || !frame || !validHands(frame, now)) { this.breakInput(); return; }
     if (frame.timestampMs <= this.lastTimestamp) return;
     const dt = (frame.timestampMs-this.lastTimestamp)/1000; this.lastTimestamp = frame.timestampMs;
@@ -141,6 +146,7 @@ export class PopSimulation {
     this.rememberTargets();
   }
   acceptSword(measured: SwordFrame | null, now: number): void {
+    if (this.mathIntroRemaining > 0) { this.breakInput(); return; }
     if (this.level === 2) { this.breakInput(); return; }
     if (this.paused || this.phase !== 'running' || !measured || !validSword(measured, now)) { this.breakInput(); return; }
     if (measured.timestampMs <= this.lastTimestamp) return;
