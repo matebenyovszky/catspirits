@@ -23,3 +23,7 @@ try {
   root.innerHTML = localizedHtml(`<section class="jumper-fallback"><h1>Cyber Jumper</h1><p>A 3D játék nem indult el. Frissítsd a böngészőt, és kapcsold be a hardveres gyorsítást.</p><button type="button">Újrapróbálás</button></section>`);
   root.querySelector('button')?.addEventListener('click', () => location.reload());
 }
+
+// Global navigation survives all in-page menus; model code is lazy until opt-in.
+const { HandNavigation } = await import('./ui/hand/HandNavigation');
+new HandNavigation();

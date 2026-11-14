@@ -4,11 +4,13 @@ const SOUND_KEY = 'catspirits.sound.enabled.v1';
 const midi = (note: number) => 440 * 2 ** ((note - 69) / 12);
 // Original Catspirits motifs, composed for this synthesizer. No borrowed tunes,
 // recordings, samples, external audio URLs or decoding work during a hit.
-const THEMES = {
-  jumper: { bpm: 124, root: 48, melody: [12, 7, 16, -1, 19, 16, 14, 7, 12, -1, 19, 24, 21, 19, 16, -1] },
-  pop: { bpm: 112, root: 53, melody: [12, -1, 19, 16, 14, 7, 12, -1, 21, 19, -1, 16, 14, 19, 12, -1] },
-  blade: { bpm: 136, root: 45, melody: [12, 15, 19, -1, 22, 19, 15, 10, 12, -1, 17, 19, 15, 10, 7, -1] },
-  robot: { bpm: 100, root: 50, melody: [12, -1, 16, 19, -1, 14, 9, -1, 16, 12, -1, 21, 19, -1, 14, 7] },
+export const AUDIO_THEMES = {
+  // Bright, driving synthwave; elastic electro-pop; darker blade techno;
+  // optimistic robotic arpeggios. All motifs and arrangements are original.
+  jumper: { bpm: 138, root: 45, chords: [0, 5, 8, 7], third: 3, lead: 'sawtooth', bass: [0,-1,0,12,-1,0,7,-1], melody: [12, 7, 15, -1, 19, 15, 14, 7, 12, -1, 19, 24, 20, 19, 15, 14] },
+  pop: { bpm: 132, root: 53, chords: [0, 7, 9, 5], third: 4, lead: 'square', bass: [0,-1,12,-1,7,0,-1,12], melody: [12, 16, 19, -1, 21, 19, 14, 7, 12, -1, 16, 24, 21, 19, 16, -1] },
+  blade: { bpm: 148, root: 42, chords: [0, 0, 3, 7], third: 3, lead: 'sawtooth', bass: [0,0,12,-1,0,7,0,12], melody: [12, 15, 19, 22, -1, 19, 15, 10, 12, -1, 17, 19, 22, 19, 15, 7] },
+  robot: { bpm: 128, root: 50, chords: [0, 5, 9, 7], third: 4, lead: 'triangle', bass: [0,-1,7,12,0,-1,12,7], melody: [12, 19, 16, 24, -1, 21, 19, 14, 16, 12, 19, -1, 24, 21, 19, 16] },
 } as const;
 
 /** One lazy Web Audio context, short lookahead and bounded voices per game.
@@ -97,14 +99,20 @@ export class ChipAudio {
     this.nodes.add(node); this.scheduledNotes++;
     node.addEventListener('ended', () => { this.nodes.delete(node); node.disconnect(); cleanup(); }, { once: true });
   }
-  private tone(note: number, time: number, duration: number, volume: number, type: OscillatorType, bus: GainNode, endNote = note): void {
+  private tone(note: number, time: number, duration: number, volume: number, type: OscillatorType, bus: GainNode, endNote = note, cutoff?: number): void {
     if (this.nodes.size >= 48) return;
     const context = this.context!, oscillator = context.createOscillator(), gain = context.createGain();
     oscillator.type = type; oscillator.frequency.setValueAtTime(midi(note), time);
     oscillator.frequency.exponentialRampToValueAtTime(midi(endNote), time + duration);
     gain.gain.setValueAtTime(.0001, time); gain.gain.exponentialRampToValueAtTime(volume, time + .005);
     gain.gain.exponentialRampToValueAtTime(.0001, time + duration);
-    oscillator.connect(gain); gain.connect(bus); this.own(oscillator, () => gain.disconnect());
+    let filter: BiquadFilterNode | undefined;
+    if (cutoff) {
+      filter=context.createBiquadFilter();filter.type='lowpass';
+      filter.frequency.setValueAtTime(cutoff,time);filter.frequency.exponentialRampToValueAtTime(Math.max(180,cutoff*.22),time+duration);
+      oscillator.connect(filter);filter.connect(gain);
+    } else oscillator.connect(gain);
+    gain.connect(bus);this.own(oscillator,()=>{gain.disconnect();filter?.disconnect();});
     oscillator.start(time); oscillator.stop(time + duration + .015);
   }
   private hiss(time: number, duration: number, volume: number, bus: GainNode): void {
@@ -118,19 +126,33 @@ export class ChipAudio {
   private schedule(): void {
     if (!this.active || !this.context) return;
     if (document.hidden) { this.sleep(); return; }
-    const theme = THEMES[this.theme], dt = 60 / (this.theme === 'pop' && this.level >= 3 ? 98 : theme.bpm) / 4;
+    const theme = AUDIO_THEMES[this.theme], dt = 60 / theme.bpm / 4;
     if (this.nextBeat < this.context.currentTime) this.nextBeat = this.context.currentTime + .01;
     while (this.nextBeat < this.context.currentTime + .10) {
-      const step = this.step++ % 128, bar = Math.floor(step / 16), root = theme.root + [0, 5, 7, 0][bar % 4] + (this.theme === 'jumper' ? this.level * 2 : 0), time = this.nextBeat;
-      if (this.musicVolume > 0) {
-        if (step % 4 === 0) { this.tone(root - 12, time, dt * 2.5, .20, 'triangle', this.music!); this.tone(47, time, .09, .12, 'sine', this.music!, 24); }
-        if (step % 8 === 4) this.hiss(time, .08, .08, this.music!);
-        if (step % 2 === 0) {
-          this.hiss(time, .025, .025, this.music!);
-          const note = theme.melody[(Math.floor(step / 2) + (bar >= 4 ? 4 : 0)) % 16];
-          if (note >= 0) this.tone(root + note, time, dt * 1.4, .055, 'square', this.music!);
+      const step=this.step++%256, beat=step%16, bar=Math.floor(step/16);
+      const root=theme.root+theme.chords[bar%4]+(this.theme==='jumper'?Math.min(4,this.level)*2:0), time=this.nextBeat;
+      const lift=bar%8>=4, breakdown=bar%16===7, bus=this.music!;
+      if(this.musicVolume>0){
+        // Four-on-the-floor kick, snare/clap and syncopated hats; a lighter
+        // one-bar break gives the next phrase a lift without louder output.
+        if(beat%4===0 && (!breakdown || beat===0))this.tone(51,time,.15,.38,'sine',bus,22);
+        if(beat%8===4){this.hiss(time,.09,.12,bus);this.tone(46,time,.065,.08,'triangle',bus,32);this.hiss(time+.018,.045,.055,bus);}
+        if(beat%2===0 || (lift && beat%4===3))this.hiss(time,beat%4===2?.065:.022,beat%4===2?.052:.025,bus);
+        const bass=theme.bass[beat%8];
+        if(bass>=0 && !breakdown)this.tone(root-12+bass,time+dt*.10,dt*.78,beat%4===0?.075:.16,'sawtooth',bus,root-12+bass,650+(beat%4)*220);
+        if(beat%2===0){
+          const note=theme.melody[(Math.floor(step/2)+(bar>=8?4:0))%16];
+          if(note>=0){
+            const pitch=root+note+(lift && this.theme==='robot'?12:0);
+            this.tone(pitch,time,dt*1.35,.075,theme.lead,bus,pitch,2600+(beat%4)*500);
+            // Quiet authored echo, not a long-running delay or extra audio file.
+            if(lift)this.tone(pitch,time+dt*1.5,dt*.7,.021,'triangle',bus);
+          }
         }
-        if (step % 4 === 2) this.tone(root + [0, 7, 12, 7][Math.floor(step / 4) % 4], time, dt * .8, .05, 'triangle', this.music!);
+        if(beat%4===2 || (lift && beat%2===1))this.tone(root+[12,19,24,12+theme.third][Math.floor(step/2)%4],time,dt*.65,.045,'square',bus,root+[12,19,24,12+theme.third][Math.floor(step/2)%4],1800);
+        // Short chord stabs leave space for score/pop feedback and avoid pads
+        // or effects accumulating through a long session.
+        if(lift && beat%8===2)for(const interval of [0,theme.third,7])this.tone(root+interval,time,dt*2,.028,'sawtooth',bus,root+interval,1400);
       }
       this.nextBeat += dt;
     }

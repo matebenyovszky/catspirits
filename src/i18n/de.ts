@@ -1,5 +1,17 @@
 /** German translations use the same Hungarian phrase IDs as the other interfaces. */
 export const german: Record<string, string> = {
+  "A kézkurzor bekapcsolását a lap munkamenete megjegyzi. Játékváltáskor és az oldal előtérbe hozásakor újraindulhat. A Kézkurzor gombbal kikapcsolható; a képfeldolgozás helyben történik.": "Die Aktivierung des Handcursors wird für diese Tab-Sitzung gespeichert. Beim Spielwechsel oder bei der Rückkehr zur Seite kann er erneut starten. Mit der Schaltfläche Handcursor ausschalten; die Bildverarbeitung bleibt auf deinem Gerät.",
+  "A kézkövető nem töltődött be. Kapcsold ki, majd próbáld újra.": "Handtracking wurde nicht geladen. Schalte es aus und versuche es erneut.",
+
+  "Kézkurzor": "Handcursor",
+  "Kézkurzor kikapcsolása": "Handcursor ausschalten",
+  "Kézkurzor bekapcsolása": "Handcursor einschalten",
+  "Kézkurzor indítása…": "Handcursor wird gestartet…",
+  "Mozgasd a kezed. Csippents a kattintáshoz, tartsd össze húzáshoz. A képernyő felső és alsó szélén görgethetsz.": "Bewege deine Hand. Zum Klicken Daumen und Zeigefinger zusammenführen, zum Ziehen halten. Am oberen oder unteren Bildschirmrand scrollen.",
+  "Mutasd a nyitott kezed a kamerának.": "Zeige der Kamera deine offene Hand.",
+  "Nyitott kéz: mozgatás · csippentés: kattintás": "Offene Hand: bewegen · Pinch: klicken",
+  "Válassz egy lehetőséget": "Wähle eine Option",
+
   "Innen már nem jön ki. Újrakezdjük!": "So geht es nicht mehr auf. Noch einmal!",
   "Új feladat · {seconds} mp": "Neue Aufgabe · {seconds} Sek.",
   "Fogásvezérlés": "Greifersteuerung",

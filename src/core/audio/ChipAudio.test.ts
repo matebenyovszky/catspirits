@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { ChipAudio } from './ChipAudio';
+import { ChipAudio, AUDIO_THEMES } from './ChipAudio';
 import { bindSoundToggle } from '../../ui/audio/soundToggle';
 import { setLanguage } from '../../i18n';
 let contexts: FakeContext[], sources: FakeNode[];
@@ -72,7 +72,7 @@ it('synchronizes menu and game buttons, persists mute across games and works wit
   setLanguage('en'); const root=document.createElement('div');root.innerHTML='<button data-sound></button><button data-sound></button><input data-mute type="checkbox">';
   const abort=new AbortController(), audio=new ChipAudio();bindSoundToggle(root,audio,abort.signal);
   root.querySelector<HTMLButtonElement>('button')!.click();
-  expect([...root.querySelectorAll('button')].every(b=>b.textContent==='Sound: off'&&b.getAttribute('aria-pressed')==='false')).toBe(true);
+  expect([...root.querySelectorAll('button')].every(b=>b.getAttribute('aria-label')==='Sound: off' && !!b.querySelector('svg')&&b.getAttribute('aria-pressed')==='false')).toBe(true);
   expect(root.querySelector<HTMLInputElement>('input')!.checked).toBe(true);
   expect(new ChipAudio('blade').enabled).toBe(false);
   vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new Error('private');});
@@ -84,4 +84,15 @@ it('can restart music after a temporary tracking stop without a new user gesture
   for(const node of sources)node.dispatchEvent(new Event('ended'));
   expect(audio.snapshot().active).toBe(false); expect(contexts[0].state).toBe('running');
   audio.play(); expect(audio.snapshot().active).toBe(true); expect(vi.getTimerCount()).toBe(1); audio.dispose();
+});
+
+it('gives each game a distinct upbeat arrangement with bounded voices', async () => {
+  expect(new Set(Object.values(AUDIO_THEMES).map(t=>JSON.stringify(t.melody))).size).toBe(4);
+  expect(Object.values(AUDIO_THEMES).every(t=>t.bpm>=128 && t.bpm<=148)).toBe(true);
+  for (const theme of ['jumper','pop','blade','robot'] as const) {
+    const audio=new ChipAudio(theme);await audio.unlock();audio.play(3);
+    const context=contexts[contexts.length-1];
+    for(let i=0;i<300;i++){context.currentTime=i*.05;vi.advanceTimersByTime(50);expect(audio.snapshot().voices).toBeLessThanOrEqual(48);for(const node of sources.splice(0))node.dispatchEvent(new Event('ended'));}
+    expect(audio.snapshot().scheduledNotes).toBeGreaterThan(100);audio.dispose();expect(vi.getTimerCount()).toBe(0);
+  }
 });

@@ -48,7 +48,7 @@ export class BladeApp {
         </section><div class="blade-art">${art}<span class="blade-art-label">01 / NEON BLADE</span></div>
         <section class="blade-guide"><div><span class="blade-eyebrow">AMIRE SZÜKSÉGED LESZ</span><h2>Egy kamera. Egy puha jelölőbot.</h2><p>A négy színes sávot követjük. Nem kell a teljes testednek a képbe férnie.</p></div>
           <div class="blade-wand"><div class="wand-diagram" aria-label="50 centiméteres bot: két rózsaszín és két zöld sáv"><i></i><b class="band b1"></b><b class="band b2"></b><b class="band b3"></b><b class="band b4"></b></div><small>MARKOLAT → RÓZSASZÍN → RÓZSASZÍN → ZÖLD → ZÖLD</small><details><summary>Jelölőbot és játékszabályok</summary><p>50 cm hosszú, puha végű bot. Rózsaszín sávok: 12–18 és 22–25 cm; zöld sávok: 34–37 és 42–48 cm a markolat aljától. Átmérő: kb. 25 mm. A sávok érjenek körbe.</p><p>Induláskor mutasd mind a négy sávot. Szórt fény és egyszínű háttér segít. Csak puha játékbotot használj, és hagyj magad körül szabad helyet.</p><p><strong>2. szint · Iránypróba</strong></p><p>Vágj a kristály nyilának irányába! A rossz irány és a kihagyás megszakítja a kombót. Öt találatonként nő a szorzó; az aranykristály háromszoros pontot ér. A második hullámtól kerüld a piros tüskéket: −20 pont. Tartós jelvesztéskor az idő megáll.</p></details></div></section>
-        <footer class="blade-menu-footer"><span>CATSPIRITS / PLAY WITH MOVEMENT</span><a href="/licenses/THIRD-PARTY-NOTICES.txt">Licencek</a><details><summary>Adatvédelem</summary><p>A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvet, a hangbeállítást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.</p></details></footer>
+        <footer class="blade-menu-footer"><span>CATSPIRITS / PLAY WITH MOVEMENT</span><a href="/licenses/THIRD-PARTY-NOTICES.txt">Licencek</a><details><summary>Adatvédelem</summary><p>A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvet, a hangbeállítást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.</p><p>A kézkurzor bekapcsolását a lap munkamenete megjegyzi. Játékváltáskor és az oldal előtérbe hozásakor újraindulhat. A Kézkurzor gombbal kikapcsolható; a képfeldolgozás helyben történik.</p></details></footer>
       </main>
       <section class="blade-play" hidden>
         <div class="blade-toolbar"><button class="blade-text-button" data-home>← Menü</button><span data-mode-label></span><div><button class="blade-text-button" data-sound aria-pressed="false">Hang: ki</button><button class="blade-text-button" data-pause>Szünet</button></div></div>
@@ -91,7 +91,7 @@ export class BladeApp {
     const canvas = this.el('canvas');
     canvas.addEventListener('pointerdown', event => {
       if (this.mode !== 'touch' || this.phase !== 'playing' || event.button !== 0 || this.pointer !== null) return;
-      this.pointer = event.pointerId; canvas.setPointerCapture(event.pointerId); this.game.breakSweep(); this.movePointer(event);
+      this.pointer = event.pointerId; if(event.isTrusted)canvas.setPointerCapture(event.pointerId); this.game.breakSweep(); this.movePointer(event);
     }, { signal });
     canvas.addEventListener('pointermove', event => { if (this.pointer === event.pointerId) this.movePointer(event); }, { signal });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) canvas.addEventListener(name, event => {

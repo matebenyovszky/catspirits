@@ -5,8 +5,8 @@ import { JumperView } from '../../core/jumper/JumperView';
 import { JumperAudio } from '../../core/jumper/JumperAudio';
 import { JumperCamera } from '../../core/jumper/JumperCamera';
 
-const icon = (name: 'play' | 'pause' | 'sound' | 'expand' | 'robot' | 'world' | 'close' | 'arrow' | 'home') => {
-  const paths = { play:'M9 5l11 7-11 7V5z', pause:'M8 5v14M16 5v14', sound:'M11 5L6 9H3v6h3l5 4V5zM15 8a6 6 0 010 8M18 5a10 10 0 010 14',
+const icon = (name: 'play' | 'pause' | 'settings' | 'expand' | 'robot' | 'world' | 'close' | 'arrow' | 'home') => {
+  const paths = { play:'M9 5l11 7-11 7V5z', pause:'M8 5v14M16 5v14', settings:'M4 6h4m4 0h8M4 12h10m4 0h2M4 18h3m4 0h9M8 3v6m6 0v6m-7 0v6',
     expand:'M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5', robot:'M8 6V3M16 6V3M5 7h14v12H5V7zM9 11v3M15 11v3M10 17h4',
     world:'M3 12a9 9 0 1018 0 9 9 0 10-18 0zM3 12h18M12 3a18 18 0 010 18 18 18 0 010-18z', close:'M6 6l12 12M18 6L6 18',
     arrow:'M4 12h16M14 6l6 6-6 6', home:'M3 11l9-8 9 8M6 9v12h12V9M10 21v-7h4v7',
@@ -53,7 +53,7 @@ export class JumperApp {
         <nav aria-label="Játék menü">
           <button data-worlds class="nav-text">${icon('world')}<span>Pályák</span></button>
           <button data-suits class="nav-text" aria-label="Robotom">${icon('robot')}<span>Robotom</span></button>
-          <button data-sound class="sound-button" aria-pressed="true">Hang: be</button><button data-settings class="icon-button" aria-label="Hang és megjelenés beállításai" title="Hang és megjelenés">${icon('sound')}</button>
+          <button data-sound class="sound-button" aria-pressed="true">Hang: be</button><button data-settings class="icon-button" aria-label="Hang és megjelenés beállításai" title="Hang és megjelenés">${icon('settings')}</button>
           <button data-fullscreen class="icon-button" aria-label="Teljes képernyő" title="Teljes képernyő">${icon('expand')}</button>
           <button data-pause class="icon-button pause-button" hidden aria-label="Játék szüneteltetése" title="Szünet (P)">${icon('pause')}</button>
         </nav>
@@ -183,7 +183,7 @@ export class JumperApp {
     };
     button.addEventListener('pointerdown',event=>{
       if(event.button!==0)return;
-      event.preventDefault();pointerHandled=true;button.setPointerCapture(event.pointerId);start(`pointer:${event.pointerId}`);
+      event.preventDefault();pointerHandled=true;if(event.isTrusted)button.setPointerCapture(event.pointerId);start(`pointer:${event.pointerId}`);
     },{signal});
     for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)button.addEventListener(name,event=>release(`pointer:${event.pointerId}`,name==='pointerup'),{signal});
     button.addEventListener('keydown',event=>{
@@ -319,7 +319,7 @@ export class JumperApp {
   private volumes():void {this.audio.setVolumes(this.save.music,this.save.effects);}
 
   private showPrivacy():void {
-    this.openModal('privacy',`${this.closeButton()}<span class="modal-eyebrow">A TE ESZKÖZÖDÖN</span><h2 id="modal-title">Adatvédelem és licencek</h2><p>A kamera csak gombnyomás és böngészőengedély után indul. A képkockák és testpontok a böngésző memóriájában maradnak; a játék nem rögzíti és nem tölti fel őket. A mikrofont nem használjuk. Lapváltáskor vagy kilépéskor a kamera leáll.</p><p>A testkövető és a modell erről az oldalról töltődik le. Nincs reklám, felhasználói fiók vagy a játékba épített analitika.</p><p>A nyelv, eredmények és beállítások ezen a böngészőn maradnak. Törlésükhöz töröld a catspirits.com webhelyadatait a böngésződben.</p><p>A tárhelyet és a botvédelmet a Cloudflare biztosítja. Ehhez IP-címet és technikai kérésadatokat kezelhet, valamint biztonsági sütiket használhat.</p><p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare adatvédelem</a> · <a href="./licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">Külső licencek</a> · <a href="./licenses/Catspirits-MIT.txt" target="_blank" rel="noopener noreferrer">MIT-licenc</a></p>`);
+    this.openModal('privacy',`${this.closeButton()}<span class="modal-eyebrow">A TE ESZKÖZÖDÖN</span><h2 id="modal-title">Adatvédelem és licencek</h2><p>A kamera csak gombnyomás és böngészőengedély után indul. A képkockák és testpontok a böngésző memóriájában maradnak; a játék nem rögzíti és nem tölti fel őket. A mikrofont nem használjuk. Lapváltáskor vagy kilépéskor a kamera leáll.</p><p>A kézkurzor bekapcsolását a lap munkamenete megjegyzi. Játékváltáskor és az oldal előtérbe hozásakor újraindulhat. A Kézkurzor gombbal kikapcsolható; a képfeldolgozás helyben történik.</p><p>A testkövető és a modell erről az oldalról töltődik le. Nincs reklám, felhasználói fiók vagy a játékba épített analitika.</p><p>A nyelv, eredmények és beállítások ezen a böngészőn maradnak. Törlésükhöz töröld a catspirits.com webhelyadatait a böngésződben.</p><p>A tárhelyet és a botvédelmet a Cloudflare biztosítja. Ehhez IP-címet és technikai kérésadatokat kezelhet, valamint biztonsági sütiket használhat.</p><p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare adatvédelem</a> · <a href="./licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">Külső licencek</a> · <a href="./licenses/Catspirits-MIT.txt" target="_blank" rel="noopener noreferrer">MIT-licenc</a></p>`);
     this.modalOn('[data-modal-close]',()=>this.closeModal());
   }
 

@@ -106,7 +106,7 @@ export class RobotApp {
     };
     stage.addEventListener('pointerdown', event => {
       if (event.target !== this.canvas() || this.phase !== 'playing' || this.source !== 'pointer' || event.button !== 0) return;
-      this.mode('manual'); this.pointer = event.pointerId; this.canvas().setPointerCapture?.(event.pointerId); aim(event); this.canvas().focus();
+      this.mode('manual'); this.pointer = event.pointerId; if(event.isTrusted)this.canvas().setPointerCapture?.(event.pointerId); aim(event); this.canvas().focus();
     }, { signal });
     stage.addEventListener('pointermove', event => { if (this.phase === 'playing' && this.source === 'pointer' && this.pointer === event.pointerId) aim(event); }, { signal });
     stage.addEventListener('pointerup', () => { this.pointer = null; }, { signal });

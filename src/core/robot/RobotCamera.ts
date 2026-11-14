@@ -17,7 +17,7 @@ export class RobotCamera {
     this.tracker = new CameraPoseTracker(this.video, {
       onFrame: frame => { if (current()) this.onFrame(frame); },
       onStatus: status => { if (current()) { this.tracking = status.state === 'tracking'; if (!this.tracking) this.onFrame(null); } }
-    }, delegate => createHandWorker(delegate, true));
+    }, delegate => createHandWorker(delegate, true), { role: 'game-hand' });
     this.tracker.setInputWidth(480); await this.tracker.start();
     return current() && this.tracking;
   }

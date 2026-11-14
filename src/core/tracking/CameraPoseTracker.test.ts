@@ -397,4 +397,16 @@ describe("CameraPoseTracker lifecycle", () => {
     expect(statuses.mock.lastCall?.[0].state).toBe("error");
     expect(vi.getTimerCount()).toBe(0);
   });
+  it('shares navigation capture with a game and preserves it when either consumer stops', async () => {
+    const camera = await startTracking();
+    const secondVideo = { ...video, srcObject: null, play: vi.fn(async () => {}), pause: vi.fn() } as unknown as HTMLVideoElement;
+    const nav = new CameraPoseTracker(secondVideo, { onFrame: vi.fn(), onStatus: vi.fn() }, makeWorker, { role: 'navigation' });
+    try {
+      const pending=nav.start();await flush();workers[1].receive({type:'ready',delegate:'GPU'});await pending;
+      expect(getUserMedia).toHaveBeenCalledOnce();expect(secondVideo.srcObject).toBe(camera.stream);
+      tracker.stop();expect(camera.track.stop).not.toHaveBeenCalled();expect(secondVideo.srcObject).toBe(camera.stream);
+      nav.stop();expect(camera.track.stop).toHaveBeenCalledOnce();
+    } finally { nav.dispose(); }
+  });
+
 });

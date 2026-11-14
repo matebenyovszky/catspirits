@@ -1,5 +1,17 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  "A kézkurzor bekapcsolását a lap munkamenete megjegyzi. Játékváltáskor és az oldal előtérbe hozásakor újraindulhat. A Kézkurzor gombbal kikapcsolható; a képfeldolgozás helyben történik.": "Hand cursor opt-in is remembered for this tab session. It may restart when switching games or returning to the page. Turn it off with the Hand cursor button; image processing stays on your device.",
+  "A kézkövető nem töltődött be. Kapcsold ki, majd próbáld újra.": "Hand tracking did not load. Turn it off and try again.",
+
+  "Kézkurzor": "Hand cursor",
+  "Kézkurzor kikapcsolása": "Turn hand cursor off",
+  "Kézkurzor bekapcsolása": "Turn hand cursor on",
+  "Kézkurzor indítása…": "Starting hand cursor…",
+  "Mozgasd a kezed. Csippents a kattintáshoz, tartsd össze húzáshoz. A képernyő felső és alsó szélén görgethetsz.": "Move your hand. Pinch to click; hold to drag. Hover at the top or bottom edge to scroll.",
+  "Mutasd a nyitott kezed a kamerának.": "Show your open hand to the camera.",
+  "Nyitott kéz: mozgatás · csippentés: kattintás": "Open hand: move · pinch: click",
+  "Válassz egy lehetőséget": "Choose an option",
+
   "Innen már nem jön ki. Újrakezdjük!": "No solution left. Let’s try again!",
   "Új feladat · {seconds} mp": "New puzzle · {seconds}s",
   "Fogásvezérlés": "Gripper control",

@@ -1,5 +1,6 @@
 import { createPoseWorker, type PoseWorkerMessage } from "./pose.worker";
 import type { PoseFrame } from "./types";
+import { sharedCamera, claimInference, releaseInference, type CameraRole } from "./SharedCamera";
 import { videoFrameKey } from './videoFrameKey';
 
 export type TrackingStatus = {
@@ -25,6 +26,7 @@ type Callbacks = {
 type Session = {
   abort: AbortController;
   stream?: MediaStream;
+  releaseCamera?: () => void;
   worker?: Worker;
   raf?: number;
   videoCallback?: number;
@@ -104,7 +106,7 @@ export class CameraPoseTracker {
   };
   private readonly onPageHide = () => this.stop();
 
-  constructor(private readonly video: HTMLVideoElement, private readonly callbacks: Callbacks, private readonly workerFactory = createPoseWorker) {}
+  constructor(private readonly video: HTMLVideoElement, private readonly callbacks: Callbacks, private readonly workerFactory = createPoseWorker, private readonly options: { role?: CameraRole; maxFps?: number } = {}) {}
 
   private async acquireCamera(session:Session):Promise<MediaStream> {
     const video:MediaTrackConstraints={facingMode:'user',width:{ideal:640},height:{ideal:480},frameRate:{ideal:60}};
@@ -154,9 +156,11 @@ export class CameraPoseTracker {
       if (!globalThis.isSecureContext || (!source && !navigator.mediaDevices?.getUserMedia)) throw new Error("A kamerához HTTPS-kapcsolat vagy localhost szükséges. Nyisd meg az oldalt biztonságos címen.");
       if (typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined" || typeof createImageBitmap === "undefined") throw new Error("A böngésző nem támogatja a háttérben futó kamerakövetést. Frissítsd a Safari vagy Chrome böngészőt.");
       if (document.hidden) throw new Error("A kamera indításához hozd előtérbe ezt az oldalt.");
-      const acquisition = (source ? Promise.resolve(source) : this.acquireCamera(session)).then((stream) => {
+      const lease = source ? undefined : sharedCamera.claim(() => this.acquireCamera(session), this.options.role ?? 'game');
+      session.releaseCamera = lease?.release;
+      const acquisition = (source ? Promise.resolve(source) : lease!.ready).then((stream) => {
         // A cancelled permission request may resolve after a new session starts.
-        if (!this.isCurrent(session)) { stream.getTracks().forEach((track) => track.stop()); throw abortError(); }
+        if (!this.isCurrent(session)) { if (source) stream.getTracks().forEach((track) => track.stop()); throw abortError(); }
         session.stream = stream;
         return stream;
       });
@@ -205,6 +209,7 @@ export class CameraPoseTracker {
 
   private async initializeWorker(session: Session, delegate: "GPU" | "CPU"): Promise<void> {
     session.worker?.terminate();
+    releaseInference(session);
     session.inFlight = false;
     session.hasResult = false;
     const worker = this.workerFactory(delegate);
@@ -226,7 +231,7 @@ export class CameraPoseTracker {
         const result = event.data;
         if (result.type === "ready") { ready = true; resolve(); }
         else if (result.type === "input-error" && result.id === session.pendingId) {
-          session.nativeInput = false; session.inFlight = false;
+          session.nativeInput = false; session.inFlight = false; releaseInference(session);
           this.captureLatest(session, performance.now());
         }
         else if (result.type === "error") failed(new Error(result.message));
@@ -265,8 +270,11 @@ export class CameraPoseTracker {
     const key = session.useVideoCallbacks && session.videoCallback !== undefined
       ? session.decodedFrameNumber : videoFrameKey(this.video);
     if (key === session.lastVideoTime) return;
+    session.lastVideoAt = now;
+    const maxFps = this.options.maxFps ?? (this.options.role === 'navigation' ? (sharedCamera.hasGame ? 12 : 24) : Infinity);
+    if (now - session.lastCaptureAt < 1000 / maxFps || !claimInference(session)) return;
     session.lastVideoTime = key;
-    session.lastVideoAt = session.lastCaptureAt = now;
+    session.lastCaptureAt = now;
     session.inFlight = true;
     void this.capture(session, now);
   }
@@ -294,7 +302,7 @@ export class CameraPoseTracker {
         resizeHeight: Math.max(1, Math.round(this.video.videoHeight * scale)), resizeQuality: "low"
       });
       if (!this.isCurrent(session) || session.worker !== worker || !session.running) { bitmap.close(); return; }
-      if (performance.now() - timestampMs > STALE_POSE_MS) { bitmap.close(); session.inFlight = false; return; }
+      if (performance.now() - timestampMs > STALE_POSE_MS) { bitmap.close(); session.inFlight = false; releaseInference(session); return; }
       session.captureMs = performance.now() - timestampMs;
       session.inputSize = `${Math.round(this.video.videoWidth * scale)}×${Math.round(this.video.videoHeight * scale)}`;
       try {
@@ -306,7 +314,7 @@ export class CameraPoseTracker {
   }
 
   private receiveFrame(session: Session, frame: PoseFrame): void {
-    session.inFlight = false;
+    session.inFlight = false; releaseInference(session);
     // Even a stale first result proves the GPU finished its cold-start work.
     session.hasResult = true;
     const now = performance.now();
@@ -324,6 +332,7 @@ export class CameraPoseTracker {
       session.fpsStartedAt = now;
     }
     frame.imageAspectRatio = this.video.videoWidth / this.video.videoHeight;
+    if (this.options.role === 'game-hand') sharedCamera.publishHand(frame);
     this.callbacks.onFrame(frame);
     if (now - session.lastStatusAt >= 500) {
       session.lastStatusAt = now;
@@ -394,7 +403,9 @@ export class CameraPoseTracker {
 
   private clearPose(session: Session): void {
     session.clearedStalePose = true;
-    this.callbacks.onFrame({ timestampMs: performance.now(), landmarks: [], worldLandmarks: [], inferenceMs: 0 });
+    const empty = { timestampMs: performance.now(), landmarks: [], worldLandmarks: [], inferenceMs: 0 };
+    if (this.options.role === 'game-hand') sharedCamera.publishHand(empty);
+    this.callbacks.onFrame(empty);
   }
 
   private fail(session: Session, message: string): void {
@@ -414,7 +425,9 @@ export class CameraPoseTracker {
     if (session.videoCallback !== undefined) this.video.cancelVideoFrameCallback(session.videoCallback);
     clearInterval(session.watchdog);
     session.worker?.terminate();
-    session.stream?.getTracks().forEach((track) => track.stop());
+    releaseInference(session);
+    if (session.releaseCamera) session.releaseCamera();
+    else session.stream?.getTracks().forEach((track) => track.stop());
     this.video.pause();
     this.video.srcObject = null;
     this.clearPose(session);
