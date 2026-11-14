@@ -1,3 +1,5 @@
+import { ChipAudio } from '../../core/audio/ChipAudio';
+import { bindSoundToggle } from '../audio/soundToggle';
 import { getLanguage, isLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
 import { BladeCamera } from '../../core/blade/BladeCamera';
 import { BladeTrackingState } from '../../core/blade/BladeTrackingState';
@@ -26,9 +28,8 @@ export class BladeApp {
   private destroyed = false;
   private level: BladeLevel = new URLSearchParams(location.search).get('level') === '2' ? 2 : 1;
   private best = { 1: { camera: 0, touch: 0 }, 2: { camera: 0, touch: 0 } };
-  private audio: AudioContext | null = null;
-  private sound = false;
-  private lastTone = 0;
+  private audio = new ChipAudio('blade');
+  private heard = { cuts: 0, mistakes: 0, missed: 0 };
 
   constructor(private root: HTMLElement) {
     document.title = `Catspirits · Neon Blade · ${t('Mozdulj és vágj!')}`;
@@ -37,7 +38,7 @@ export class BladeApp {
     root.innerHTML = localizedHtml(`
       <header class="blade-header"><a class="blade-brand" href="?lang=${getLanguage()}"><span class="blade-brand-icon">✦</span><span>CATSPIRITS<small>MOVE. PLAY. GLOW.</small></span></a>
         <nav class="blade-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}" aria-current="page">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}">Neon Pop</a><a href="?game=robot&lang=${getLanguage()}">Bit Rescue</a></nav>
-        <label class="blade-language"><span class="sr-only">Nyelv</span><select aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label></header>
+        <button class="blade-text-button" data-sound aria-pressed="true">Hang: be</button><label class="blade-language"><span class="sr-only">Nyelv</span><select aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label></header>
       <main class="blade-menu">
         <section class="blade-intro"><span class="blade-eyebrow">KAMERÁS KARDKALAND</span><h1>NEON<br><span>BLADE.</span></h1><p class="blade-lead">A mozdulatod a penge.<br>Vágd át a kristályokat, és építs fénykombókat!</p>
           <div class="blade-tags"><span>60 másodperc</span><span>3 hullám</span><span>4× szorzó</span></div>
@@ -47,7 +48,7 @@ export class BladeApp {
         </section><div class="blade-art">${art}<span class="blade-art-label">01 / NEON BLADE</span></div>
         <section class="blade-guide"><div><span class="blade-eyebrow">AMIRE SZÜKSÉGED LESZ</span><h2>Egy kamera. Egy puha jelölőbot.</h2><p>A négy színes sávot követjük. Nem kell a teljes testednek a képbe férnie.</p></div>
           <div class="blade-wand"><div class="wand-diagram" aria-label="50 centiméteres bot: két rózsaszín és két zöld sáv"><i></i><b class="band b1"></b><b class="band b2"></b><b class="band b3"></b><b class="band b4"></b></div><small>MARKOLAT → RÓZSASZÍN → RÓZSASZÍN → ZÖLD → ZÖLD</small><details><summary>Jelölőbot és játékszabályok</summary><p>50 cm hosszú, puha végű bot. Rózsaszín sávok: 12–18 és 22–25 cm; zöld sávok: 34–37 és 42–48 cm a markolat aljától. Átmérő: kb. 25 mm. A sávok érjenek körbe.</p><p>Induláskor mutasd mind a négy sávot. Szórt fény és egyszínű háttér segít. Csak puha játékbotot használj, és hagyj magad körül szabad helyet.</p><p><strong>2. szint · Iránypróba</strong></p><p>Vágj a kristály nyilának irányába! A rossz irány és a kihagyás megszakítja a kombót. Öt találatonként nő a szorzó; az aranykristály háromszoros pontot ér. A második hullámtól kerüld a piros tüskéket: −20 pont. Tartós jelvesztéskor az idő megáll.</p></details></div></section>
-        <footer class="blade-menu-footer"><span>CATSPIRITS / PLAY WITH MOVEMENT</span><a href="/licenses/THIRD-PARTY-NOTICES.txt">Licencek</a><details><summary>Adatvédelem</summary><p>A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvválasztást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.</p></details></footer>
+        <footer class="blade-menu-footer"><span>CATSPIRITS / PLAY WITH MOVEMENT</span><a href="/licenses/THIRD-PARTY-NOTICES.txt">Licencek</a><details><summary>Adatvédelem</summary><p>A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvet, a hangbeállítást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.</p></details></footer>
       </main>
       <section class="blade-play" hidden>
         <div class="blade-toolbar"><button class="blade-text-button" data-home>← Menü</button><span data-mode-label></span><div><button class="blade-text-button" data-sound aria-pressed="false">Hang: ki</button><button class="blade-text-button" data-pause>Szünet</button></div></div>
@@ -65,7 +66,7 @@ export class BladeApp {
       if (this.phase === 'playing') this.game.accept(frame, performance.now());
     });
     if (import.meta.env.DEV) { const diagnostics = document.createElement("output"); diagnostics.hidden = true; diagnostics.dataset.bladeDiagnostics = ""; this.root.append(diagnostics); }
-    this.bind();
+    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind();
   }
   private el<T extends HTMLElement>(selector: string): T { return this.root.querySelector<T>(selector)!; }
   private on(selector: string, action: () => void): void { this.el(selector).addEventListener('click', action, { signal: this.abort.signal }); }
@@ -81,12 +82,6 @@ export class BladeApp {
     this.on('[data-begin]', () => {
       if (this.mode === 'camera' && !this.camera.running) void this.setupCamera(this.game.phase === 'running');
       else this.begin();
-    });
-    this.on('[data-sound]', () => {
-      this.sound = !this.sound; this.el('[data-sound]').setAttribute('aria-pressed', String(this.sound));
-      this.text('[data-sound]', t(this.sound ? 'Hang: be' : 'Hang: ki'));
-      if (this.sound) { this.audio ??= typeof AudioContext !== 'undefined' ? new AudioContext() : null; void this.audio?.resume().catch(() => {}); }
-      else void this.audio?.suspend().catch(() => {});
     });
     this.el('select').addEventListener('change', event => {
       const language = (event.target as HTMLSelectElement).value; if (!isLanguage(language)) return;
@@ -124,6 +119,7 @@ export class BladeApp {
     this.resize(); this.startFrames();
   }
   private async setupCamera(resume: boolean): Promise<void> {
+    this.audio.stop(); void this.audio.unlock();
     const generation = ++this.generation;
     this.enter('camera'); if (!resume) { this.game.start(this.aspect(), this.level); this.game.phase = 'ready'; this.game.paused = true; }
     this.panel('Mutasd a jelölőbotot!', 'Kamera engedélyezése…');
@@ -155,7 +151,8 @@ export class BladeApp {
     else { this.game.aspect = this.aspect(); this.game.breakSweep(); }
     this.root.classList.remove('blade-calibrating'); this.phase = 'playing'; this.pointer = null; this.el('.blade-overlay').hidden = true;
     this.el('[data-results]').hidden = true; this.game.paused = false; this.previousTime = 0;
-    this.view.reset(); this.startFrames(); if (this.sound) void this.audio?.resume().catch(() => {});
+    this.heard = { cuts: this.game.cuts, mistakes: this.game.mistakes, missed: this.game.missed };
+    this.view.reset(); this.startFrames(); void this.audio.unlock(); this.audio.play(this.level);
     this.el('canvas').focus();
   }
   private pause(): void {
@@ -164,14 +161,14 @@ export class BladeApp {
     this.panel('Egy kis pihenő.', 'A köröd megvár.');
     this.text('[data-begin]', t(this.mode === 'camera' ? 'Kamera és folytatás' : 'Folytatás'));
     this.el('[data-restart]').hidden = true; this.el('.blade-tracking').hidden = true;
-    cancelAnimationFrame(this.raf); this.raf = 0; void this.audio?.suspend().catch(() => {});
+    cancelAnimationFrame(this.raf); this.raf = 0; this.audio.sleep();
   }
-  private suspend(): void { this.pause(); this.camera.stop(); cancelAnimationFrame(this.raf); this.raf = 0; ++this.generation; }
+  private suspend(): void { this.audio.sleep(); this.pause(); this.camera.stop(); cancelAnimationFrame(this.raf); this.raf = 0; ++this.generation; }
   private home(): void {
     ++this.generation; this.camera.stop(); this.phase = 'menu'; this.tracking.reset(); this.game.phase = 'ready'; this.measured = null; this.pointer = null;
     this.game.breakSweep(); this.view.reset(); this.root.classList.remove('blade-in-game');
     this.el('.blade-play').hidden = true; this.el('.blade-menu').hidden = false;
-    cancelAnimationFrame(this.raf); this.raf = 0; void this.audio?.suspend().catch(() => {});
+    cancelAnimationFrame(this.raf); this.raf = 0; this.audio.sleep();
     this.el('[data-camera]').focus();
   }
   private aspect(): number { const video = this.el<HTMLVideoElement>('video'); return this.mode === 'camera' && video.videoWidth ? video.videoWidth / video.videoHeight : innerWidth < 600 ? 3 / 4 : 4 / 3; }
@@ -206,6 +203,11 @@ export class BladeApp {
     }
     const active = this.phase === 'playing' && (this.mode === 'touch' || this.tracking.available(frameNow));
     this.game.update(dt, active);
+    if (active) this.audio.play(this.level); else this.audio.stop();
+    if (this.game.cuts > this.heard.cuts) this.audio.cue('pop');
+    if (this.game.mistakes > this.heard.mistakes) this.audio.cue('wrong');
+    if (this.game.missed > this.heard.missed) this.audio.cue('miss');
+    this.heard = { cuts: this.game.cuts, mistakes: this.game.mistakes, missed: this.game.missed };
     if (this.phase === 'setup') {
       this.el<HTMLButtonElement>('[data-begin]').disabled = !fresh;
       if (fresh) this.text('[data-panel-message]', t('Megvan a bot! Indulhat a kristályvadászat.'));
@@ -217,7 +219,7 @@ export class BladeApp {
     }
     this.view.draw(this.game, visible, frameNow, this.mode === 'camera');
     if (now - this.lastHud >= 100 || !this.lastHud) {
-      if (import.meta.env.DEV) this.text("[data-blade-diagnostics]", JSON.stringify({ camera: this.camera.running, stats: this.camera.stats, fresh: !!fresh, tracking: active, rings: visible?.visibleRings }));
+      if (import.meta.env.DEV) this.text("[data-blade-diagnostics]", JSON.stringify({ camera: this.camera.running, stats: this.camera.stats, fresh: !!fresh, tracking: active, rings: visible?.visibleRings, audio: this.audio.snapshot() }));
       this.lastHud = now; this.text('[data-score]', String(this.game.score)); this.text('[data-time]', String(Math.ceil(this.game.remaining)).padStart(2, '0'));
       this.text('[data-combo]', `${this.game.combo} · ×${this.game.multiplier}`);
       this.text('[data-wave]', t('{wave}. HULLÁM / 3', { wave: this.game.wave }));
@@ -226,17 +228,8 @@ export class BladeApp {
         else if (!active) this.text('[data-hint]', t('Mutasd mind a négy színes sávot a kamerának.'));
       }
     }
-    if (this.sound && this.game.bursts.some(burst => burst.points > 0 && burst.age < .08) && now - this.lastTone > 100) this.tone(now);
     if (this.game.phase === 'over') { this.finish(); return; }
     this.raf = requestAnimationFrame(time => this.frame(time));
-  }
-  private tone(now: number): void {
-    if (!this.audio || this.audio.state !== 'running') return;
-    this.lastTone = now; const oscillator = this.audio.createOscillator(), gain = this.audio.createGain(), time = this.audio.currentTime;
-    oscillator.frequency.setValueAtTime(420 + this.game.multiplier * 100, time); oscillator.frequency.exponentialRampToValueAtTime(900, time + .07);
-    gain.gain.setValueAtTime(.035, time); gain.gain.exponentialRampToValueAtTime(.001, time + .09);
-    oscillator.connect(gain).connect(this.audio.destination); oscillator.start(); oscillator.stop(time + .1);
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
   }
   private finish(): void {
     this.root.classList.remove('blade-calibrating'); this.phase = 'over'; this.camera.stop(); this.el('.blade-tracking').hidden = true;
@@ -249,7 +242,7 @@ export class BladeApp {
     this.text('[data-begin]', t('Új kör')); this.el('[data-restart]').hidden = true;
     const results = this.el('[data-results]'); results.hidden = false;
     results.textContent = t('{score} pont · {cuts} vágás · {combo} legjobb kombó · {best} rekord', { score: this.game.score, cuts: this.game.cuts, combo: this.game.bestCombo, best: this.best[this.level][this.mode] });
-    this.el('[data-begin]').focus(); void this.audio?.suspend().catch(() => {});
+    this.el('[data-begin]').focus(); this.audio.stop(); this.audio.cue('finish');
   }
-  dispose(): void { this.suspend(); this.destroyed = true; this.abort.abort(); void this.audio?.close().catch(() => {}); }
+  dispose(): void { this.suspend(); this.destroyed = true; this.abort.abort(); this.audio.dispose(); }
 }

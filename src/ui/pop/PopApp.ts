@@ -1,3 +1,5 @@
+import { ChipAudio } from '../../core/audio/ChipAudio';
+import { bindSoundToggle } from '../audio/soundToggle';
 import { getLanguage, isLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
 import { PopCamera, type PopCameraMode } from '../../core/pop/PopCamera';
 import { PopSimulation, type PopLevel } from '../../core/pop/PopSimulation';
@@ -12,6 +14,7 @@ const BEST_KEYS = { 1: 'catspirits.neon-pop.best.v1', 2: 'catspirits.neon-pop.be
 const art = `<svg viewBox="0 0 480 460" aria-hidden="true"><g fill="none" stroke="#7ce5d8" opacity=".2"><circle cx="240" cy="230" r="180"/><circle cx="240" cy="230" r="135" stroke-dasharray="4 12"/><path d="M60 230h360M240 50v360"/></g><g stroke-width="3"><g transform="translate(150 143)"><circle r="55" fill="#24585f" stroke="#83e9d9"/><path d="M-18-6v10m36-10v10m-30 17q12 12 24 0" stroke="#f2fff8" fill="none" stroke-linecap="round"/></g><g transform="translate(326 248)"><circle r="67" fill="#413a67" stroke="#b6a4ff"/><path d="M-20-8v12m40-12v12m-34 20q14 14 28 0" stroke="#fff" fill="none" stroke-linecap="round"/></g><g transform="translate(164 333)"><circle r="39" fill="#69502b" stroke="#ffe4a1"/><path d="M-12-5v8m24-8v8m-20 12q8 8 16 0" stroke="#fff4c9" fill="none" stroke-linecap="round"/></g><circle cx="296" cy="122" r="18" fill="#ffb1df44" stroke="#ffb1df"/><path d="M277 142l-36 36" stroke="#ffb1df" stroke-dasharray="3 8"/></g></svg>`;
 
 export class PopApp {
+  private audio = new ChipAudio('pop');
   private game = new PopSimulation();
   private camera: PopCamera; private view: PopView;
   private hands: HandFrame | null = null; private sword: SwordFrame | null = null; private lastSeen = -Infinity;
@@ -26,16 +29,16 @@ export class PopApp {
     root.innerHTML = localizedHtml(`
       <header class="blade-header"><a class="blade-brand" href="?lang=${getLanguage()}"><span class="blade-brand-icon">✦</span><span>CATSPIRITS<small>MOVE. PLAY. GLOW.</small></span></a>
       <nav class="blade-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}" aria-current="page">Neon Pop</a><a href="?game=robot&lang=${getLanguage()}">Bit Rescue</a></nav>
-      <label class="blade-language"><span class="sr-only">Nyelv</span><select aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label></header>
+      <button class="blade-text-button" data-sound aria-pressed="true">Hang: be</button><label class="blade-language"><span class="sr-only">Nyelv</span><select aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label></header>
       <main class="blade-menu"><section class="blade-intro"><span class="blade-eyebrow">CÉLZÓS TESZTJÁTÉK</span><h1>NEON<br><span>POP.</span></h1>
       <p class="blade-lead">Célozz és csapj le!<br>A felbukkanó fénylényeket kézzel vagy karddal is elkaphatod.</p>
       <div class="blade-tags"><span data-duration>45 másodperc</span><span>Két kézzel is</span><span>Pontos találatok</span></div>
-      <fieldset class="blade-levels"><legend>Válassz szintet!</legend><label><input type="radio" name="level" value="1"><span>1. szint · Szabad célzás<small>Bármelyik kézzel, bottal vagy érintéssel.</small></span></label><label><input type="radio" name="level" value="2"><span>2. szint · Színpárosítás<small>A megfelelő színű kézzel találd el!</small></span></label><label><input type="radio" name="level" value="3"><span>3. szint · Eredményvadász<small>Számold ki, és találd el az eredményt!</small></span></label><label><input type="radio" name="level" value="4"><span>4. szint · Célösszeg<small>Gyűjts számokat a célértékhez!</small></span></label></fieldset><p class="pop-level-note" data-math-note hidden>90 másodperces matekkör. A számok megvárnak; kézzel, bottal és érintéssel is játszhatsz.</p><p class="pop-level-note" data-level-note>2. szint: csak kamerával és kézzel játszható.</p>
+      <fieldset class="blade-levels"><legend>Válassz szintet!</legend><label><input type="radio" name="level" value="1"><span>1. szint · Szabad célzás<small>Bármelyik kézzel, bottal vagy érintéssel.</small></span></label><label><input type="radio" name="level" value="2"><span>2. szint · Színpárosítás<small>A megfelelő színű kézzel találd el!</small></span></label><label><input type="radio" name="level" value="3"><span>3. szint · Eredményvadász<small>Számold ki, és találd el az eredményt!</small></span></label><label><input type="radio" name="level" value="4"><span>4. szint · Célösszeg<small>Gyűjts számokat a célértékhez!</small></span></label></fieldset><p class="pop-level-note" data-math-note hidden>90 másodperces matekkör. Bármelyik kéz jó, a színek nem számítanak. Bottal és érintéssel is játszhatsz.</p><p class="pop-level-note" data-level-note>2. szint: csak kamerával és kézzel játszható.</p>
       <button class="blade-primary" data-hands>Kamera · kézzel <span>↗</span></button><button class="blade-secondary" data-sword>Kamera · jelölőbottal <span>↗</span></button><button class="blade-text-button" data-touch>Kipróbálom egérrel / érintéssel</button><p class="blade-private">A kamera képe a gépeden marad.</p></section>
       <div class="blade-art">${art}<span class="blade-art-label">03 / NEON POP · TEST</span></div>
       <section class="blade-guide"><div><span class="blade-eyebrow">CSAK CÉLOZZ, ÉS MOZDULJ!</span><h2>Minden célpont aktív.</h2><p>Több fénylényt is elkaphatsz egy mozdulattal. A körív mutatja, mennyi idejük maradt. Az arany háromszoros pontot ér.</p></div><div class="pop-instructions"><p>Kézzel: a csuklódat követő színes körrel csapj a célpontra. Mindkét kéz működik; a vállad, könyököd és kezed legyen a képen.</p><p>2. szint: a türkiz körrel a türkiz, a rózsaszín körrel a rózsaszín célpontot találd el. Az egy és két pont is segít párosítani. A gyémánttal jelölt célpont háromszoros pontot ér.</p><p>Karddal: a fényes pengével vágj át a célponton, bármelyik irányból.</p><p>Puha játékbotot használj, hagyj szabad helyet, és ne üsd meg a képernyőt!</p><a href="?game=blade&lang=${getLanguage()}">Jelölőbot és játékszabályok</a></div></section>
-      <footer class="blade-menu-footer"><span>CATSPIRITS / PLAY WITH MOVEMENT</span><a href="/licenses/THIRD-PARTY-NOTICES.txt">Licencek</a><details><summary>Adatvédelem</summary><p>A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvválasztást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.</p></details></footer></main>
-      <section class="blade-play" hidden><div class="blade-toolbar"><button class="blade-text-button" data-home>← Menü</button><span data-mode></span><button class="blade-text-button" data-pause>Szünet</button></div>
+      <footer class="blade-menu-footer"><span>CATSPIRITS / PLAY WITH MOVEMENT</span><a href="/licenses/THIRD-PARTY-NOTICES.txt">Licencek</a><details><summary>Adatvédelem</summary><p>A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvet, a hangbeállítást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.</p></details></footer></main>
+      <section class="blade-play" hidden><div class="blade-toolbar"><button class="blade-text-button" data-home>← Menü</button><span data-mode></span><button class="blade-text-button" data-sound aria-pressed="true">Hang: be</button><button class="blade-text-button" data-pause>Szünet</button></div>
       <div class="blade-hud"><div><small>PONT</small><strong data-score>0</strong></div><div class="blade-timer"><small>HÁTRALÉVŐ IDŐ</small><strong data-time>45</strong></div><div><small>KOMBÓ</small><strong data-combo>0 · ×1</strong></div></div>
       <div class="blade-arena-wrap"><div class="blade-arena"><video autoplay muted playsinline aria-label="Tükrözött kamera"></video><canvas tabindex="0" aria-label="Neon Pop játékpálya. Koppints a felbukkanó célpontokra."></canvas><div class="pop-math-panel" hidden aria-live="polite" aria-atomic="true"><small data-math-label></small><strong data-math-question></strong><span data-math-total></span><span data-math-feedback></span></div><div class="blade-tracking" role="status" hidden></div>
       <div class="blade-overlay"><div class="blade-panel"><span class="blade-eyebrow">NEON POP · TEST</span><h2 data-title></h2><p data-message></p><div data-results hidden></div><button class="blade-primary" data-begin>Indulhat!</button><button class="blade-secondary" data-restart>Kamera újraindítása</button><button class="blade-text-button" data-exit>Vissza a menübe</button></div></div></div></div>
@@ -50,7 +53,7 @@ export class PopApp {
       const now = performance.now(); if (frame && validSword(frame, now)) { this.sword = frame; this.lastSeen = frame.timestampMs; }
       if (this.phase === 'playing') this.game.acceptSword(frame, now);
     });
-    this.bind();
+    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind();
     if (import.meta.env.DEV) { const output = document.createElement('output'); output.hidden = true; output.dataset.popDiagnostics = ''; this.root.append(output); }
   }
   private el<T extends HTMLElement>(selector: string): T { return this.root.querySelector<T>(selector)!; }
@@ -97,11 +100,12 @@ export class PopApp {
     this.el('.blade-menu').hidden = true; this.el('.blade-play').hidden = false; this.el('video').hidden = mode === 'touch'; this.el('[data-results]').hidden = true;
     this.text('[data-rule]', t(this.level === 4 ? 'Találd el a célösszeget legalább két számból!' : this.level === 3 ? 'Számold ki a műveletet, és találd el az eredményt!' : this.level === 2 ? 'Türkiz egy pont · rózsaszín két pont: párosítsd a kéz és a célpont színét!' : 'Minden célpont aktív · Nincs kötelező vágási irány'));
     this.text('[data-mode]', `${t('{level}. SZINT', { level: this.level })} · ${t(mode === 'hands' ? 'KÉZ · KAMERA' : mode === 'sword' ? 'KARD · KAMERA' : 'EGÉR / ÉRINTÉS · GYAKORLÁS')}`);
-    this.text('[data-hint]', t(mode === 'hands' ? 'A két színes kör a két kezed.' : mode === 'sword' ? 'A két szélső sáv közötti fényes rész a pengéd.' : 'Koppints a fénylényekre!'));
+    this.text('[data-hint]', t(mode === 'hands' ? this.level >= 3 ? 'Bármelyik kézzel választhatsz. A színek nem számítanak.' : 'A két színes kör a két kezed.' : mode === 'sword' ? 'A két szélső sáv közötti fényes rész a pengéd.' : 'Koppints a fénylényekre!'));
     this.el('.pop-math-panel').hidden = this.level < 3; this.el('.pop-math-controls').hidden = this.level !== 4;
     this.resize(); this.startFrames();
   }
   private async setup(mode: PopCameraMode, resume: boolean): Promise<void> {
+    this.audio.stop(); void this.audio.unlock();
     const generation = ++this.generation; this.enter(mode); if (!resume) { this.game.start(this.aspect(), this.level); this.game.phase = 'ready'; this.game.paused = true; this.hud(); }
     this.panel('Készülj a célzásra!', 'Kamera engedélyezése…'); this.el<HTMLButtonElement>('[data-begin]').disabled = true; this.el('[data-restart]').hidden = true;
     try {
@@ -122,16 +126,18 @@ export class PopApp {
   private begin(): void {
     if (this.mode !== 'touch' && (!this.camera.running || !this.fresh(performance.now()))) return;
     if (this.game.phase !== 'running') this.game.start(this.aspect(), this.level); else { this.game.aspect = this.aspect(); this.game.breakInput(); }
+    void this.audio.unlock(); this.audio.play(this.level);
     this.phase = 'playing'; this.game.paused = false; this.root.classList.remove('blade-calibrating'); this.el('.blade-overlay').hidden = true; this.el('[data-results]').hidden = true;
     this.previousTime = 0; this.hud(); this.startFrames(); this.el('canvas').focus();
   }
   private pause(): void {
     if (this.phase !== 'playing' && this.phase !== 'setup') return;
-    this.phase = 'paused'; ++this.generation; this.camera.stop(); this.clearInput(); this.game.update(0, false); this.stopFrames(); this.root.classList.remove('blade-calibrating'); this.el('.blade-tracking').hidden = true;
+    this.audio.sleep(); this.phase = 'paused'; ++this.generation; this.camera.stop(); this.clearInput(); this.game.update(0, false); this.stopFrames(); this.root.classList.remove('blade-calibrating'); this.el('.blade-tracking').hidden = true;
     this.panel('Egy kis pihenő.', 'A köröd megvár.'); this.text('[data-begin]', t(this.mode === 'touch' ? 'Folytatás' : 'Kamera és folytatás')); this.el('[data-restart]').hidden = true;
   }
-  private suspend(): void { this.pause(); ++this.generation; this.camera.stop(); this.clearInput(); this.stopFrames(); }
+  private suspend(): void { this.audio.sleep(); this.pause(); ++this.generation; this.camera.stop(); this.clearInput(); this.stopFrames(); }
   private home(): void {
+    this.audio.sleep();
     ++this.generation; this.camera.stop(); this.clearInput(); this.stopFrames(); this.phase = 'menu'; this.game.phase = 'ready'; this.root.classList.remove('blade-in-game', 'blade-calibrating');
     this.el('.blade-play').hidden = true; this.el('.blade-menu').hidden = false; this.el('[data-hands]').focus();
   }
@@ -152,6 +158,8 @@ export class PopApp {
     if (this.phase === 'playing' && this.mode !== 'touch' && !this.camera.running && !this.camera.loading) { this.pause(); this.text('[data-message]', t('A kamera leállt. A folytatáshoz indítsd újra.')); return; }
     const active = this.phase === 'playing' && (this.mode === 'touch' || this.camera.running && now-this.lastSeen <= (this.mode === 'hands' ? 360 : 240));
     this.game.update(dt, active);
+    if (active) this.audio.play(this.level); else this.audio.stop();
+    for (const event of this.game.drainEvents()) this.audio.cue(event);
     if (this.phase === 'setup') {
       this.el<HTMLButtonElement>('[data-begin]').disabled = !this.camera.running || !this.fresh(now);
       this.text('[data-message]', t(this.camera.loading ? 'A kamerakövetés betöltése…' : this.fresh(now) ? 'Megvan! Indulhat a célvadászat.' : this.mode === 'hands' ? 'Mutasd a kezed és a könyököd a kamerának.' : 'Mutasd mind a négy színes sávot a kamerának.'));
@@ -159,7 +167,7 @@ export class PopApp {
     if (this.phase === 'playing') { this.el('.blade-tracking').hidden = active; if (!active) this.text('.blade-tracking', t('Nincs követés. Az idő megáll, amíg újra látlak.')); }
     this.view.draw(this.game, this.hands, this.sword, now, this.mode !== 'touch');
     if (time-this.lastHud >= 100 || !this.lastHud) { this.lastHud = time; this.hud(); }
-    if (import.meta.env.DEV) this.text('[data-pop-diagnostics]', JSON.stringify({ mode: this.mode, phase: this.phase, fresh: this.fresh(now), active, hits: this.game.hits, camera: this.camera.running }));
+    if (import.meta.env.DEV) this.text('[data-pop-diagnostics]', JSON.stringify({ mode: this.mode, phase: this.phase, fresh: this.fresh(now), active, hits: this.game.hits, camera: this.camera.running, audio: this.audio.snapshot() }));
     if (this.game.phase === 'over') { this.finish(); return; }
     this.raf = requestAnimationFrame(t => this.frame(t));
   }
@@ -179,10 +187,11 @@ export class PopApp {
     for (const selector of ['[data-undo]', '[data-clear]']) this.el<HTMLButtonElement>(selector).disabled = this.phase !== 'playing' || this.game.mathFeedback === 'solved' || puzzle.selected.length === 0;
   }
   private finish(): void {
+    this.audio.stop(); this.audio.cue('finish');
     this.phase = 'over'; this.camera.stop(); this.clearInput(); this.el('.blade-tracking').hidden = true; this.hud();
     this.best[this.level][this.mode] = Math.max(this.best[this.level][this.mode], this.game.score); try { localStorage.setItem(BEST_KEYS[this.level], JSON.stringify(this.best[this.level])); } catch { /* Optional local scores. */ }
     this.panel('Szép célzás!', 'Újra megpróbálod?'); this.text('[data-begin]', t('Új kör')); this.el('[data-restart]').hidden = true;
     this.el('[data-results]').hidden = false; this.text('[data-results]', t('{score} pont · {hits} találat · {missed} kihagyás · {best} rekord', { score: this.game.score, hits: this.game.hits, missed: this.game.missed, best: this.best[this.level][this.mode] })); this.el('[data-begin]').focus();
   }
-  dispose(): void { this.suspend(); this.destroyed = true; this.abort.abort(); }
+  dispose(): void { this.suspend(); this.destroyed = true; this.abort.abort(); this.audio.dispose(); }
 }

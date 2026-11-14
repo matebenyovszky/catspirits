@@ -68,3 +68,31 @@ describe('Neon Pop math integration', () => {
     expect(game.math!.selected).toHaveLength(1);
   });
 });
+
+it('math accepts either hand irrespective of target parity and selects the earliest swept number', () => {
+  for (const level of [3,4] as const) for (const id of ['left','right'] as const) {
+    const game=new PopSimulation(); game.start(1,level); advance(game,.5);
+    const rightmost=game.targets[2];
+    if(level===3) game.math!.target=rightmost.value!;
+    const frame=(timestampMs:number,x:number):HandFrame=>({timestampMs,imageAspectRatio:1,hands:[{id,x:1-x,y:.22}]});
+    game.acceptHands(frame(100,.97),100); game.acceptHands(frame(180,.04),180);
+    expect(game.math!.selected).toEqual([game.math!.choices.indexOf(rightmost.value!)]);
+    expect(game.drainEvents()).toEqual([level===3?'correct':'pick']); expect(game.drainEvents()).toEqual([]);
+  }
+});
+it('does not use stale or reacquired math hand positions as a selection sweep', () => {
+  for(const id of ['left','right'] as const){
+    const game=new PopSimulation();game.start(1,4);advance(game,.5);
+    const frame=(timestampMs:number,x:number):HandFrame=>({timestampMs,imageAspectRatio:1,hands:[{id,x:1-x,y:.22}]});
+    game.acceptHands(frame(100,.05),100);game.acceptHands(frame(150,.3),500);expect(game.math!.selected).toHaveLength(0);
+    game.acceptHands(frame(520,.3),520);expect(game.math!.selected).toHaveLength(0);
+  }
+});
+it('emits exactly one wrong/correct cue per accepted answer and one undo cue per change', () => {
+  const game=new PopSimulation();game.start(1,3);advance(game,.5);
+  tapValue(game,game.math!.choices.find(v=>v!==game.math!.target)!);expect(game.drainEvents()).toEqual(['wrong']);
+  tapValue(game,game.math!.target);expect(game.drainEvents()).toEqual([]);
+  advance(game,.5);tapValue(game,game.math!.target);expect(game.drainEvents()).toEqual(['correct']);
+  game.start(1,4);advance(game,.5);tapValue(game,game.math!.choices[0]);expect(game.drainEvents()).toEqual(['pick']);
+  game.undoMath();expect(game.drainEvents()).toEqual(['undo']);game.undoMath();expect(game.drainEvents()).toEqual([]);
+});

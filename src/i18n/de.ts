@@ -1,5 +1,8 @@
 /** German translations use the same Hungarian phrase IDs as the other interfaces. */
 export const german: Record<string, string> = {
+  "90 másodperces matekkör. Bármelyik kéz jó, a színek nem számítanak. Bottal és érintéssel is játszhatsz.": "90 Sekunden Mathe. Beide Hände funktionieren; Farben spielen keine Rolle. Auch mit Stab oder per Touch spielbar.",
+  "Bármelyik kézzel választhatsz. A színek nem számítanak.": "Wähle mit einer beliebigen Hand. Die Farben spielen keine Rolle.",
+
   "3. szint · Eredményvadász": "Level 3 · Ergebnisjagd",
   "Számold ki, és találd el az eredményt!": "Rechne und triff das Ergebnis!",
   "4. szint · Célösszeg": "Level 4 · Zielsumme",
@@ -157,7 +160,7 @@ export const german: Record<string, string> = {
   "Vágj mozgó pengével a kristályokba! Öt egymás utáni találatonként nő a szorzó. Az aranykristály háromszor annyit ér; egy kihagyás megszakítja a kombót. Jelvesztéskor az idő megáll.": "Schwinge durch die Kristalle! Je fünf Treffer in Folge erhöhen deinen Multiplikator. Goldene Kristalle zählen dreifach; ein verpasster Kristall beendet die Kombo. Geht die Erkennung verloren, pausiert die Zeit.",
   "Adatvédelem": "Datenschutz",
   "Licencek": "Lizenzen",
-  "A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvválasztást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.": "Kamerabilder bleiben auf deinem Gerät. Das Spiel zeichnet sie nicht auf und lädt sie nicht hoch. Dein Browser speichert Sprache und Bestwerte. Cloudflare stellt das Hosting bereit und verarbeitet Netzwerkdaten zur Bereitstellung und zum Schutz der Website.",
+  "A kamera képe a gépeden marad. A játék nem rögzít és nem tölt fel kameraképet. A nyelvet, a hangbeállítást és a rekordokat a böngésződ tárolja. A tárhelyet a Cloudflare biztosítja; a kiszolgáláshoz és a védelemhez hálózati adatokat kezel.": "Kamerabilder bleiben auf deinem Gerät. Das Spiel zeichnet sie nicht auf und lädt sie nicht hoch. Dein Browser speichert Sprache, Toneinstellung und Bestwerte. Cloudflare stellt das Hosting bereit und verarbeitet Netzwerkdaten zur Bereitstellung und zum Schutz der Website.",
   "← Menü": "← Menü",
   "Hang: ki": "Ton: aus",
   "Hang: be": "Ton: an",

@@ -1,3 +1,4 @@
+import { ChipAudio } from '../../core/audio/ChipAudio';
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RobotApp } from './RobotApp';
@@ -119,4 +120,14 @@ it('waits for depth calibration and then raises the third axis with apparent pal
   feed(25, 1); feed(50, 1.4);
   expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 80%');
   click('[data-depth]'); feed(50, 1.4); expect(root.querySelector('[data-height]')!.textContent).toBe('Lift: 0%');
+});
+
+it('signals actual robot actions once and suspends audio on pause', () => {
+  const cue=vi.spyOn(ChipAudio.prototype,'cue'), sleep=vi.spyOn(ChipAudio.prototype,'sleep');
+  click('[data-pointer]'); click('[data-auto]'); advance(3000);
+  expect(cue.mock.calls.filter(([c])=>c==='grab')).toHaveLength(3);
+  expect(cue.mock.calls.filter(([c])=>c==='release')).toHaveLength(3);
+  expect(cue.mock.calls.filter(([c])=>c==='correct')).toHaveLength(3);
+  expect(cue.mock.calls.filter(([c])=>c==='finish')).toHaveLength(1);
+  click('[data-reset]'); click('[data-pointer]'); click('[data-pause]'); expect(sleep).toHaveBeenCalled();
 });

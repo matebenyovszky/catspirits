@@ -1,3 +1,5 @@
+import { ChipAudio } from '../../core/audio/ChipAudio';
+import { bindSoundToggle } from '../audio/soundToggle';
 import { getLanguage, isLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
 import { RobotCamera } from '../../core/robot/RobotCamera';
 import type { PoseFrame } from '../../core/tracking/types';
@@ -12,6 +14,8 @@ import './robot.css';
 
 type Phase = 'ready' | 'loading' | 'playing' | 'paused' | 'complete';
 export class RobotApp {
+  private audio = new ChipAudio('robot');
+  private heard = { holding: null as number | null, delivered: 0, blocked: false };
   private game = new RobotSimulation();
   private view: RobotRenderer;
   private flatView: RobotView;
@@ -40,7 +44,7 @@ export class RobotApp {
     root.innerHTML = localizedHtml(`
       <header class="blade-header"><a class="blade-brand" href="?lang=${getLanguage()}"><span class="blade-brand-icon">✦</span><span>CATSPIRITS<small>MOVE. PLAY. GLOW.</small></span></a>
         <nav class="blade-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}">Neon Pop</a><a href="?game=robot&lang=${getLanguage()}" aria-current="page">Bit Rescue</a></nav>
-        <label class="blade-language"><span class="sr-only">Nyelv</span><select data-language aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label>
+        <button class="blade-text-button" data-sound aria-pressed="true">Hang: be</button><label class="blade-language"><span class="sr-only">Nyelv</span><select data-language aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label>
       </header>
       <main class="robot-main">
         <div class="robot-heading"><div><span class="blade-eyebrow">04 / ROBOT LAB · VIRTUAL</span><h1>BIT <span>RESCUE.</span></h1><p>Te vagy a robotpilóta.</p></div><div class="robot-heading-controls"><div class="robot-view-select" aria-label="Nézet"><button data-view="2d" aria-pressed="true">2D</button><button data-view="3d" aria-pressed="false">3D · próba</button></div><div class="robot-mission-select"><label for="robot-level">Küldetés</label><select id="robot-level"><option value="1">01 · Első dokkolás</option><option value="2">02 · Kerülőút</option></select></div></div></div>
@@ -66,7 +70,7 @@ export class RobotApp {
     if (level === 2) this.text('[data-banner-title]', t('Segíts Bitnek kerülőutat találni!'));
     this.flatView = new RobotView(this.el('canvas')); this.view = this.flatView;
     this.camera = new RobotCamera(this.el('video'), frame => { this.hands = frame; });
-    this.bind(); this.resize(); this.hud();
+    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind(); this.resize(); this.hud();
     if (new URLSearchParams(location.search).get('view') === '3d') void this.setView('3d');
   }
   private canvas(): HTMLCanvasElement { return this.viewMode === '3d' && this.spatialCanvas ? this.spatialCanvas : this.el('canvas'); }
@@ -116,8 +120,8 @@ export class RobotApp {
     }, { signal });
     window.addEventListener('keyup', event => { this.keys.delete(event.key.toLowerCase()); }, { signal });
     window.addEventListener('blur', () => { if (this.phase === 'playing') this.pause(); }, { signal });
-    document.addEventListener('visibilitychange', () => { if (document.hidden) this.pause(); }, { signal });
-    window.addEventListener('pagehide', () => this.pause(), { signal });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { this.audio.sleep(); this.pause(); } }, { signal });
+    window.addEventListener('pagehide', () => { this.audio.sleep(); this.pause(); }, { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
   }
   private mode(mode: 'manual' | 'auto'): void {
@@ -165,12 +169,14 @@ export class RobotApp {
   private stopCamera(): void { ++this.generation; this.camera.stop(); this.hands = null; this.pinch = null; this.handInput.reset(); this.game.setDepth(null); this.el('video').hidden = true; }
   private startPointer(): void {
     if (this.destroyed || document.hidden) return;
+    void this.audio.unlock();
     this.stopCamera(); this.source = 'pointer'; this.cameraError = false;
     if (this.game.complete) this.game.reset(this.game.level);
     this.play();
   }
   private async startCamera(): Promise<void> {
     if (this.destroyed || document.hidden || this.phase === 'loading') return;
+    this.audio.stop(); void this.audio.unlock();
     this.stopCamera(); this.stopFrames(); this.keys.clear(); this.pointer = null; this.game.stop();
     this.source = 'camera'; this.phase = 'loading'; this.cameraError = false; const generation = this.generation;
     this.el('video').hidden = false; this.el('[data-banner]').hidden = true; this.hud();
@@ -186,12 +192,13 @@ export class RobotApp {
     }
   }
   private play(): void {
+    this.heard = { holding: this.game.holding, delivered: this.game.delivered, blocked: this.game.blocked }; this.audio.play(this.game.level);
     this.phase = 'playing'; this.game.stop(); this.keys.clear(); this.pointer = null;
     this.el('[data-banner]').hidden = true; this.previous = this.lastHud = 0; this.hud(); this.canvas().focus(); this.startFrames();
   }
   private pause(): void {
     if (this.phase !== 'playing' && this.phase !== 'loading') return;
-    this.phase = 'paused'; this.stopCamera(); this.stopFrames(); this.keys.clear(); this.pointer = null; this.game.stop(); this.showPause(); this.draw();
+    this.audio.sleep(); this.phase = 'paused'; this.stopCamera(); this.stopFrames(); this.keys.clear(); this.pointer = null; this.game.stop(); this.showPause(); this.draw();
   }
   private showPause(): void {
     this.el('[data-banner]').hidden = false; this.text('[data-banner-title]', t('A robot megvár.'));
@@ -199,6 +206,7 @@ export class RobotApp {
     this.el('[data-resume]').hidden = false; this.el('[data-next]').hidden = true;
   }
   private reset(level: RobotLevel): void {
+    this.audio.sleep();
     this.stopCamera(); this.stopFrames(); this.game.reset(level); this.phase = 'ready'; this.cameraError = false; this.keys.clear(); this.pointer = null;
     this.el<HTMLSelectElement>('#robot-level').value = String(level);
     const url = new URL(location.href); url.searchParams.set('level', String(level)); history.replaceState(null, '', url.href);
@@ -226,12 +234,18 @@ export class RobotApp {
       }
     }
     this.game.step(dt, this.source === 'pointer' || !!hand, this.source === 'pointer');
+    if (this.source === 'pointer' || hand || this.game.mode === 'auto') this.audio.play(this.game.level); else this.audio.stop();
+    if (this.game.delivered > this.heard.delivered) this.audio.cue('correct');
+    if (this.game.holding !== this.heard.holding) this.audio.cue(this.game.holding === null ? 'release' : 'grab');
+    if (this.game.blocked && !this.heard.blocked) this.audio.cue('blocked');
+    this.heard = { holding: this.game.holding, delivered: this.game.delivered, blocked: this.game.blocked };
     this.view.draw(this.game);
     if (time - this.lastHud > 100 || !this.lastHud) { this.lastHud = time; this.hud(); }
     if (this.game.complete) { this.finish(); return; }
     this.startFrames();
   }
   private finish(): void {
+    this.audio.stop(); this.audio.cue('finish');
     this.phase = 'complete'; this.stopCamera(); this.stopFrames(); this.el('[data-banner]').hidden = false;
     this.text('[data-banner-title]', t('Az állomás újra él!'));
     this.text('[data-banner-text]', t('3 cella a helyén · {auto} automata dokkolás · {help} átvétel', { auto: this.game.autoDeliveries, help: this.game.takeovers }));
@@ -258,5 +272,5 @@ export class RobotApp {
   }
   private draw(): void { this.view.draw(this.game); this.hud(); }
   private resize(): void { this.view.resize(); this.draw(); }
-  dispose(): void { this.destroyed = true; this.stopCamera(); this.stopFrames(); this.abort.abort(); this.spatialView?.dispose(); }
+  dispose(): void { this.destroyed = true; this.stopCamera(); this.stopFrames(); this.abort.abort(); this.audio.dispose(); this.spatialView?.dispose(); }
 }

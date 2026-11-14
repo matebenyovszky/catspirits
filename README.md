@@ -87,3 +87,7 @@ Catspirits-owned code is [MIT licensed](LICENSE). Runtime dependencies and the G
 [Report security problems privately](SECURITY.md). CI checks dependency vulnerabilities, tests, TypeScript, production build and a Cloudflare deployment dry run. GitHub Actions are pinned to commit hashes; dependency alerts, automatic security fixes and private vulnerability reporting are enabled.
 
 Rendering is limited to at most 60 updates/s in play or camera setup and 30 updates/s in menus. Hidden pages stop rendering, camera and audio. Drawing-buffer resolution is limited to roughly 1080p pixels, including the bloom compositor's buffers. Camera inference still consumes CPU/GPU and battery while active; the game does not promise a device-independent power limit.
+
+### Original chiptune audio
+
+All four games have original, locally synthesized 8-bit-style music and varied game feedback (pops, correct/wrong answers, pickups and robot actions). Use **Sound: on/off** in each game; the preference follows you between games. Cyber Jumper also retains separate music/effect volume sliders. The shared engine has one lazy AudioContext, a short lookahead, a 48-voice ceiling, and no audio downloads. Pause/backgrounding suspends playback; muting stops synthesis. The score patterns and effects are Catspirits source under the repository MIT licence; no Tetris arrangement or third-party recording is included.

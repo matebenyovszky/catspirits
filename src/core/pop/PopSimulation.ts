@@ -4,6 +4,7 @@ import { clipBlade, swordToScreen, validSword, type Point2, type SwordFrame } fr
 import { HAND_RADIUS, validHands, type HandFrame, type HandPoint } from './HandInput';
 export type PopTarget = Point2 & { id: number; active: boolean; age: number; lifetime: number; radius: number; gold: boolean; value: number | null };
 export type PopBurst = Point2 & { age: number; points: number };
+export type PopEvent = 'pop' | 'correct' | 'wrong' | 'pick' | 'undo' | 'miss';
 export type PopLevel = 1 | 2 | 3 | 4;
 
 /** Fixed reachable grid and independent target lifetimes. Every hand and every
@@ -17,6 +18,9 @@ export class PopSimulation {
   level: PopLevel = 1;
   math: MathPuzzle | null = null;
   mathFeedback: 'ready' | 'picked' | 'wrong' | 'solved' = 'ready';
+  private events: PopEvent[] = [];
+  drainEvents(): PopEvent[] { return this.events.splice(0); }
+  private emit(event: PopEvent): void { if (this.events.length < 24) this.events.push(event); }
   private mathDelay = 0;
   private mathRound = 0;
   get isMath(): boolean { return this.level >= 3; }
@@ -31,6 +35,7 @@ export class PopSimulation {
   get wave(): number { return Math.min(3, 1+Math.floor(this.elapsed/15)); }
   get multiplier(): number { return Math.min(4, 1+Math.floor(this.combo/5)); }
   start(aspect: number, level: PopLevel = 1): void {
+    this.events.length = 0;
     this.level = level === 4 ? 4 : level === 3 ? 3 : level === 2 ? 2 : 1;
     this.aspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 4/3;
     this.elapsed = this.score = this.hits = this.missed = this.combo = this.bestCombo = this.sequence = 0;
@@ -53,7 +58,7 @@ export class PopSimulation {
       return;
     }
     for (const target of this.targets) if (target.active && (target.age += dt) >= target.lifetime) {
-      target.active = false; this.missed++; this.combo = 0;
+      target.active = false; this.missed++; this.combo = 0; this.emit('miss');
     }
     this.spawnIn -= dt;
     if (this.spawnIn <= 0) {
@@ -78,6 +83,7 @@ export class PopSimulation {
   }
   undoMath(reset = false): void {
     if (!this.math || this.paused || this.phase !== 'running' || this.mathFeedback === 'solved') return;
+    if (this.math.selected.length) this.emit('undo');
     if (reset) this.math.selected.length = 0; else this.math.selected.pop();
     this.targets.forEach(t => { if (t.value !== null) t.active = !this.math!.selected.includes(this.math!.choices.indexOf(t.value)); });
     this.mathDelay = .35; this.mathFeedback = 'ready'; this.breakInput();
@@ -89,16 +95,17 @@ export class PopSimulation {
       const puzzle = this.math;
       this.mathDelay = .45; // At most one choice per observation, with a short deliberate-selection delay.
       if (puzzle.kind === 'answer' && target.value !== puzzle.target) {
-        this.mathFeedback = 'wrong'; this.combo = 0; this.missed++; return;
+        this.mathFeedback = 'wrong'; this.combo = 0; this.missed++; this.emit('wrong'); return;
       }
       target.active = false;
       puzzle.selected.push(puzzle.choices.indexOf(target.value));
       if (puzzle.kind === 'sum' && (puzzle.selected.length < 2 || totalSelected(puzzle) !== puzzle.target)) {
-        this.mathFeedback = 'picked'; return;
+        this.mathFeedback = 'picked'; this.emit('pick'); return;
       }
-      this.mathFeedback = 'solved'; this.mathDelay = 1;
+      this.mathFeedback = 'solved'; this.mathDelay = 1; this.emit('correct');
     }
 
+    if (!this.isMath) this.emit('pop');
     target.active = false; this.hits++; this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
     const points = (target.gold ? 30 : 10)*this.multiplier; this.score += points;
     if (this.bursts.length >= 18) this.bursts.shift();
@@ -109,6 +116,7 @@ export class PopSimulation {
     if (frame.timestampMs <= this.lastTimestamp) return;
     const dt = (frame.timestampMs-this.lastTimestamp)/1000; this.lastTimestamp = frame.timestampMs;
     const hands = frame.hands.map(h => ({ ...h, x: 1-h.x }));
+    let first: { target: PopTarget; at: number } | null = null;
     for (const hand of hands) {
       const old = this.previousHands.get(hand.id);
       if (!old || dt > .16 || Math.abs(frame.imageAspectRatio-this.aspect) > .01) continue;
@@ -116,8 +124,18 @@ export class PopSimulation {
       if (speed < .18 || speed > 12) continue;
       for (const target of this.targets) if (target.active && this.priorTargets.has(target.id)
         && (this.level !== 2 || hand.id === (target.id % 2 ? 'left' : 'right'))
-        && segmentDistance(target, old, hand, this.aspect) <= target.radius+HAND_RADIUS) this.hit(target);
+        && segmentDistance(target, old, hand, this.aspect) <= target.radius+HAND_RADIUS) {
+          if (!this.isMath) { this.hit(target); continue; }
+          // Earliest circle entry along the measured sweep, independent of hand
+          // colour, target-array order and camera mirroring.
+          const dx = (hand.x-old.x)*this.aspect, dy = hand.y-old.y;
+          const ox = (old.x-target.x)*this.aspect, oy = old.y-target.y;
+          const a = dx*dx+dy*dy, b = ox*dx+oy*dy, c = ox*ox+oy*oy-(target.radius+HAND_RADIUS)**2;
+          const at = c <= 0 ? 0 : (-b-Math.sqrt(Math.max(0, b*b-a*c)))/a;
+          if (!first || at < first.at) first = { target, at };
+        }
     }
+    if (first) this.hit(first.target);
     this.previousHands.clear(); this.previousSword = null;
     for (const hand of hands) this.previousHands.set(hand.id, hand);
     this.rememberTargets();

@@ -10,6 +10,7 @@ vi.mock('../../core/jumper/JumperView', () => ({ JumperView: class {
   setSuit() {} resize() {} update(...args: unknown[]) { viewUpdate(...args); } event() {} dispose() {} snapshot() { return {}; }
 } }));
 vi.mock('../../core/jumper/JumperAudio', () => ({ JumperAudio: class {
+  enabled = true; onEnabledChange?: () => void; setEnabled(value: boolean) { this.enabled=value; this.onEnabledChange?.(); }
   async unlock() {} setVolumes() {} play() {} stop() {} sleep() {} event() {} dispose() {} snapshot() { return {}; }
 } }));
 const cameraStart = vi.hoisted(() => vi.fn());

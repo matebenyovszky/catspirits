@@ -1,3 +1,4 @@
+import { bindSoundToggle } from '../audio/soundToggle';
 import { getLanguage, isLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
 import { JumperSimulation, WORLDS, SUITS, DUCK_GATE_HALF_DEPTH, freshSave, validateSave, type JumperSave, type JumperPhase } from '../../core/jumper/JumperSimulation';
 import { JumperView } from '../../core/jumper/JumperView';
@@ -26,7 +27,6 @@ export class JumperApp {
   private mode: 'keys' | 'camera' = 'camera';
   private selectedLevel = 0;
   private modalName = '';
-  private muted = false;
   private toastTime = 0;
   private cameraSetup = false;
   private cameraMessage = '';
@@ -53,7 +53,7 @@ export class JumperApp {
         <nav aria-label="Játék menü">
           <button data-worlds class="nav-text">${icon('world')}<span>Pályák</span></button>
           <button data-suits class="nav-text" aria-label="Robotom">${icon('robot')}<span>Robotom</span></button>
-          <button data-settings class="icon-button" aria-label="Hang és megjelenés beállításai" title="Hang és megjelenés">${icon('sound')}</button>
+          <button data-sound class="sound-button" aria-pressed="true">Hang: be</button><button data-settings class="icon-button" aria-label="Hang és megjelenés beállításai" title="Hang és megjelenés">${icon('sound')}</button>
           <button data-fullscreen class="icon-button" aria-label="Teljes képernyő" title="Teljes képernyő">${icon('expand')}</button>
           <button data-pause class="icon-button pause-button" hidden aria-label="Játék szüneteltetése" title="Szünet (P)">${icon('pause')}</button>
         </nav>
@@ -90,7 +90,7 @@ export class JumperApp {
       if(this.cameraSetup)this.updateCameraSetup();
     });
     this.el('[data-best]').textContent=t(this.save.best.toLocaleString(getLanguage()));
-    this.bind(); this.updatePlayLabel(); this.updateHud(); this.raf=requestAnimationFrame(time=>this.frame(time));
+    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind(); this.updatePlayLabel(); this.updateHud(); this.raf=requestAnimationFrame(time=>this.frame(time));
     if(import.meta.env.DEV) (window as unknown as { catspirits: unknown }).catspirits={
       snapshot:()=>({phase:this.simulation.phase,level:this.simulation.level,score:this.simulation.score,hearts:this.simulation.hearts,
         crystals:this.simulation.crystals,progress:this.simulation.progress,height:this.simulation.runner.state.height,lane:this.simulation.lane,
@@ -243,32 +243,32 @@ export class JumperApp {
   private begin():void {
     this.cameraSetup=false;this.starting=false;this.closeModal(false);
     this.simulation.start(this.selectedLevel,this.save.difficulty);this.syncPhase();
-    this.audio.play(this.simulation.level);this.el('canvas').focus();
+    void this.audio.unlock();this.audio.play(this.simulation.level);this.el('canvas').focus();
     this.toast(this.simulation.level>=2?'↑ Lila: ugrás · ↓ Arany: lehajolás':'Kövesd a kristályokat. A fénykapunál ugorj!',this.simulation.level>=2?4:2.1);
   }
 
   private home():void {
     this.camera.stop();this.starting=this.cameraSetup=false;this.el('.camera-preview').hidden=true;
     this.simulation.phase='ready';this.simulation.runner.reset();this.simulation.pickups=[];
-    this.simulation.level=this.selectedLevel;this.simulation.lane=0;this.closeModal(false);this.audio.stop();this.syncPhase();
+    this.simulation.level=this.selectedLevel;this.simulation.lane=0;this.closeModal(false);this.audio.sleep();this.syncPhase();
   }
 
   private pause():void {
     if(this.simulation.phase!=='running')return;
-    this.simulation.pause();this.audio.stop();this.syncPhase();
+    this.simulation.pause();this.audio.sleep();this.syncPhase();
     this.openModal('pause',`<span class="modal-eyebrow">EGY KIS PIHENŐ</span><h2 id="modal-title">Szünet.</h2><p>Bit megvár. Innen folytatjuk!</p><button class="jumper-primary wide" data-resume>${icon('play')} Folytatás</button><button class="jumper-secondary wide" data-retry>Újrakezdem a pályát</button><button class="modal-text-button" data-back>Vissza a kezdőlapra</button>`);
-    this.modalOn('[data-resume]',()=>this.resume());this.modalOn('[data-retry]',()=>{this.closeModal(false);this.simulation.retry();this.syncPhase();this.audio.play(this.simulation.level);});this.modalOn('[data-back]',()=>this.home());
+    this.modalOn('[data-resume]',()=>this.resume());this.modalOn('[data-retry]',()=>{this.closeModal(false);this.simulation.retry();this.syncPhase();void this.audio.unlock();this.audio.play(this.simulation.level);});this.modalOn('[data-back]',()=>this.home());
   }
 
   private resume():void {
     if(this.contextLost)return;
     if(this.mode==='camera' && !this.camera.input(true).tracked){this.cameraSetup=true;this.showCameraSetup(true);void this.camera.start();return;}
-    this.closeModal(false);this.simulation.resume();this.syncPhase();void this.audio.unlock().then(()=>{if(!this.destroyed && !document.hidden && this.simulation.phase==='running')this.audio.play(this.simulation.level);});this.el('canvas').focus();
+    this.closeModal(false);this.simulation.resume();this.syncPhase();void this.audio.unlock();this.audio.play(this.simulation.level);this.el('canvas').focus();
   }
 
   private openModal(name:string,html:string):void {
     // Auxiliary panels leave the run paused until the panel is closed.
-    if(this.simulation.phase==='running'){this.simulation.pause();this.audio.stop();this.syncPhase();}
+    if(this.simulation.phase==='running'){this.simulation.pause();this.audio.sleep();this.syncPhase();}
     this.modalName=name;const backdrop=this.el('.jumper-modal-backdrop');backdrop.hidden=false;
     this.el('.jumper-modal').innerHTML=localizedHtml(html);this.el('.jumper-modal').focus();
     this.root.querySelectorAll<HTMLElement>('.jumper-header,.jumper-hero,.touch-controls,canvas,.camera-preview').forEach(element=>element.inert=true);
@@ -278,7 +278,7 @@ export class JumperApp {
   private closeModal(resume=true):void {
     this.modalName='';this.el('.jumper-modal-backdrop').hidden=true;
     this.root.querySelectorAll<HTMLElement>('[inert]').forEach(element=>element.inert=false);
-    if(resume && this.simulation.phase==='paused'){this.simulation.resume();this.syncPhase();this.audio.play(this.simulation.level);this.el('canvas').focus();}
+    if(resume && this.simulation.phase==='paused'){this.simulation.resume();this.syncPhase();void this.audio.unlock();this.audio.play(this.simulation.level);this.el('canvas').focus();}
     else if(this.simulation.phase==='ready')this.el('[data-play]').focus();
   }
   private closeButton():string {return `<button class="modal-close" data-modal-close aria-label="Bezárás">${icon('close')}</button>`;}
@@ -306,17 +306,17 @@ export class JumperApp {
   }
 
   private showSettings():void {
-    this.openModal('settings',`${this.closeButton()}<span class="modal-eyebrow">SAJÁT RITMUSOD</span><h2 id="modal-title">Hang & fény.</h2><label class="slider-label" for="jumper-music">Zene <output data-music-output>${Math.round(this.save.music*100)}%</output><input id="jumper-music" aria-label="Zene hangereje" data-music type="range" min="0" max="100" value="${Math.round(this.save.music*100)}"></label><label class="slider-label" for="jumper-effects">Játékhangok <output data-effects-output>${Math.round(this.save.effects*100)}%</output><input id="jumper-effects" aria-label="Játékhangok hangereje" data-effects type="range" min="0" max="100" value="${Math.round(this.save.effects*100)}"></label><label class="setting-row"><span>Csendes mód<small>Egy gombbal minden hang kikapcsolható.</small></span><input data-mute type="checkbox" ${this.muted?'checked':''}></label><label class="setting-row"><span>Nyugis kaland<small>Lassabb pálya, 5 élet. Új futamnál érvényes.</small></span><input data-chill type="checkbox" ${this.save.difficulty==='chill'?'checked':''}></label><label class="setting-row"><span>Kevesebb mozgó effekt<small>Részecskék és képernyőrázás nélkül.</small></span><input data-reduced type="checkbox" ${this.view.reducedMotion?'checked':''}></label>`);
+    this.openModal('settings',`${this.closeButton()}<span class="modal-eyebrow">SAJÁT RITMUSOD</span><h2 id="modal-title">Hang & fény.</h2><label class="slider-label" for="jumper-music">Zene <output data-music-output>${Math.round(this.save.music*100)}%</output><input id="jumper-music" aria-label="Zene hangereje" data-music type="range" min="0" max="100" value="${Math.round(this.save.music*100)}"></label><label class="slider-label" for="jumper-effects">Játékhangok <output data-effects-output>${Math.round(this.save.effects*100)}%</output><input id="jumper-effects" aria-label="Játékhangok hangereje" data-effects type="range" min="0" max="100" value="${Math.round(this.save.effects*100)}"></label><label class="setting-row"><span>Csendes mód<small>Egy gombbal minden hang kikapcsolható.</small></span><input data-mute type="checkbox" ${!this.audio.enabled?'checked':''}></label><label class="setting-row"><span>Nyugis kaland<small>Lassabb pálya, 5 élet. Új futamnál érvényes.</small></span><input data-chill type="checkbox" ${this.save.difficulty==='chill'?'checked':''}></label><label class="setting-row"><span>Kevesebb mozgó effekt<small>Részecskék és képernyőrázás nélkül.</small></span><input data-reduced type="checkbox" ${this.view.reducedMotion?'checked':''}></label>`);
     this.modalOn('[data-modal-close]',()=>this.closeModal());
     for(const key of ['music','effects'] as const)this.el<HTMLInputElement>(`[data-${key}]`).addEventListener('input',event=>{
       this.save[key]=Number((event.target as HTMLInputElement).value)/100;this.el(`[data-${key}-output]`).textContent=t(Math.round(this.save[key]*100)+'%');
       this.volumes();this.persist();void this.audio.unlock();
     },{signal:this.abort.signal});
-    this.el<HTMLInputElement>('[data-mute]').addEventListener('change',event=>{this.muted=(event.target as HTMLInputElement).checked;this.volumes();},{signal:this.abort.signal});
+    this.el<HTMLInputElement>('[data-mute]').addEventListener('change',event=>{this.audio.setEnabled(!(event.target as HTMLInputElement).checked);},{signal:this.abort.signal});
     this.el<HTMLInputElement>('[data-chill]').addEventListener('change',event=>{this.save.difficulty=(event.target as HTMLInputElement).checked?'chill':'normal';this.persist();},{signal:this.abort.signal});
     this.el<HTMLInputElement>('[data-reduced]').addEventListener('change',event=>{this.view.reducedMotion=(event.target as HTMLInputElement).checked;},{signal:this.abort.signal});
   }
-  private volumes():void {this.audio.setVolumes(this.muted?0:this.save.music,this.muted?0:this.save.effects);}
+  private volumes():void {this.audio.setVolumes(this.save.music,this.save.effects);}
 
   private showPrivacy():void {
     this.openModal('privacy',`${this.closeButton()}<span class="modal-eyebrow">A TE ESZKÖZÖDÖN</span><h2 id="modal-title">Adatvédelem és licencek</h2><p>A kamera csak gombnyomás és böngészőengedély után indul. A képkockák és testpontok a böngésző memóriájában maradnak; a játék nem rögzíti és nem tölti fel őket. A mikrofont nem használjuk. Lapváltáskor vagy kilépéskor a kamera leáll.</p><p>A testkövető és a modell erről az oldalról töltődik le. Nincs reklám, felhasználói fiók vagy a játékba épített analitika.</p><p>A nyelv, eredmények és beállítások ezen a böngészőn maradnak. Törlésükhöz töröld a catspirits.com webhelyadatait a böngésződben.</p><p>A tárhelyet és a botvédelmet a Cloudflare biztosítja. Ehhez IP-címet és technikai kérésadatokat kezelhet, valamint biztonsági sütiket használhat.</p><p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare adatvédelem</a> · <a href="./licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">Külső licencek</a> · <a href="./licenses/Catspirits-MIT.txt" target="_blank" rel="noopener noreferrer">MIT-licenc</a></p>`);
@@ -337,7 +337,7 @@ export class JumperApp {
     this.modalOn('[data-camera-go]',()=>{
       this.cameraSetup=false;
       this.autoRun=this.el<HTMLInputElement>('[data-auto-run]').checked;
-      if(resuming){this.closeModal(false);this.simulation.resume();this.syncPhase();this.audio.play(this.simulation.level);}else this.begin();
+      if(resuming){this.closeModal(false);this.simulation.resume();this.syncPhase();void this.audio.unlock();this.audio.play(this.simulation.level);}else this.begin();
     });
     this.modalOn('[data-use-keys]',()=>{this.camera.stop();this.el('.camera-preview').hidden=true;this.mode='keys';this.el<HTMLInputElement>('[value="keys"]').checked=true;this.updatePlayLabel();this.begin();});
     this.modalOn('[data-camera-retry]',()=>{this.cameraError=false;void this.camera.start();});
@@ -361,8 +361,8 @@ export class JumperApp {
     const title=finished?'Fénybajnok vagy!':won?'Ez ragyogó volt!':'Még egy kaland?';
     const label=finished?'MIND AZ ÖT VILÁG A TIÉD':won?t(WORLDS[s.level].name).toUpperCase()+' · TELJESÍTVE':'BIT VELED VAN';
     this.openModal('result',`<span class="modal-eyebrow">${label}</span><h2 id="modal-title">${title}</h2>${won?`<div class="result-stars" aria-label="${s.stars} csillag">${'★'.repeat(s.stars)}<span>${'☆'.repeat(3-s.stars)}</span></div>`:'<p>Szép próbálkozás! Kövesd a kapu jelzését: ↑ ugorj, ↓ maradj lent, amíg átérsz.</p>'}<div class="result-stats"><div><strong>${s.score.toLocaleString(getLanguage())}</strong><small>PONT</small></div><div><strong>◆ ${s.crystals}</strong><small>KRISTÁLY</small></div><div><strong>${s.maxCombo}×</strong><small>LEGJOBB KOMBO</small></div></div>${won?`<p class="result-note">${s.stars===3?'Tökéletes fényfutam!':s.stars===2?'Három csillaghoz: 0 hiba + 15 kristály.':'Két csillaghoz: legfeljebb 2 hiba.'}</p>`:''}<button class="jumper-primary wide" data-next>${icon('play')} ${won&&!finished?'Következő világ':'Újra játszom'}</button>${won&&!finished?'<button class="jumper-secondary wide" data-again>Még több csillagot szerzek</button>':''}<button class="modal-text-button" data-back>Vissza a kezdőlapra</button>`);
-    this.modalOn('[data-next]',()=>{this.closeModal(false);if(won&&!finished)this.simulation.next();else if(finished)this.simulation.start(0,this.save.difficulty);else this.simulation.retry();this.syncPhase();this.audio.play(this.simulation.level);this.el('canvas').focus();});
-    if(won&&!finished)this.modalOn('[data-again]',()=>{this.closeModal(false);this.simulation.retry();this.syncPhase();this.audio.play(this.simulation.level);});
+    this.modalOn('[data-next]',()=>{this.closeModal(false);if(won&&!finished)this.simulation.next();else if(finished)this.simulation.start(0,this.save.difficulty);else this.simulation.retry();this.syncPhase();void this.audio.unlock();this.audio.play(this.simulation.level);this.el('canvas').focus();});
+    if(won&&!finished)this.modalOn('[data-again]',()=>{this.closeModal(false);this.simulation.retry();this.syncPhase();void this.audio.unlock();this.audio.play(this.simulation.level);});
     this.modalOn('[data-back]',()=>{this.selectedLevel=Math.min(s.level+(won&&!finished?1:0),4);this.el('[data-selected-world]').textContent=t(WORLDS[this.selectedLevel].name);this.el('.world-orbit').textContent=t(String(this.selectedLevel+1).padStart(2,'0'));this.home();});
   }
 

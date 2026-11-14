@@ -32,10 +32,10 @@ export class PopView {
       const x = target.x*w, y = target.y*h, r = target.radius*h;
       c.strokeStyle = '#91e0db20'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, r+5, 0, Math.PI*2); c.stroke();
       if (!target.active) continue;
-      const colour = game.level === 2 ? (target.id%2 ? '#88ffee' : '#ffb1df') : target.gold ? '#ffe4a1' : target.id%2 ? '#83e9d9' : '#b6a4ff';
+      const colour = game.isMath ? '#b9eeff' : game.level === 2 ? (target.id%2 ? '#88ffee' : '#ffb1df') : target.gold ? '#ffe4a1' : target.id%2 ? '#83e9d9' : '#b6a4ff';
       const rise = game.isMath || this.reduced ? 0 : Math.max(0, 1-target.age/.12)*r*.2;
       c.save(); c.translate(x, y+rise);
-      c.fillStyle = game.level === 2 ? (target.id%2 ? '#24585f' : '#673e58') : target.gold ? '#69502b' : target.id%2 ? '#24585f' : '#413a67'; c.strokeStyle = colour; c.lineWidth = 2;
+      c.fillStyle = game.isMath ? '#254657' : game.level === 2 ? (target.id%2 ? '#24585f' : '#673e58') : target.gold ? '#69502b' : target.id%2 ? '#24585f' : '#413a67'; c.strokeStyle = colour; c.lineWidth = 2;
       c.beginPath(); c.arc(0, 0, r, 0, Math.PI*2); c.fill(); c.stroke();
       c.strokeStyle = colour; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath();
       c.arc(0, 0, r+5, -Math.PI/2, -Math.PI/2+Math.PI*2*(1-target.age/target.lifetime)); c.stroke();
@@ -66,7 +66,7 @@ export class PopView {
     }
     if (hands && validHands(hands, now)) for (const hand of hands.hands) {
       const x = (1-hand.x)*w, y = hand.y*h, r = HAND_RADIUS*h;
-      c.fillStyle = hand.id === 'left' ? '#88ffee45' : '#ffb1df45'; c.strokeStyle = hand.id === 'left' ? '#88ffee' : '#ffb1df'; c.lineWidth = 3;
+      c.fillStyle = game.isMath ? '#b9eeff45' : hand.id === 'left' ? '#88ffee45' : '#ffb1df45'; c.strokeStyle = game.isMath ? '#b9eeff' : hand.id === 'left' ? '#88ffee' : '#ffb1df'; c.lineWidth = 3;
       c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y, 3, 0, Math.PI*2); c.fill();
       if (game.level === 2 && hand.id === 'right') { c.beginPath(); c.arc(x+7, y, 2, 0, Math.PI*2); c.fill(); }
     }
