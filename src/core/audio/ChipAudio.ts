@@ -1,10 +1,12 @@
-export type AudioTheme = 'jumper' | 'pop' | 'blade' | 'robot';
+import { FESTIVAL_SCORES, HERD_ENCORE, isFestivalTheme, type FestivalTheme } from './festivalScores';
+
+export type AudioTheme = 'jumper' | 'pop' | 'blade' | 'robot' | FestivalTheme;
 export type AudioCue = 'pop' | 'correct' | 'wrong' | 'pick' | 'undo' | 'miss' | 'grab' | 'release' | 'blocked' | 'finish' | 'jump' | 'duck' | 'land' | 'crystal' | 'shield' | 'hit' | 'clear' | 'level';
 const SOUND_KEY = 'catspirits.sound.enabled.v1';
 const midi = (note: number) => 440 * 2 ** ((note - 69) / 12);
-// Original Catspirits motifs, composed for this synthesizer. No borrowed tunes,
-// recordings, samples, external audio URLs or decoding work during a hit.
+// Original Catspirits round themes. All music and cues use local oscillators.
 export const AUDIO_THEMES = {
+  ...FESTIVAL_SCORES,
   // Bright, driving synthwave; elastic electro-pop; darker blade techno;
   // optimistic robotic arpeggios. All motifs and arrangements are original.
   jumper: { bpm: 138, root: 45, chords: [0, 5, 8, 7], third: 3, lead: 'sawtooth', bass: [0,-1,0,12,-1,0,7,-1], melody: [12, 7, 15, -1, 19, 15, 14, 7, 12, -1, 19, 24, 20, 19, 15, 14] },
@@ -40,6 +42,14 @@ export class ChipAudio {
   onEnabledChange?: () => void;
   constructor(private theme: AudioTheme = 'pop') {
     try { this.enabled = localStorage.getItem(SOUND_KEY) !== 'off'; } catch { /* Optional preference. */ }
+  }
+  setTheme(theme: AudioTheme): void {
+    if (this.theme === theme || this.disposed) return;
+    this.halt();
+    this.theme = theme;
+    this.lastCue.clear();
+    this.variations.clear();
+    this.start();
   }
   async unlock(): Promise<void> {
     if (this.disposed || !this.enabled || document.hidden) return;
@@ -99,12 +109,13 @@ export class ChipAudio {
     this.nodes.add(node); this.scheduledNotes++;
     node.addEventListener('ended', () => { this.nodes.delete(node); node.disconnect(); cleanup(); }, { once: true });
   }
-  private tone(note: number, time: number, duration: number, volume: number, type: OscillatorType, bus: GainNode, endNote = note, cutoff?: number): void {
+  private tone(note: number, time: number, duration: number, volume: number, type: OscillatorType, bus: GainNode, endNote = note, cutoff?: number, sustain = 0): void {
     if (this.nodes.size >= 48) return;
     const context = this.context!, oscillator = context.createOscillator(), gain = context.createGain();
     oscillator.type = type; oscillator.frequency.setValueAtTime(midi(note), time);
     oscillator.frequency.exponentialRampToValueAtTime(midi(endNote), time + duration);
     gain.gain.setValueAtTime(.0001, time); gain.gain.exponentialRampToValueAtTime(volume, time + .005);
+    if (sustain > 0) gain.gain.setValueAtTime(volume, time + duration * sustain);
     gain.gain.exponentialRampToValueAtTime(.0001, time + duration);
     let filter: BiquadFilterNode | undefined;
     if (cutoff) {
@@ -130,6 +141,11 @@ export class ChipAudio {
     if (this.nextBeat < this.context.currentTime) this.nextBeat = this.context.currentTime + .01;
     while (this.nextBeat < this.context.currentTime + .10) {
       const step=this.step++%256, beat=step%16, bar=Math.floor(step/16);
+      if (isFestivalTheme(this.theme)) {
+        if (this.musicVolume > 0) this.festivalStep(this.theme, step, this.nextBeat, dt);
+        this.nextBeat += dt;
+        continue;
+      }
       const root=theme.root+theme.chords[bar%4]+(this.theme==='jumper'?Math.min(4,this.level)*2:0), time=this.nextBeat;
       const lift=bar%8>=4, breakdown=bar%16===7, bus=this.music!;
       if(this.musicVolume>0){
@@ -157,14 +173,76 @@ export class ChipAudio {
       this.nextBeat += dt;
     }
   }
+  private festivalStep(id: FestivalTheme, step: number, time: number, dt: number): void {
+    const score = FESTIVAL_SCORES[id];
+    const beat = step % 16, bar = Math.floor(step / 16);
+    const root = score.root + score.chords[bar % 4];
+    const bus = this.music!;
+    const upbeat = time + (beat % 2) * dt * score.swing;
+    const lift = bar % 8 >= 4;
+    const fill = bar % 8 === 7 && beat >= 12;
+
+    if (score.kick[beat] === 'x' && !fill) {
+      this.tone(55, time, .16, .48, 'sine', bus, 28);
+    }
+    if (score.snare[beat] === 'x' || (fill && beat % 2 === 0)) {
+      this.hiss(upbeat, .105, .13, bus);
+      this.tone(52, upbeat, .085, .10, 'triangle', bus, 38);
+    }
+    if (score.hats[beat] === 'x' || fill) {
+      this.hiss(upbeat, beat % 4 === 2 ? .078 : .024, beat % 4 === 2 ? .055 : .03, bus);
+    }
+
+    const bass = score.bass[beat];
+    if (bass >= 0 && !fill) {
+      // The clean fundamental reaches a PA sub. A quiet filtered upper octave
+      // carries the same rhythm through phone speakers without boosting gain.
+      const pitch = root - 12 + bass, onset = upbeat + dt * .12;
+      const length = dt * score.bassLength;
+      this.tone(pitch, onset, length, .31, 'sine', bus);
+      this.tone(pitch + 12, onset, length * .82, .115, 'sawtooth', bus, pitch + 12, 920);
+    }
+
+    if (beat % 2 === 0) {
+      const note = score.melody[(step / 2 + (bar >= 8 ? 8 : 0)) % 16];
+      if (note >= 0) {
+        const pitch = root + 12 + note;
+        this.tone(pitch, time, dt * 1.65, .102, score.lead, bus, pitch, score.cutoff);
+        if (lift && beat % 4 === 2) this.tone(pitch + 7, time + dt, dt * .9, .035, 'triangle', bus);
+      }
+    }
+    if (lift && (beat === 2 || beat === 10)) {
+      for (const interval of [score.third, 7, 12]) {
+        this.tone(root + 12 + interval, time, dt * 1.9, .035, 'sawtooth', bus, root + 12 + interval, 1050);
+      }
+    }
+  }
+
   cue(cue: AudioCue): void {
     if (!this.enabled || this.disposed || document.hidden || this.context?.state !== 'running' || !this.effects || !this.effectsVolume) return;
     const time = this.context.currentTime;
     if (time - (this.lastCue.get(cue) ?? -Infinity) < .07) return;
     this.lastCue.set(cue, time);
+    if (this.theme === 'herd' && cue === 'finish') {
+      const eighth = 60 / 104 / 4; // Allegro in two: 104 half notes per minute.
+      for (const { pitch, onset, length } of HERD_ENCORE) {
+        const start = time + onset * eighth, duration = length * eighth;
+        const held = length > 1;
+        this.tone(pitch, start, duration, .15, 'square', this.effects, pitch, 2000, held ? .55 : .22);
+        if (held) this.tone(pitch - 24, start, duration, .23, 'sine', this.effects, pitch - 24, undefined, .52);
+      }
+      return;
+    }
     const variant = (this.variations.get(cue) ?? 0) % 4; this.variations.set(cue, variant + 1);
     const n = [0, 3, 7, 5][variant];
     const play = (notes: number[], type: OscillatorType = 'square', duration = .10) => notes.forEach((note, i) => this.tone(note, time + i * .055, duration, .13, type, this.effects!));
+    if (isFestivalTheme(this.theme) && (cue === 'correct' || cue === 'clear' || cue === 'finish')) {
+      const score = FESTIVAL_SCORES[this.theme];
+      const first = score.root + 24 + (variant % 2) * 12;
+      play(score.answer.map(interval => first + interval), score.lead, cue === 'finish' ? .22 : .115);
+      if (cue === 'finish') this.tone(first - 24, time, .26, .24, 'triangle', this.effects);
+      return;
+    }
     switch (cue) {
       case 'wrong': case 'hit': case 'blocked':
         play([52 + variant, 46 + variant, 40 + variant], 'sawtooth', .09); break;
@@ -181,6 +259,15 @@ export class ChipAudio {
         this.tone(72 + n, time + .035, .09, .09, 'square', this.effects, 84 + n);
         this.hiss(time, .045, .11, this.effects); break;
     }
+  }
+  /** Position within the audible quarter note, 0 on the beat, 0.5 halfway through. */
+  beatPhase(): number | undefined {
+    if (!this.active || !this.musicVolume || this.context?.state !== 'running') return undefined;
+    const quarter = 60 / AUDIO_THEMES[this.theme].bpm;
+    // nextBeat is the audio time of the next unscheduled sixteenth. Measuring
+    // backwards from it includes both lookahead and late-scheduler corrections.
+    const beats = this.step / 4 + (this.context.currentTime - this.nextBeat) / quarter;
+    return Math.max(0, beats) % 1;
   }
   snapshot() {
     const samples = new Uint8Array(this.analyser?.fftSize ?? 256); this.analyser?.getByteTimeDomainData(samples);

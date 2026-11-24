@@ -4,6 +4,7 @@ import './ui/jumper/jumper.css';
 
 const root = document.querySelector<HTMLElement>('#jumper')!;
 const loaders = {
+  arcade: () => import('./ui/festival/FestivalApp').then(({ FestivalApp }) => FestivalApp),
   jumper: () => import('./ui/jumper/JumperApp').then(({ JumperApp }) => JumperApp),
   blade: () => import('./ui/blade/BladeApp').then(({ BladeApp }) => BladeApp),
   pop: () => import('./ui/pop/PopApp').then(({ PopApp }) => PopApp),
@@ -16,7 +17,7 @@ let revision = 0;
 async function renderRoute(focus = false): Promise<void> {
   const current = ++revision;
   const name = new URLSearchParams(location.search).get('game');
-  const game: GameId = name === 'blade' || name === 'pop' || name === 'robot' ? name : 'jumper';
+  const game: GameId = name === 'arcade' || name === 'blade' || name === 'pop' || name === 'robot' ? name : 'jumper';
   // Load the selected module before replacing a working screen. A rapid click
   // or history traversal can overtake an earlier import.
   try {

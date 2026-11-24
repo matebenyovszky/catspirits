@@ -2,10 +2,10 @@ import { getLanguage, LANGUAGES } from '../../i18n';
 import './shell.css';
 import { trackingToggle } from './trackingToggle';
 
-export type GameId = 'jumper' | 'blade' | 'pop' | 'robot';
+export type GameId = 'jumper' | 'blade' | 'pop' | 'robot' | 'arcade';
 
 const games: Record<GameId, string> = {
-  jumper: 'Cyber Jumper', blade: 'Neon Blade', pop: 'Neon Pop', robot: 'Bit Rescue',
+  jumper: 'Cyber Jumper', blade: 'Neon Blade', pop: 'Neon Pop', robot: 'Bit Rescue', arcade: 'Arcade',
 };
 
 export function gameHeader(current: GameId, controls = '<button class="shell-sound" data-sound aria-pressed="true">Hang: be</button>'): string {

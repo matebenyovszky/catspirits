@@ -1,8 +1,8 @@
-# Catspirits · Cyber Jumper
+# Catspirits · Kamerával irányítható mozgásjátékok
 
 **Kamerával vezérelt, aktív mozgásjáték: a tested mozdulataival irányítod Bitet.** Ugorj, hajolj le, és dőlj oldalra öt neonvilágon át a [catspirits.com](https://catspirits.com) játékában! A mozgást a böngésző helyben követi, a kamerakép a gépeden marad. Magyarul, angolul és németül játszható. Kamera nélkül billentyűvel és érintéssel is működik.
 
-[English README](README.md) · [Mozgás és vezérlés](docs/game.md) · [Neon Blade kardos játék](docs/sword-tracking.md) · [Neon Pop célzós játék](docs/neon-pop.md) · [Cloudflare útmutató](docs/cloudflare.md)
+[Motion Arcade – hat játszható küldetés](https://catspirits.com/?game=arcade&lang=hu) · [Standi bemutató és játékötletek](docs/festival-hu.md) · [English README](README.md) · [Mozgás és vezérlés](docs/game.md) · [Neon Blade kardos játék](docs/sword-tracking.md) · [Neon Pop célzós játék](docs/neon-pop.md) · [Cloudflare útmutató](docs/cloudflare.md)
 
 A repó minden szükséges forrást, függőséget, tesztet és saját buildet tartalmaz. Nem kell hozzá az eredeti avataros alkalmazás, AI-fiók, API-kulcs, backend vagy helyi kamerasegéd.
 
@@ -65,9 +65,11 @@ Kézi módban a meglévő, helyben futó modell a csuklókat figyeli; a váll, k
 [Bit Rescue indítása](https://catspirits.com/?game=robot&lang=hu): 3D-s robotkarral, kamerával követett váll–könyök–kéz mozgással, alapértelmezett kézcsukásos fogással és automatikus emeléssel, egérrel, érintéssel vagy billentyűvel vigyél három energiacellát a megfelelő dokkhoz. Add át Bitnek a vezérlést, és ha elakad, vedd vissza, kerüld meg az akadályt, majd add vissza neki. Az első küldetés szabad dokkolás, a második kerülőutat igényel. A vezérlés szabályalapú, nem tanított AI; a játék nem rögzít demonstrációkat, és nem kapcsolódik fizikai robothoz. A 3D nézetben külön kapcsolható kísérleti magasságvezérlés is: a kalibrált tenyérméret változása vezérli az emelést. [Vezérlés és fejlesztői dokumentáció](docs/robot-rescue.md).
 
 
-### Saját cyber-elektrós zene és játékhangok
+### Cyber-elektrós zene és játékhangok
 
-Mind a négy játék saját, eltérő cyber-elektrós zenét (Jumper: 138 BPM synthwave; Pop: 132 BPM electro-pop; Blade: 148 BPM techno; Bit Rescue: 128 BPM arpeggiós téma) és változatos effekteket kapott: pukkanás, helyes/hibás válasz, gyűjtés és robotműveletek. A egységes **hangszóróikon** minden játékban elérhető, és megjegyzi a választást. A Cyber Jumper külön zene- és effekt-hangerő csúszkái is megmaradtak. Nincs hangfájl-letöltés; némítva leáll a hanggenerálás, szünetben és háttérben a hanglejátszás is szünetel. Saját dallamokat használunk; nincs átvett Tetris-feldolgozás vagy külső hangfelvétel.
+A Cyber Jumper alatt 138 BPM-es synthwave, a Neon Popban 132 BPM-es electro-pop, a Neon Blade-ben 148 BPM-es techno, a Bit Rescue-ban 128 BPM-es arpeggiós téma szól. A hat fesztiválküldetés mindegyikéhez saját kísérőzene készült. A Magnet Meadow győzelmekor Beethoven V. szimfóniájának közkincs nyitómotívumát játssza a szinti. A böngésző minden hangot és effektet helyben szólaltat meg. [A kotta és a feldolgozás forrása](public/licenses/THIRD-PARTY-NOTICES.txt)
+
+A **hangszóróikon** minden játékban megjegyzi a választást. A Cyber Jumperben a zene és az effektek hangereje külön is állítható. A némítás az előre beütemezett hangokat is leállítja.
 
 ### Kézkurzor a teljes felületen
 

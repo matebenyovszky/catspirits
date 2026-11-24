@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ChipAudio, AUDIO_THEMES } from './ChipAudio';
+import { FESTIVAL_SCORES } from './festivalScores';
 import { bindSoundToggle } from '../../ui/audio/soundToggle';
 import { setLanguage } from '../../i18n';
 let contexts: FakeContext[], sources: FakeNode[];
 class FakeNode extends EventTarget {
   connect = vi.fn(() => this); disconnect = vi.fn(); start = vi.fn();
-  stop = vi.fn(() => this.dispatchEvent(new Event('ended')));
+  // A future stop schedules a release. Tests can advance an individual source
+  // to its natural end, or stop it immediately as real mute/dispose does.
+  stop = vi.fn((when?: number) => {
+    if (when === undefined) this.dispatchEvent(new Event('ended'));
+  });
   gain = { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(), setTargetAtTime: vi.fn() };
   frequency = { value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() };
   threshold = { value: 0 }; ratio = { value: 0 }; fftSize = 256;
@@ -87,12 +92,106 @@ it('can restart music after a temporary tracking stop without a new user gesture
 });
 
 it('gives each game a distinct upbeat arrangement with bounded voices', async () => {
-  expect(new Set(Object.values(AUDIO_THEMES).map(t=>JSON.stringify(t.melody))).size).toBe(4);
-  expect(Object.values(AUDIO_THEMES).every(t=>t.bpm>=128 && t.bpm<=148)).toBe(true);
+  expect(new Set(Object.values(AUDIO_THEMES).map(t=>JSON.stringify(t.melody))).size).toBe(10);
+  expect(Object.values(AUDIO_THEMES).every(t=>t.bpm>=126 && t.bpm<=154)).toBe(true);
   for (const theme of ['jumper','pop','blade','robot'] as const) {
     const audio=new ChipAudio(theme);await audio.unlock();audio.play(3);
     const context=contexts[contexts.length-1];
     for(let i=0;i<300;i++){context.currentTime=i*.05;vi.advanceTimersByTime(50);expect(audio.snapshot().voices).toBeLessThanOrEqual(48);for(const node of sources.splice(0))node.dispatchEvent(new Event('ended'));}
     expect(audio.snapshot().scheduledNotes).toBeGreaterThan(100);audio.dispose();expect(vi.getTimerCount()).toBe(0);
   }
+});
+
+it('changes festival scores on one context, without keeping old voices, timers or mute overrides', async () => {
+  const audio = new ChipAudio('jungle');
+  await audio.unlock();
+  audio.play();
+  for (const theme of Object.keys(FESTIVAL_SCORES) as (keyof typeof FESTIVAL_SCORES)[]) {
+    audio.setTheme(theme);
+    expect(vi.getTimerCount()).toBe(1);
+    for (let i = 0; i < 40; i++) {
+      contexts[0].currentTime += .12;
+      vi.advanceTimersByTime(120);
+      audio.cue('correct');
+      expect(sources.every(source => source.start.mock.calls.length === 1)).toBe(true);
+      sources.splice(0);
+    }
+  }
+  expect(contexts).toHaveLength(1);
+  audio.setEnabled(false);
+  const count = audio.snapshot().scheduledNotes;
+  audio.setTheme('build'); audio.play(); audio.cue('correct');
+  expect(vi.getTimerCount()).toBe(0);
+  expect(audio.snapshot().scheduledNotes).toBe(count);
+  audio.dispose();
+});
+
+it('reports quarter-note phase against the audio clock and resets it when music restarts', async () => {
+  const audio = new ChipAudio('paint');
+  expect(audio.beatPhase()).toBeUndefined();
+  await audio.unlock(); audio.play();
+  const clock = contexts[0];
+  expect(audio.beatPhase()).toBe(0);
+  clock.currentTime = .025 + (60 / AUDIO_THEMES.paint.bpm) * 1.5;
+  expect(audio.beatPhase()).toBeCloseTo(.5);
+  audio.stop(); expect(audio.beatPhase()).toBeUndefined();
+  audio.play(); expect(audio.beatPhase()).toBe(0);
+  audio.setEnabled(false); expect(audio.beatPhase()).toBeUndefined();
+  audio.dispose();
+});
+
+it('plays the two phrases of the Fifth only on winning Magnet Meadow', async () => {
+  const audio = new ChipAudio('herd');
+  await audio.unlock();
+  const pitch = (node: FakeNode) =>
+    Math.round(69 + 12 * Math.log2(node.frequency.setValueAtTime.mock.calls[0][0] / 440));
+  for (const cue of ['correct', 'clear', 'miss'] as const) {
+    audio.cue(cue);
+    expect(sources.splice(0).length).toBeLessThan(8);
+  }
+  audio.stop();
+  contexts[0].currentTime = 12;
+  audio.cue('finish');
+  expect(sources).toHaveLength(10);
+  const lead = sources.filter(node => pitch(node) >= 60);
+  expect(lead.map(pitch)).toEqual([67, 67, 67, 63, 65, 65, 65, 62]);
+  expect(sources.map(pitch).filter(note => note < 60)).toEqual([39, 38]);
+  const eighth = 60 / 104 / 4;
+  const rhythm = [1, 2, 3, 4, 10, 11, 12, 13];
+  const durations = [.73, .73, .73, 4.5, .73, .73, .73, 7.25];
+  for (const [i, note] of lead.entries()) {
+    const attack = note.start.mock.calls[0][0];
+    const release = note.frequency.exponentialRampToValueAtTime.mock.calls[0][1];
+    expect(attack).toBeCloseTo(12 + rhythm[i] * eighth);
+    expect(release - attack).toBeCloseTo(durations[i] * eighth);
+  }
+  expect(vi.getTimerCount()).toBe(0);
+  audio.setTheme('jungle'); sources = []; audio.cue('finish');
+  expect(sources).toHaveLength(4);
+  audio.dispose();
+});
+
+it('shares the voice ceiling and cancels queued encore notes on mute and disposal', async () => {
+  const audio = new ChipAudio('herd');
+  await audio.unlock();
+  for (let i = 0; i < 10; i++) {
+    contexts[0].currentTime += .1;
+    audio.cue('finish');
+  }
+  expect(audio.snapshot().voices).toBe(48);
+  const pending = [...sources];
+  audio.setEnabled(false);
+  expect(audio.snapshot().voices).toBe(0);
+  expect(pending.every(node => node.stop.mock.calls.some(call => !call.length))).toBe(true);
+  contexts[0].currentTime += 1;
+  audio.cue('finish');
+  expect(sources).toHaveLength(48);
+  audio.setEnabled(true); await Promise.resolve();
+  audio.cue('finish');
+  expect(audio.snapshot().voices).toBe(10);
+  audio.dispose();
+  expect(audio.snapshot().voices).toBe(0);
+  expect(sources.slice(48).every(node => node.stop.mock.calls.some(call => !call.length))).toBe(true);
+  audio.cue('finish');
+  expect(sources).toHaveLength(58);
 });

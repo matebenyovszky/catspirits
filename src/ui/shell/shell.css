@@ -133,6 +133,8 @@
   .shell-launch .blade-intro h1 { font-size: clamp(52px, 12vw, 76px); }
 }
 @media (max-width: 520px) {
+  .shell-header .shell-games { min-width:0; gap:1px; overflow-x:auto; justify-content:flex-start; }
+  .shell-header .shell-games a { flex:1 0 auto; padding-inline:5px; }
   .shell-brand { gap: 6px; }
   .shell-mark { width: 30px; height: 30px; }
   .jumper-header .jumper-tools { gap: 4px; }

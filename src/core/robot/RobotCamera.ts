@@ -8,7 +8,7 @@ export class RobotCamera {
   private generation = 0;
   lastError?: string;
   private tracking = false;
-  constructor(private video: HTMLVideoElement, private onFrame: (frame: PoseFrame | null) => void) {}
+  constructor(private video: HTMLVideoElement, private onFrame: (frame: PoseFrame | null) => void, private readonly includeArm = true) {}
   get running(): boolean { return this.tracking; }
   async start(): Promise<boolean> {
     this.stop(); this.lastError = undefined; const generation = this.generation;
@@ -18,7 +18,7 @@ export class RobotCamera {
     this.tracker = new CameraPoseTracker(this.video, {
       onFrame: frame => { if (current()) this.onFrame(frame); },
       onStatus: status => { if (current()) { this.tracking = status.state === 'tracking'; if (status.state === 'error') this.lastError = status.message; if (!this.tracking) this.onFrame(null); } }
-    }, delegate => createHandWorker(delegate, true), { role: 'game-hand' });
+    }, delegate => createHandWorker(delegate, this.includeArm), { role: 'game-hand' });
     this.tracker.setInputWidth(480); await this.tracker.start();
     return current() && this.tracking;
   }

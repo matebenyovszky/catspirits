@@ -27,8 +27,8 @@ beforeEach(async () => {
   root = document.createElement('main'); document.body.replaceChildren(root); app = new RobotApp(root); await vi.dynamicImportSettled();
 });
 afterEach(() => { app.dispose(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
-it('offers all four games without camera or background rendering on arrival', () => {
-  expect(root.querySelectorAll('nav a')).toHaveLength(4); expect(root.textContent).toContain('Rule-based autopilot, not a trained AI');
+it('offers the games and festival arcade without camera or background rendering on arrival', () => {
+  expect(root.querySelector('nav a[href*=arcade]')).not.toBeNull(); expect(root.textContent).toContain('Rule-based autopilot, not a trained AI');
   expect(mock.start).not.toHaveBeenCalled(); expect(callbacks.size).toBe(0); expect(root.dataset.phase).toBe('ready');
 });
 it('runs a complete autonomous mission, releases resources and starts the detour', () => {
