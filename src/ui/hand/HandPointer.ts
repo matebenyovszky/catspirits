@@ -10,6 +10,7 @@ export class HandPointer {
   private popup?: HTMLElement;
   private rangeChanged = false;
   private allowCanvas = true;
+  get canDrag(): boolean { return this.target instanceof HTMLCanvasElement || (this.target instanceof HTMLInputElement && this.target.type === 'range'); }
   private actionable(element: Element | null): HTMLElement | null {
     const target = element?.closest<HTMLElement>('button,a[href],input,select,label,summary,canvas,[role="button"]') ?? null;
     if (!target || target.closest('[inert],[hidden]') || target.matches(':disabled,[aria-disabled="true"]')) return null;

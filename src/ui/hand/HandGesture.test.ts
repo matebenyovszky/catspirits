@@ -31,3 +31,36 @@ it('rejects implausible geometry and maps a mirrored palm to viewport edges',()=
   const left=frame(50);left.landmarks[9]={x:.9,y:.05,z:0};expect(gesture.update(left,50)).toMatchObject({x:0,y:0});
   gesture.reset();const right=frame(100);right.landmarks[9]={x:.05,y:.95,z:0};expect(gesture.update(right,100)).toMatchObject({x:1,y:1});
 });
+
+const space={width:390,height:844,allowDrag:false};
+function moved(time:number,ratio:number,x:number,y=.5):PoseFrame{
+  const f=frame(time);f.landmarks[4].x=.5+ratio*.14;f.landmarks[9]={x,y,z:0};return f;
+}
+function arm(gesture:HandGesture){for(let t=0;t<=200;t+=50)gesture.update(moved(t,.9,.5),t,space);}
+it('anchors to the pre-pinch cursor before both closing and release move the palm',()=>{
+  const g=new HandGesture();arm(g);const anchor=g.update(moved(230,.9,.5),230,space)!;
+  expect(g.update(moved(260,.5,.54),260,space)).toMatchObject({x:anchor.x,y:anchor.y,edge:null});
+  g.update(moved(300,.1,.57),300,space);expect(g.update(moved(370,.1,.59),370,space)).toMatchObject({x:anchor.x,y:anchor.y,edge:'down'});
+  // Buttons must remain stable even with a long pinch and substantial drift.
+  expect(g.update(moved(650,.1,.7),650,space)).toMatchObject({x:anchor.x,y:anchor.y,held:true});
+  g.update(moved(700,.9,.63),700,space);expect(g.update(moved(770,.9,.6),770,space)).toMatchObject({x:anchor.x,y:anchor.y,edge:'up'});
+  expect(g.update(moved(820,.9,.6),820,space)?.x).toBe(anchor.x);
+  expect(g.update(moved(930,.9,.6),930,space)?.x).toBeLessThan(anchor.x);
+});
+it('permits deliberate canvas/range dragging after hold and movement hysteresis without an initial jump',()=>{
+  const g=new HandGesture();arm(g);const drag={...space,allowDrag:true};const anchor=g.update(moved(230,.9,.5),230,drag)!;
+  g.update(moved(260,.1,.53),260,drag);g.update(moved(330,.1,.55),330,drag);
+  expect(g.update(moved(450,.1,.57),450,drag)?.x).toBe(anchor.x);
+  g.update(moved(550,.1,.62),550,drag);expect(g.update(moved(650,.1,.62),650,drag)?.x).toBeCloseTo(anchor.x);
+  const moving=g.update(moved(720,.1,.67),720,drag)!;expect(moving.x).toBeLessThan(anchor.x);
+  g.update(moved(770,.9,.7),770,drag);expect(g.update(moved(840,.9,.72),840,drag)).toMatchObject({x:moving.x,edge:'up'});
+  // A second pinch during release settling starts at the current drag endpoint.
+  g.update(moved(880,.1,.72),880,drag);expect(g.update(moved(950,.1,.72),950,drag)?.edge).toBe('down');
+  expect(g.update(moved(1170,.1,.72),1170,drag)?.x).toBeCloseTo(moving.x);
+});
+it('releases a half-pinch without clicking and drops its anchor after tracking loss',()=>{
+  const g=new HandGesture();arm(g);g.update(moved(260,.5,.54),260,space);
+  const reopened=g.update(moved(350,.9,.6),350,space)!;expect(reopened.edge).toBeNull();expect(reopened.x).toBeLessThan(.5);
+  g.update({...moved(400,.1,.6),landmarks:[]},400,space);
+  const reacquired=g.update(moved(450,.1,.3),450,space)!;expect(reacquired.held).toBe(false);expect(reacquired.edge).toBeNull();expect(reacquired.x).toBeGreaterThan(.5);
+});

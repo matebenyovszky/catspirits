@@ -1,3 +1,4 @@
+import { createTrackingOverlay, type TrackingOverlay } from '../tracking/TrackingOverlay';
 import { sharedCamera } from '../tracking/SharedCamera';
 import { CameraSwordTracker } from '../tracking/sword/CameraSwordTracker';
 import { SwordMeasurementGate } from '../tracking/sword/SwordMeasurementGate';
@@ -6,6 +7,7 @@ import type { SwordFrame } from '../tracking/sword/types';
 /** Independent colour tracking: no body model, microphone, recording or upload. */
 export class BladeCamera {
   private generation = 0;
+  private overlay?: TrackingOverlay;
   private releaseCamera?: () => void;
   private cameraAbort?: AbortController;
   private stream: MediaStream | null = null;
@@ -33,12 +35,17 @@ export class BladeCamera {
       await this.video.play();
       if (generation !== this.generation) return false;
       if (document.hidden) { this.stop(); return false; }
-      this.tracker = new CameraSwordTracker(this.video, frame => this.onFrame(this.gate.accept(frame, performance.now())));
+      this.overlay = createTrackingOverlay(this.video);
+      this.tracker = new CameraSwordTracker(this.video, frame => {
+        const measured = this.gate.accept(frame, performance.now());
+        this.overlay?.sword(measured);this.onFrame(measured);
+      });
       this.tracker.start(); return this.running;
     } catch (error) { if (generation === this.generation) this.stop(); throw error; }
   }
   stop(): void {
     ++this.generation; this.cameraAbort?.abort(); this.cameraAbort = undefined; this.tracker?.stop(); this.tracker = null; this.gate.reset();
+    this.overlay?.dispose();this.overlay = undefined;
     this.releaseCamera?.(); this.releaseCamera = undefined; this.stream = null;
     this.video.pause(); this.video.srcObject = null; this.onFrame(null);
   }

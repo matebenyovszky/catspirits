@@ -1,3 +1,4 @@
+import { createTrackingOverlay, type TrackingOverlay } from './TrackingOverlay';
 import { createPoseWorker, type PoseWorkerMessage } from "./pose.worker";
 import type { PoseFrame } from "./types";
 import { sharedCamera, cameraAccessError, claimInference, releaseInference, type CameraRole } from "./SharedCamera";
@@ -26,6 +27,7 @@ type Callbacks = {
 type Session = {
   abort: AbortController;
   stream?: MediaStream;
+  overlay?: TrackingOverlay;
   releaseCamera?: () => void;
   worker?: Worker;
   raf?: number;
@@ -147,6 +149,7 @@ export class CameraPoseTracker {
       this.video.srcObject = session.stream;
       await cancellable(this.video.play(), session.abort.signal, 15000);
       if (!this.isCurrent(session)) return;
+      session.overlay = createTrackingOverlay(this.video);
       this.callbacks.onStatus({ state: "loading", message: `${session.cameraLabel} megnyitva. Testkövető modell betöltése…`, cameraLabel: session.cameraLabel });
       try { await this.initializeWorker(session, "GPU"); }
       catch (error) {
@@ -302,6 +305,7 @@ export class CameraPoseTracker {
       session.fpsStartedAt = now;
     }
     frame.imageAspectRatio = this.video.videoWidth / this.video.videoHeight;
+    session.overlay?.pose(frame);
     if (this.options.role === 'game-hand') sharedCamera.publishHand(frame);
     this.callbacks.onFrame(frame);
     if (now - session.lastStatusAt >= 500) {
@@ -373,6 +377,7 @@ export class CameraPoseTracker {
 
   private clearPose(session: Session): void {
     session.clearedStalePose = true;
+    session.overlay?.clear();
     const empty = { timestampMs: performance.now(), landmarks: [], worldLandmarks: [], inferenceMs: 0 };
     if (this.options.role === 'game-hand') sharedCamera.publishHand(empty);
     this.callbacks.onFrame(empty);
@@ -391,6 +396,7 @@ export class CameraPoseTracker {
     window.removeEventListener("pagehide", this.onPageHide);
     if (!session) return;
     session.abort.abort();
+    session.overlay?.dispose();
     if (session.raf !== undefined) cancelAnimationFrame(session.raf);
     if (session.videoCallback !== undefined) this.video.cancelVideoFrameCallback(session.videoCallback);
     clearInterval(session.watchdog);

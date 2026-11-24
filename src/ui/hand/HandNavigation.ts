@@ -154,7 +154,7 @@ export class HandNavigation {
     this.tracker=tracker;tracker.setInputWidth(320);this.tick();await tracker.start();
   }
   private frame(frame:PoseFrame):void {
-    const point=this.gesture.update(frame);
+    const point=this.gesture.update(frame,performance.now(),{width:innerWidth,height:innerHeight,allowDrag:this.pointer.canDrag});
     if(!point){this.cancel();const text=t('Mutasd a nyitott kezed a kamerának.');if(this.status.textContent!==text)this.status.textContent=text;return;}
     this.lastSeen=performance.now();this.tick();this.point={x:point.x*innerWidth,y:point.y*innerHeight};
     this.cursor.hidden=false;this.cursor.style.transform=`translate3d(${this.point.x}px,${this.point.y}px,0)`;
