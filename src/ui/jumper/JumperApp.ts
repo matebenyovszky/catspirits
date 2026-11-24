@@ -1,5 +1,6 @@
+import { gameHeader } from '../shell/GameHeader';
 import { bindSoundToggle } from '../audio/soundToggle';
-import { getLanguage, isLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
+import { getLanguage, localizedHtml, t } from '../../i18n';
 import { JumperSimulation, WORLDS, SUITS, DUCK_GATE_HALF_DEPTH, freshSave, validateSave, type JumperSave, type JumperPhase } from '../../core/jumper/JumperSimulation';
 import { JumperView } from '../../core/jumper/JumperView';
 import { JumperAudio } from '../../core/jumper/JumperAudio';
@@ -47,19 +48,14 @@ export class JumperApp {
     root.innerHTML = localizedHtml(`
       <canvas class="jumper-scene" tabindex="0" aria-label="Cyber Jumper játékpálya. Szóköz: ugrás, le nyíl vagy S: lehajolás, bal és jobb nyíl: sávváltás, P: szünet."></canvas>
       <div class="jumper-vignette" aria-hidden="true"></div>
-      <header class="jumper-header">
-        <button class="jumper-brand" data-home aria-label="Cyber Jumper kezdőlap"><span class="brand-mark">${icon('robot')}</span><span>CATSPIRITS<strong>CYBER JUMPER<span>↗</span></strong></span></button>
-        <nav class="jumper-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}" aria-current="page">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}">Neon Pop</a><a href="?game=robot&lang=${getLanguage()}">Bit Rescue</a></nav>
-        <nav aria-label="Játék menü">
+      ${gameHeader('jumper', `<nav class="jumper-tools" aria-label="Játék menü">
           <button data-worlds class="nav-text">${icon('world')}<span>Pályák</span></button>
           <button data-suits class="nav-text" aria-label="Robotom">${icon('robot')}<span>Robotom</span></button>
           <button data-sound class="sound-button" aria-pressed="true">Hang: be</button><button data-settings class="icon-button" aria-label="Hang és megjelenés beállításai" title="Hang és megjelenés">${icon('settings')}</button>
           <button data-fullscreen class="icon-button" aria-label="Teljes képernyő" title="Teljes képernyő">${icon('expand')}</button>
           <button data-pause class="icon-button pause-button" hidden aria-label="Játék szüneteltetése" title="Szünet (P)">${icon('pause')}</button>
-        </nav>
-      </header>
+        </nav>`)}
       <section class="jumper-hero" aria-label="Kezdőképernyő">
-        <fieldset class="language-switch"><legend>Nyelv</legend><button type="button" data-language="en" lang="en" aria-pressed="${getLanguage()==='en'}">English</button><button type="button" data-language="hu" lang="hu" aria-pressed="${getLanguage()==='hu'}">Magyar</button><button type="button" data-language="de" lang="de" aria-pressed="${getLanguage()==='de'}">Deutsch</button></fieldset>
         <div class="hero-badge"><span></span> KAMERÁS MOZGÁS · 5 VILÁG</div>
         <h1>MOZDULJ A<br><span>JÖVŐBE.</span></h1>
         <p>A mozdulataid irányítják Bitet.<br class="desktop-break"> Ugorj, hajolj le, és dőlj oldalra a kamera előtt!</p>
@@ -133,14 +129,6 @@ export class JumperApp {
       // Accessibility activation may emit only click. A pointer gesture is consumed once.
       button.addEventListener('click',event=>{if(!pointerHandled || event.detail===0)action();pointerHandled=false;},{signal:this.abort.signal});
     }
-    this.root.querySelectorAll<HTMLButtonElement>('[data-language]').forEach(button=>button.addEventListener('click',()=>{
-      const language=button.dataset.language;
-      if(!isLanguage(language))return;
-      if(language===getLanguage())return;
-      this.persist();
-      try { localStorage.setItem(LANGUAGE_KEY,language); } catch { /* URL also stores the choice. */ }
-      const url=new URL(location.href);url.searchParams.set('lang',language);location.assign(url.href);
-    },{signal:this.abort.signal}));
     this.bindDuckButton();
     const canvas=this.el('canvas');
     canvas.addEventListener('pointerdown',event=>{this.swipeX=event.clientX;this.swipeY=event.clientY;},{signal:this.abort.signal});
@@ -197,6 +185,7 @@ export class JumperApp {
   }
 
   private key(event:KeyboardEvent):void {
+    if (event.target instanceof HTMLSelectElement) return;
     if(event.defaultPrevented)return;
     if(event.key==='Tab' && this.modalName){
       const controls=[...this.el('.jumper-modal').querySelectorAll<HTMLElement>('button:not(:disabled),input,select')].filter(e=>!e.hidden);
@@ -319,12 +308,12 @@ export class JumperApp {
   private volumes():void {this.audio.setVolumes(this.save.music,this.save.effects);}
 
   private showPrivacy():void {
-    this.openModal('privacy',`${this.closeButton()}<span class="modal-eyebrow">A TE ESZKÖZÖDÖN</span><h2 id="modal-title">Adatvédelem és licencek</h2><p>A kamera csak gombnyomás és böngészőengedély után indul. A képkockák és testpontok a böngésző memóriájában maradnak; a játék nem rögzíti és nem tölti fel őket. A mikrofont nem használjuk. Lapváltáskor vagy kilépéskor a kamera leáll.</p><p>A kézkurzor bekapcsolását a lap munkamenete megjegyzi. Játékváltáskor és az oldal előtérbe hozásakor újraindulhat. A Kézkurzor gombbal kikapcsolható; a képfeldolgozás helyben történik.</p><p>A testkövető és a modell erről az oldalról töltődik le. Nincs reklám, felhasználói fiók vagy a játékba épített analitika.</p><p>A nyelv, eredmények és beállítások ezen a böngészőn maradnak. Törlésükhöz töröld a catspirits.com webhelyadatait a böngésződben.</p><p>A tárhelyet és a botvédelmet a Cloudflare biztosítja. Ehhez IP-címet és technikai kérésadatokat kezelhet, valamint biztonsági sütiket használhat.</p><p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare adatvédelem</a> · <a href="./licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">Külső licencek</a> · <a href="./licenses/Catspirits-MIT.txt" target="_blank" rel="noopener noreferrer">MIT-licenc</a></p>`);
+    this.openModal('privacy',`${this.closeButton()}<span class="modal-eyebrow">A TE ESZKÖZÖDÖN</span><h2 id="modal-title">Adatvédelem és licencek</h2><p>A kamera csak gombnyomás és böngészőengedély után indul. A képkockák és testpontok a böngésző memóriájában maradnak; a játék nem rögzíti és nem tölti fel őket. A mikrofont nem használjuk. Lapváltáskor vagy kilépéskor a kamera leáll.</p><p>A kézkurzor és a játékok közös kamerafolyamot használnak. Játékváltáskor az aktív kézkurzor tovább működik. A kamera háttérben leáll. Visszatéréskor a kézkurzor csak meglévő böngészőengedéllyel indul újra automatikusan.</p><p>A testkövető és a modell erről az oldalról töltődik le. Nincs reklám, felhasználói fiók vagy a játékba épített analitika.</p><p>A nyelv, eredmények és beállítások ezen a böngészőn maradnak. Törlésükhöz töröld a catspirits.com webhelyadatait a böngésződben.</p><p>A tárhelyet és a botvédelmet a Cloudflare biztosítja. Ehhez IP-címet és technikai kérésadatokat kezelhet, valamint biztonsági sütiket használhat.</p><p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare adatvédelem</a> · <a href="./licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">Külső licencek</a> · <a href="./licenses/Catspirits-MIT.txt" target="_blank" rel="noopener noreferrer">MIT-licenc</a></p>`);
     this.modalOn('[data-modal-close]',()=>this.closeModal());
   }
 
   private showHelp():void {
-    this.openModal('help',`${this.closeButton()}<span class="modal-eyebrow">EGY PERC, ÉS MEHETÜNK</span><h2 id="modal-title">Ugorj. Gyűjts. Ragyogj.</h2><p class="help-camera">Kamerával: állj úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugorj, hajolj le, és dőlj oldalra! A képet helyben dolgozzuk fel. Billentyűvel és érintéssel kamera nélkül is játszhatsz.</p><div class="help-steps"><p><b>01</b><span><strong>Ugorj át a fénykapun!</strong>Szóköz / ↑ / W, vagy az UGRÁS gomb. Akkor ugorj, amikor a kapu közel ér. A 3. világtól az arany felső rúd alatt hajolj le: tartsd a ↓ / S billentyűt vagy a HAJOLJ LE gombot, amíg átérsz.</span></p><p><b>02</b><span><strong>Kövesd a kristályokat!</strong>← → / A D, a képernyő nyilai vagy oldalra húzás vált sávot. A kék pajzs egy ütközést kivéd.</span></p><p><b>03</b><span><strong>Hódítsd meg az öt világot!</strong>8 kapu egy pálya. 3 csillag: hibátlan futam és legalább 15 kristály. 2 csillag: legfeljebb 2 hibázás.</span></p></div><p class="help-safety">Hagyj szabad helyet magad körül, stabil talajon mozogj, és ha kellemetlen, állj meg. A játékhoz nem kell magasra ugrani. Kamerával csak az legyen a képben, aki játszani szeretne.</p><p class="help-sword"><strong>Neon Blade · kamerás kardkaland</strong><br>Opcionális játékmód rózsaszín–zöld jelölőbottal. <a href="?game=blade&lang=${getLanguage()}">Kipróbálom →</a></p>`);
+    this.openModal('help',`${this.closeButton()}<span class="modal-eyebrow">EGY PERC, ÉS MEHETÜNK</span><h2 id="modal-title">Ugorj. Gyűjts. Ragyogj.</h2><p class="help-camera">Kamerával: állj úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugorj, hajolj le, és dőlj oldalra! A képet helyben dolgozzuk fel. Billentyűvel és érintéssel kamera nélkül is játszhatsz.</p><div class="help-steps"><p><b>01</b><span><strong>Ugorj át a fénykapun!</strong>Szóköz / ↑ / W, vagy az UGRÁS gomb. Akkor ugorj, amikor a kapu közel ér. A 3. világtól az arany felső rúd alatt hajolj le: tartsd a ↓ / S billentyűt vagy a HAJOLJ LE gombot, amíg átérsz.</span></p><p><b>02</b><span><strong>Kövesd a kristályokat!</strong>← → / A D, a képernyő nyilai vagy oldalra húzás vált sávot. A kék pajzs egy ütközést kivéd.</span></p><p><b>03</b><span><strong>Hódítsd meg az öt világot!</strong>8 kapu egy pálya. 3 csillag: hibátlan futam és legalább 15 kristály. 2 csillag: legfeljebb 2 hibázás.</span></p></div><p class="help-safety">Hagyj szabad helyet magad körül, stabil talajon mozogj, és ha kellemetlen, állj meg. A játékhoz nem kell magasra ugrani. Kamerával csak az legyen a képben, aki játszani szeretne.</p><p class="help-sword"><strong>Neon Blade · kamerás kardkaland</strong><br>Opcionális játékmód rózsaszín–zöld jelölőbottal. <a data-route href="?game=blade&lang=${getLanguage()}">Kipróbálom →</a></p>`);
     this.modalOn('[data-modal-close]',()=>this.closeModal());
   }
 
@@ -454,5 +443,5 @@ export class JumperApp {
     this.raf=requestAnimationFrame(next=>this.frame(next));
   }
 
-  private dispose():void {this.destroyed=true;cancelAnimationFrame(this.raf);this.abort.abort();this.camera.stop();this.audio.dispose();this.view.dispose();}
+  dispose():void {if(this.destroyed)return;this.destroyed=true;cancelAnimationFrame(this.raf);this.abort.abort();this.camera.stop();this.audio.dispose();this.view.dispose();}
 }

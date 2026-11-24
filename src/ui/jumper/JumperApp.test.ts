@@ -87,8 +87,7 @@ describe('standalone multilingual interface', () => {
     localStorage.setItem('catspirits.cyber-jumper.v1', JSON.stringify(save));
     new JumperApp(root);
     expect(text('h1')).toBe('BEWEG DICHIN DIE ZUKUNFT.');
-    expect(root.querySelector('[data-language="de"]')!.getAttribute('aria-pressed')).toBe('true');
-    expect(text('.language-switch')).toContain('Deutsch');
+    expect(root.querySelector<HTMLSelectElement>('header [data-language]')!.value).toBe('de');
     expect(root.querySelector('[data-jump]')!.getAttribute('aria-label')).toBe('Springen');
     click('[data-worlds]'); expect(text('.world-list')).toContain('Regenbogenbrücke');
     click('[data-world="2"]');

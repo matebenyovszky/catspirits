@@ -155,18 +155,20 @@ describe("CameraPoseTracker lifecycle", () => {
     expect(getUserMedia).toHaveBeenNthCalledWith(2,expect.objectContaining({video:expect.objectContaining({deviceId:{exact:'built-in'}})}));
   });
 
-  it("an old permission result cannot replace a restarted camera session", async () => {
-    const firstPermission = deferred<MediaStream>();
-    const oldCamera = cameraStream();
-    getUserMedia.mockReturnValueOnce(firstPermission.promise);
-    const firstStart = tracker.start();
-    const currentCamera = await startTracking();
-    firstPermission.resolve(oldCamera.stream);
-    await firstStart;
+  it("starts only the latest session when permission is still pending during restart", async () => {
+    const permission = deferred<MediaStream>();
+    const camera = cameraStream();
+    getUserMedia.mockReturnValueOnce(permission.promise);
+    const first = tracker.start();
+    const current = tracker.start();
+    permission.resolve(camera.stream);
+    await first;
     await flush();
-    expect(oldCamera.track.stop).toHaveBeenCalledOnce();
-    expect(currentCamera.track.stop).not.toHaveBeenCalled();
-    expect(video.srcObject).toBe(currentCamera.stream);
+    workers[0].receive({ type: "ready", delegate: "GPU" });
+    await current;
+    expect(getUserMedia).toHaveBeenCalledOnce();
+    expect(camera.track.stop).not.toHaveBeenCalled();
+    expect(video.srcObject).toBe(camera.stream);
     expect(workers).toHaveLength(1);
   });
 

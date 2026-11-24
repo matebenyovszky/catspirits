@@ -17,8 +17,7 @@ export class BladeCamera {
   async start(): Promise<boolean> {
     this.stop(); const generation = this.generation;
     if (document.hidden || !navigator.mediaDevices?.getUserMedia) throw new Error('camera-unavailable');
-    const lease = sharedCamera.claim(() => navigator.mediaDevices.getUserMedia({ audio: false,
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 } } }), 'game');
+    const lease = sharedCamera.claim('game');
     this.releaseCamera = lease.release;
     let stream: MediaStream;
     try { stream = await lease.ready; }

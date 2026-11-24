@@ -1,6 +1,8 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
-  "A kézkurzor bekapcsolását a lap munkamenete megjegyzi. Játékváltáskor és az oldal előtérbe hozásakor újraindulhat. A Kézkurzor gombbal kikapcsolható; a képfeldolgozás helyben történik.": "Hand cursor opt-in is remembered for this tab session. It may restart when switching games or returning to the page. Turn it off with the Hand cursor button; image processing stays on your device.",
+  "A játék nem töltődött be. Próbáld újra.": "The game did not load. Try again.",
+  "A folytatáshoz indítsd el a kézkurzort.": "Start the hand cursor to continue.",
+  "A kézkurzor és a játékok közös kamerafolyamot használnak. Játékváltáskor az aktív kézkurzor tovább működik. A kamera háttérben leáll. Visszatéréskor a kézkurzor csak meglévő böngészőengedéllyel indul újra automatikusan.": "The hand cursor and games share a camera stream. The active cursor stays on when you switch games. The camera stops in the background. When you return, the cursor restarts automatically only if the browser already grants permission.",
   "A kézkövető nem töltődött be. Kapcsold ki, majd próbáld újra.": "Hand tracking did not load. Turn it off and try again.",
 
   "Kézkurzor": "Hand cursor",

@@ -8,6 +8,7 @@ export type PopCameraMode = 'hands' | 'sword';
  * the player explicitly selects hands; sword mode keeps the colour worker. */
 export class PopCamera {
   private generation = 0;
+  lastError?: string;
   private pose: CameraPoseTracker | null = null;
   private sword: BladeCamera | null = null;
   private state: 'idle' | 'loading' | 'tracking' | 'error' = 'idle';
@@ -16,7 +17,7 @@ export class PopCamera {
   get running(): boolean { return this.sword ? this.sword.running : !!this.pose && this.state === 'tracking'; }
   get loading(): boolean { return this.state === 'loading'; }
   async start(mode: PopCameraMode): Promise<boolean> {
-    this.stop(); const generation = this.generation; this.state = 'loading';
+    this.stop(); this.lastError = undefined; const generation = this.generation; this.state = 'loading';
     const current = () => generation === this.generation;
     if (document.hidden) { this.stop(); return false; }
     if (mode === 'sword') {
@@ -31,7 +32,7 @@ export class PopCamera {
     if (!current() || document.hidden) { if (current()) this.stop(); return false; }
     const pose = new CameraPoseTracker(this.video, {
       onFrame: frame => { if (current()) this.onHands(handsFromPose(frame, performance.now())); },
-      onStatus: status => { if (current()) { this.state = status.state; if (status.state !== 'tracking') this.onHands(null); } }
+      onStatus: status => { if (current()) { this.state = status.state; if (status.state === 'error') this.lastError = status.message; if (status.state !== 'tracking') this.onHands(null); } }
     });
     this.pose = pose; pose.setInputWidth(320); await pose.start();
     return current() && this.running;

@@ -1,6 +1,7 @@
+import { gameHeader } from '../shell/GameHeader';
 import { ChipAudio } from '../../core/audio/ChipAudio';
 import { bindSoundToggle } from '../audio/soundToggle';
-import { getLanguage, isLanguage, LANGUAGE_KEY, localizedHtml, t } from '../../i18n';
+import { localizedHtml, t } from '../../i18n';
 import { RobotCamera } from '../../core/robot/RobotCamera';
 import type { PoseFrame } from '../../core/tracking/types';
 import { RobotArmInput } from '../../core/robot/RobotArmInput';
@@ -42,11 +43,8 @@ export class RobotApp {
   constructor(private root: HTMLElement) {
     root.classList.add('blade-root', 'robot-root'); document.title = `Catspirits · Bit Rescue · ${t('Te vagy a robotpilóta.')}`;
     root.innerHTML = localizedHtml(`
-      <header class="blade-header"><a class="blade-brand" href="?lang=${getLanguage()}"><span class="blade-brand-icon">✦</span><span>CATSPIRITS<small>MOVE. PLAY. GLOW.</small></span></a>
-        <nav class="blade-games" aria-label="Játékválasztó"><a href="?lang=${getLanguage()}">Cyber Jumper</a><a href="?game=blade&lang=${getLanguage()}">Neon Blade</a><a href="?game=pop&lang=${getLanguage()}">Neon Pop</a><a href="?game=robot&lang=${getLanguage()}" aria-current="page">Bit Rescue</a></nav>
-        <button class="blade-text-button" data-sound aria-pressed="true">Hang: be</button><label class="blade-language"><span class="sr-only">Nyelv</span><select data-language aria-label="Nyelv"><option value="en">EN</option><option value="hu">HU</option><option value="de">DE</option></select></label>
-      </header>
-      <main class="robot-main">
+      ${gameHeader('robot')}
+      <main class="robot-main shell-workspace">
         <div class="robot-heading"><div><span class="blade-eyebrow">04 / ROBOT LAB · VIRTUAL</span><h1>BIT <span>RESCUE.</span></h1><p>Te vagy a robotpilóta.</p></div><div class="robot-heading-controls"><div class="robot-mission-select"><label for="robot-level">Küldetés</label><select id="robot-level"><option value="1">01 · Első dokkolás</option><option value="2">02 · Kerülőút</option></select></div></div></div>
         <p class="robot-view-note" data-view-note role="status" hidden></p><button class="blade-text-button" data-view-retry hidden>Újrapróbálás</button><div class="robot-workspace">
           <section class="robot-board" aria-label="Robotkaros játék">
@@ -64,7 +62,6 @@ export class RobotApp {
         </div>
         <footer class="robot-footer"><p>Virtuális robotkar · Szabályalapú automata, nem tanított AI. A kar a mezők fölött mozog; a fogó nem haladhat át rajtuk.</p><button class="blade-text-button" data-reset>Új küldetés indítása</button><a href="/licenses/THIRD-PARTY-NOTICES.txt">Licencek</a></footer>
       </main>`);
-    this.el<HTMLSelectElement>('[data-language]').value = getLanguage();
     const level: RobotLevel = new URLSearchParams(location.search).get('level') === '2' ? 2 : 1;
     this.game.reset(level); this.el<HTMLSelectElement>('#robot-level').value = String(level);
     if (level === 2) this.text('[data-banner-title]', t('Segíts Bitnek kerülőutat találni!'));
@@ -94,11 +91,6 @@ export class RobotApp {
     this.on('[data-next]', () => { const camera = this.source === 'camera'; this.reset(2); if (camera) void this.startCamera(); else this.startPointer(); });
     this.on('[data-reset]', () => this.reset(this.game.level));
     this.el('#robot-level').addEventListener('change', event => this.reset((event.target as HTMLSelectElement).value === '2' ? 2 : 1), { signal });
-    this.el('[data-language]').addEventListener('change', event => {
-      const value = (event.target as HTMLSelectElement).value; if (!isLanguage(value)) return;
-      this.pause(); try { localStorage.setItem(LANGUAGE_KEY, value); } catch { /* Optional preference. */ }
-      const url = new URL(location.href); url.searchParams.set('lang', value); url.searchParams.set('level', String(this.game.level)); location.assign(url.href);
-    }, { signal });
     const aim = (event: PointerEvent) => {
       const rect = this.canvas().getBoundingClientRect(); if (!rect.width || !rect.height) return;
       const x = (event.clientX - rect.left) / rect.width, y = (event.clientY - rect.top) / rect.height;
@@ -257,7 +249,7 @@ export class RobotApp {
     this.el<HTMLButtonElement>('[data-calibrate]').disabled = !cameraControl || this.game.holding !== null;
     this.text('[data-height]', t('Emelés: {height}%', { height: Math.round(this.game.lift / .12 * 100) }));
     this.text('[data-pinch-status]', t(!this.pinch?.armed ? this.game.holding !== null ? this.gesture === 'pinch' ? 'A folytatáshoz csippents újra. A tárgyat megtartom.' : 'A folytatáshoz csukd be a kezed. A tárgyat megtartom.' : this.gesture === 'pinch' ? 'Nyisd szét a hüvelyk- és mutatóujjad a kezdéshez.' : 'Nyisd ki a kezed a kezdéshez.' : !this.armTracked ? 'Mutasd a vállad, könyököd és kezed a kamerának.' : this.depthControl && this.pinch.depth === null ? 'Kalibrálás: tartsd nyitott tenyered mozdulatlanul a kamera felé.' : this.pinch.closed ? this.gesture === 'pinch' ? 'CSIPPENTÉS · FOGÁS' : 'CSUKOTT KÉZ · FOGÁS' : 'NYITOTT KÉZ · ELENGEDÉS'));
-    this.text('[data-camera-status]', t(this.cameraError ? 'A kamera nem indult el. Próbáld újra, vagy válassz másik irányítást.' : this.phase === 'loading' ? 'A kamerakövetés betöltése…' : playing && this.source === 'camera' ? fresh ? this.gesture === 'pinch' ? 'Megvan a vezérlő kezed. Csippentéssel foghatsz.' : 'Megvan a karod. Kézcsukással foghatsz, kéznyitással engedhetsz el.' : 'Mutasd a vállad, könyököd és kezed a kamerának.' : 'A kamera képe a gépeden marad.'));
+    this.text('[data-camera-status]', t(this.cameraError ? this.camera.lastError ?? 'A kamera nem indult el. Próbáld újra, vagy válassz másik irányítást.' : this.phase === 'loading' ? 'A kamerakövetés betöltése…' : playing && this.source === 'camera' ? fresh ? this.gesture === 'pinch' ? 'Megvan a vezérlő kezed. Csippentéssel foghatsz.' : 'Megvan a karod. Kézcsukással foghatsz, kéznyitással engedhetsz el.' : 'Mutasd a vállad, könyököd és kezed a kamerának.' : 'A kamera képe a gépeden marad.'));
     this.text('[data-control-status]', t(this.phase === 'complete' ? 'Mindhárom cella a helyén!' : !playing ? 'A robot megvár.' : this.game.blocked ? 'A mező útban van. Vedd át, kerüld meg, majd add vissza Bitnek!' : this.game.mode === 'auto' ? 'Bit a következő cellán dolgozik. Bármikor visszaveheted.' : 'Bármikor átveheted a vezérlést.'));
     this.text('[data-task]', t(this.phase === 'complete' ? 'Mindhárom cella a helyén!' : this.phase === 'paused' ? 'A robot megvár.' : !playing ? 'Válassz irányítást a kezdéshez.' : this.game.blocked ? 'Kerüld meg a sárga mezőt felül vagy alul!' : this.game.holding === null ? this.source === 'camera' ? this.gesture === 'pinch' ? 'Vezesd a fogót a cellához, és csippents!' : 'Vezesd a fogót a cellához, és csukd be a kezed!' : 'Vezesd a fogót egy cellához, és tartsd ott.' : 'Vidd a cellát az azonos számú dokkhoz.'));
     this.root.classList.toggle('robot-blocked', playing && this.game.blocked);

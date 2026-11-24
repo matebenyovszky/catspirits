@@ -6,17 +6,18 @@ import type { PoseFrame } from '../tracking/types';
 export class RobotCamera {
   private tracker: CameraPoseTracker | null = null;
   private generation = 0;
+  lastError?: string;
   private tracking = false;
   constructor(private video: HTMLVideoElement, private onFrame: (frame: PoseFrame | null) => void) {}
   get running(): boolean { return this.tracking; }
   async start(): Promise<boolean> {
-    this.stop(); const generation = this.generation;
+    this.stop(); this.lastError = undefined; const generation = this.generation;
     const [{ CameraPoseTracker }, { createHandWorker }] = await Promise.all([import('../tracking/CameraPoseTracker'), import('../tracking/hand.worker')]);
     if (generation !== this.generation || document.hidden) return false;
     const current = () => generation === this.generation;
     this.tracker = new CameraPoseTracker(this.video, {
       onFrame: frame => { if (current()) this.onFrame(frame); },
-      onStatus: status => { if (current()) { this.tracking = status.state === 'tracking'; if (!this.tracking) this.onFrame(null); } }
+      onStatus: status => { if (current()) { this.tracking = status.state === 'tracking'; if (status.state === 'error') this.lastError = status.message; if (!this.tracking) this.onFrame(null); } }
     }, delegate => createHandWorker(delegate, true), { role: 'game-hand' });
     this.tracker.setInputWidth(480); await this.tracker.start();
     return current() && this.tracking;

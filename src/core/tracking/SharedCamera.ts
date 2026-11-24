@@ -1,39 +1,102 @@
 import type { PoseFrame } from './types';
 export type CameraRole = 'game' | 'navigation' | 'game-hand';
 type Capture = { owners: Map<symbol, CameraRole>; ready: Promise<MediaStream>; stream?: MediaStream };
-/** One local capture per page. A consumer releases only its lease; it cannot
- * stop the camera underneath a game. Late permission results are closed. */
+export type CameraLease = { ready: Promise<MediaStream>; release(): void };
+
+const video: MediaTrackConstraints = { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 } };
+
+async function openCamera(isWanted: () => boolean): Promise<MediaStream> {
+  const devices = navigator.mediaDevices;
+  if (!devices?.getUserMedia) return Promise.reject(new DOMException('Camera unavailable', 'NotSupportedError'));
+  try {
+    return await devices.getUserMedia({ audio: false, video });
+  } catch (error) {
+    // A disconnected Continuity Camera can be the system default on macOS.
+    if (!(error instanceof Error) || error.name !== 'NotReadableError' || !isWanted()) throw error;
+    const cameras = await devices.enumerateDevices?.().catch(() => []);
+    const builtIn = cameras?.find(device => device.kind === 'videoinput' && /MacBook|FaceTime|Built.in/i.test(device.label));
+    if (!builtIn?.deviceId || !isWanted()) throw error;
+    return devices.getUserMedia({ audio: false, video: { ...video, deviceId: { exact: builtIn.deviceId } } });
+  }
+}
+
+export function cameraAccessError(error: unknown): string | undefined {
+  if (!(error instanceof Error)) return;
+  switch (error.name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'A kamera nincs engedélyezve. Engedélyezd a böngésző címsoránál és a rendszer adatvédelmi beállításaiban, majd indítsd újra.';
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'Nem található kamera. Csatlakoztass egy kamerát, majd próbáld újra.';
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'A kamera nem érhető el. Zárd be a kamerát használó többi alkalmazást, majd próbáld újra.';
+    case 'OverconstrainedError':
+      return 'A kamera nem támogatja a kért képbeállítást. Próbálj másik kamerát.';
+  }
+}
+
+/** One local capture per document, including any in-flight permission prompt. */
 export class SharedCamera {
   private capture?: Capture;
   private listeners = new Set<() => void>();
   private handListeners = new Set<(frame: PoseFrame) => void>();
+  constructor(private readonly acquire: (isWanted: () => boolean) => Promise<MediaStream> = openCamera) {}
+
   get hasGameHands(): boolean { return !!this.capture && [...this.capture.owners.values()].includes('game-hand'); }
   get hasGame(): boolean { return !!this.capture && [...this.capture.owners.values()].some(role => role !== 'navigation'); }
+  get hasCapture(): boolean { return !!this.capture?.stream; }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   onHand(listener: (frame: PoseFrame) => void): () => void { this.handListeners.add(listener); return () => this.handListeners.delete(listener); }
   publishHand(frame: PoseFrame): void { for (const listener of this.handListeners) listener(frame); }
   private changed(): void { for (const listener of this.listeners) listener(); }
-  claim(acquire: () => Promise<MediaStream>, role: CameraRole) {
-    let capture = this.capture;
-    if (!capture) {
-      capture = { owners: new Map(), ready: undefined as unknown as Promise<MediaStream> };
+
+  async canResume(): Promise<boolean> {
+    if (this.hasCapture) return true;
+    try {
+      return (await navigator.permissions.query({ name: 'camera' as PermissionName })).state === 'granted';
+    } catch {
+      return false;
+    }
+  }
+
+  claim(role: CameraRole): CameraLease {
+    const owner = Symbol(role);
+    const existing = this.capture;
+    const owners = existing?.owners ?? new Map<symbol, CameraRole>();
+    owners.set(owner, role);
+    const capture = existing ?? { owners, ready: this.acquire(() => owners.size > 0) };
+    if (!existing) {
       this.capture = capture;
-      const current = capture;
-      let acquisition: Promise<MediaStream>;
-      try { acquisition=acquire(); } catch(error) { acquisition=Promise.reject(error); }
-      current.ready = acquisition.then(stream => {
-        if (!current.owners.size) stream.getTracks().forEach(track => track.stop());
-        else current.stream = stream;
+      capture.ready = capture.ready.then(stream => {
+        if (capture.owners.size) {
+          capture.stream = stream;
+          for (const track of stream.getTracks()) track.addEventListener('ended', () => {
+            if (this.capture !== capture) return;
+            this.capture = undefined;
+            capture.stream = undefined;
+            stream.getTracks().forEach(candidate => candidate.stop());
+            this.changed();
+          }, { once: true });
+        } else {
+          this.capture = undefined;
+          stream.getTracks().forEach(track => track.stop());
+        }
         return stream;
+      }, error => {
+        if (this.capture === capture) this.capture = undefined;
+        throw error;
       });
     }
-    const owner = Symbol(role); capture.owners.set(owner, role); this.changed();
-    const current = capture;
-    return { ready: current.ready, release: () => {
-      if (!current.owners.delete(owner)) return;
-      if (!current.owners.size) {
-        if (this.capture === current) this.capture = undefined;
-        current.stream?.getTracks().forEach(track => track.stop());
+    this.changed();
+    return { ready: capture.ready, release: () => {
+      if (!capture.owners.delete(owner)) return;
+      // An open browser prompt cannot be cancelled. Keep it available to new
+      // owners until it resolves, but stop an unused stream immediately.
+      if (!capture.owners.size && capture.stream) {
+        if (this.capture === capture) this.capture = undefined;
+        capture.stream.getTracks().forEach(track => track.stop());
       }
       this.changed();
     } };

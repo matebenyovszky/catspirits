@@ -1,0 +1,155 @@
+.shell-header {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  align-items: center;
+  gap: 12px 18px;
+  width: min(100%, 1440px);
+  margin-inline: auto;
+  padding: max(13px, env(safe-area-inset-top)) clamp(16px, 3.3vw, 48px) 13px;
+  border-bottom: 1px solid #8fb7ed22;
+  background: #0c1327e8;
+  color: #edf4ff;
+}
+#jumper .shell-header.jumper-header {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+}
+.shell-brand {
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+.shell-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--mint);
+  background: #173e47;
+  border: 1px solid #68ebcb9c;
+  border-radius: 6px;
+  box-shadow: inset -4px -4px #102935, 0 0 18px #4ff3cd26;
+  font-size: 21px;
+}
+.shell-header .shell-games {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px;
+  background: #162139;
+  border: 1px solid #819bd32d;
+  border-radius: 10px;
+}
+.shell-games a {
+  border-radius: 6px;
+  color: #c0cce1;
+  text-decoration: none;
+  text-align: center;
+  white-space: nowrap;
+  font-size: clamp(10px, 1.1vw, 13px);
+  font-weight: 730;
+  padding: 8px clamp(6px, 1vw, 14px);
+}
+#jumper .shell-games a[aria-current] {
+  color: #a5ffe5;
+  background: #1e404a;
+  box-shadow: inset 0 -2px #65ecc4;
+}
+.shell-games a:hover { background: #26324c; }
+.shell-tools { display: flex; align-items: center; justify-content: flex-end; gap: 9px; }
+.shell-header .shell-language, .shell-header .shell-sound {
+  font: 700 12px/1.2 system-ui, sans-serif;
+  padding: 8px;
+  min-height: 36px;
+  color: #e1ebff;
+  background: #151f37;
+  border: 1px solid #89a6d141;
+  border-radius: 7px;
+  color-scheme: dark;
+}
+.shell-header :is(a, button, select):focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.jumper-header .jumper-tools button { height: 36px; padding-inline: 9px; }
+.jumper-header .jumper-tools .icon-button { width: 36px; padding-inline: 0; }
+#jumper[data-phase]:not([data-phase="ready"]) .jumper-header .shell-games { visibility: hidden; }
+
+#jumper.blade-root {
+  background:
+    linear-gradient(180deg, #10192b20, #0b1020 760px),
+    radial-gradient(ellipse at 76% 18%, #2c4c687d, transparent 54%),
+    #0b1020;
+}
+.shell-launch { position: relative; isolation: isolate; }
+.shell-launch .blade-intro { position: relative; z-index: 1; min-width: 0; }
+.shell-scene {
+  min-width: 0;
+  width: 100%;
+  align-self: center;
+  background: radial-gradient(ellipse at 50% 53%, #357b884c, transparent 60%);
+}
+.shell-scene svg { display: block; width: 100%; height: auto; }
+.shell-launch .blade-intro h1 { text-shadow: 0 4px #182e48, 0 0 28px #88bdf538; }
+.shell-launch :is(.blade-primary, .blade-secondary), .shell-workspace :is(.blade-primary, .blade-secondary) {
+  border-radius: 8px;
+}
+.shell-launch .blade-primary, .shell-workspace .blade-primary { box-shadow: inset 0 -4px #0a243037; }
+.shell-workspace .robot-stage {
+  background-color: #0b1020;
+  background-image: linear-gradient(#4d86a02b 1px, transparent 1px), linear-gradient(90deg, #4d86a02b 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.shell-workspace .robot-heading { padding-block-end: 18px; border-bottom: 1px solid #65ecc441; }
+.shell-workspace .robot-board { border-radius: 12px; border-color: #638eae64; }
+.shell-workspace .robot-card { border-radius: 10px; }
+
+@media (max-width: 1150px) {
+  .shell-header { grid-template-columns: 1fr auto; }
+  .shell-header .shell-games { grid-area: 2 / 1 / 3 / -1; justify-self: center; }
+  #jumper[data-phase]:not([data-phase="ready"]) .jumper-header .shell-games { display: none; }
+  #jumper .jumper-hero { top: max(24%, 132px); }
+}
+@media (max-width: 700px) {
+  .shell-header { gap: 7px; padding-inline: 12px; }
+  .shell-header .shell-games { width: 100%; }
+  .shell-games a { flex: 1; }
+  .blade-in-game .shell-header .shell-games { display: none; }
+  .shell-launch .shell-scene {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: min(54%, 350px);
+    opacity: .32;
+    pointer-events: none;
+  }
+  .shell-launch .blade-intro h1 { font-size: clamp(52px, 12vw, 76px); }
+}
+@media (max-width: 520px) {
+  .shell-brand { gap: 6px; }
+  .shell-mark { width: 30px; height: 30px; }
+  .jumper-header .jumper-tools { gap: 4px; }
+  .jumper-header .jumper-tools [data-worlds] { display: none; }
+  .shell-header .shell-language { padding-inline: 5px; }
+  #jumper .jumper-hero { top: max(17%, 120px); }
+}
+@media (max-width: 800px) and (max-height: 500px) {
+  #jumper .jumper-hero { top: max(22%, 116px); }
+}
+
+@media (min-width: 801px) and (max-height: 780px) {
+  #jumper .jumper-hero { top: clamp(128px, 19vh, 152px); }
+  #jumper .jumper-hero h1 { font-size: clamp(58px, 6.5vw, 83px); margin-block: 18px; }
+  #jumper .jumper-hero > p { margin-bottom: 17px; }
+}
+
+@media (max-width: 350px) {
+  .jumper-header .shell-brand > span:last-child { display: none; }
+}

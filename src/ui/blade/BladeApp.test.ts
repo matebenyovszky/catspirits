@@ -21,7 +21,7 @@ describe('Neon Blade interface and lifecycle', () => {
   it('offers the camera first, with no camera access or rendering in the menu', () => {
     expect(root.textContent).toContain('Camera & marker wand'); expect(root.querySelector('.wand-diagram')!.getAttribute('aria-label')).toContain('two pink and two green');
     expect(start).not.toHaveBeenCalled(); expect(callbacks.size).toBe(0);
-    expect(root.querySelector<HTMLAnchorElement>('.blade-games a')!.href).toContain('?lang=en');
+    expect(root.querySelector<HTMLAnchorElement>('.shell-games a')!.href).toContain('?lang=en');
   });
   it('starts touch practice without a camera and resumes the same round after pause', () => {
     click('[data-practice]'); advance(20, 120);
@@ -53,7 +53,7 @@ describe('Neon Blade interface and lifecycle', () => {
   it('renders German and Hungarian camera instructions with working mode links', () => {
     for (const [language, label] of [['de', 'Kamera & Markierungsstab'], ['hu', 'Kamera és jelölőbot']] as const) {
       app.dispose(); setLanguage(language); app = new BladeApp(root); expect(root.textContent).toContain(label);
-      expect(root.querySelector<HTMLAnchorElement>('.blade-games a')!.getAttribute('href')).toBe(`?lang=${language}`);
+      expect(root.querySelector<HTMLAnchorElement>('.shell-games a')!.getAttribute('href')).toBe(`?lang=${language}`);
     }
   });
 });

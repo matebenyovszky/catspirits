@@ -19,12 +19,20 @@ describe('standalone sword camera ownership', () => {
     const start = camera.start(); camera.stop(); grant(source.media); await start;
     expect(source.track.stop).toHaveBeenCalledOnce(); expect(started).not.toHaveBeenCalled(); expect(video.srcObject).toBeNull();
   });
-  it('cannot let an old start replace a new camera and stops on an ended track', async () => {
-    const old = stream(), current = stream(); let grant!: (s: MediaStream) => void;
-    permission.mockReturnValueOnce(new Promise(resolve => { grant = resolve; })).mockResolvedValueOnce(current.media);
-    const first = camera.start(); await camera.start(); grant(old.media); await first;
-    expect(video.srcObject).toBe(current.media); expect(old.track.stop).toHaveBeenCalledOnce(); expect(started).toHaveBeenCalledOnce();
-    current.track.dispatchEvent(new Event('ended')); expect(camera.running).toBe(false); expect(video.srcObject).toBeNull();
+  it('shares a pending prompt on restart and stops on an ended track', async () => {
+    const source = stream();
+    let grant!: (s: MediaStream) => void;
+    permission.mockReturnValueOnce(new Promise(resolve => { grant = resolve; }));
+    const first = camera.start(), second = camera.start();
+    grant(source.media);
+    expect(await first).toBe(false);
+    expect(await second).toBe(true);
+    expect(permission).toHaveBeenCalledOnce();
+    expect(video.srcObject).toBe(source.media);
+    expect(started).toHaveBeenCalledOnce();
+    source.track.dispatchEvent(new Event('ended'));
+    expect(camera.running).toBe(false);
+    expect(video.srcObject).toBeNull();
   });
   it('releases the stream when playback fails or the page hides while permission is pending', async () => {
     const source = stream(); permission.mockResolvedValue(source.media); vi.mocked(video.play).mockRejectedValueOnce(new Error('play'));

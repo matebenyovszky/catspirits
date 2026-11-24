@@ -1,6 +1,6 @@
 import { createPoseWorker, type PoseWorkerMessage } from "./pose.worker";
 import type { PoseFrame } from "./types";
-import { sharedCamera, claimInference, releaseInference, type CameraRole } from "./SharedCamera";
+import { sharedCamera, cameraAccessError, claimInference, releaseInference, type CameraRole } from "./SharedCamera";
 import { videoFrameKey } from './videoFrameKey';
 
 export type TrackingStatus = {
@@ -80,11 +80,8 @@ function cancellable<T>(promise: Promise<T>, signal: AbortSignal, timeoutMs?: nu
 }
 
 function cameraError(error: unknown): string {
-  const name = error instanceof Error ? error.name : "";
-  if (name === "NotAllowedError" || name === "SecurityError") return "A kamera nincs engedélyezve. Engedélyezd a böngésző címsoránál és a rendszer adatvédelmi beállításaiban, majd indítsd újra.";
-  if (name === "NotFoundError" || name === "DevicesNotFoundError") return "Nem található kamera. Csatlakoztass egy kamerát, majd próbáld újra.";
-  if (name === "NotReadableError" || name === "TrackStartError") return "A kamera nem érhető el. Zárd be a kamerát használó többi alkalmazást, majd próbáld újra.";
-  if (name === "OverconstrainedError") return "A kamera nem támogatja a kért képbeállítást. Próbálj másik kamerát.";
+  const accessError = cameraAccessError(error);
+  if (accessError) return accessError;
   if (error instanceof Error && error.message.startsWith("A ")) return error.message;
   return "A testkövetőt nem sikerült elindítani. Ellenőrizd az internetkapcsolatot a modell letöltéséhez, és használj friss Safari vagy Chrome böngészőt, bekapcsolt hardveres gyorsítással.";
 }
@@ -108,33 +105,6 @@ export class CameraPoseTracker {
 
   constructor(private readonly video: HTMLVideoElement, private readonly callbacks: Callbacks, private readonly workerFactory = createPoseWorker, private readonly options: { role?: CameraRole; maxFps?: number } = {}) {}
 
-  private async acquireCamera(session:Session):Promise<MediaStream> {
-    const video:MediaTrackConstraints={facingMode:'user',width:{ideal:640},height:{ideal:480},frameRate:{ideal:60}};
-    // macOS may keep a disconnected Continuity Camera as the browser default.
-    // Once labels are available, prefer the built-in camera when there are
-    // multiple inputs; it is also the lower-latency choice for this local mode.
-    try {
-      const devices=await navigator.mediaDevices.enumerateDevices?.();
-      const cameras=devices?.filter(d=>d.kind==='videoinput')??[];
-      const builtIn=cameras.find(d=>/MacBook|FaceTime|Built.in/i.test(d.label));
-      if(cameras.length>1 && builtIn?.deviceId && this.isCurrent(session)) {
-        try { return await navigator.mediaDevices.getUserMedia({audio:false,video:{width:{ideal:640},height:{ideal:480},frameRate:{ideal:60},deviceId:{exact:builtIn.deviceId}}}); }
-        catch { /* Fall through to the browser default, then preserve its error. */ }
-      }
-    } catch { /* Device enumeration is optional until camera permission exists. */ }
-    try {return await navigator.mediaDevices.getUserMedia({audio:false,video});}
-    catch(error){
-      // A disconnected Continuity camera can be the browser's default while
-      // the built-in Mac camera is available. Retry that explicit local device
-      // once; never change permissions or stop another application's capture.
-      if(!(error instanceof Error) || error.name!=='NotReadableError' || !this.isCurrent(session))throw error;
-      const devices=await navigator.mediaDevices.enumerateDevices?.();
-      const builtIn=devices?.find(d=>d.kind==='videoinput' && /MacBook|FaceTime|Built.in/i.test(d.label));
-      if(!builtIn?.deviceId || !this.isCurrent(session))throw error;
-      return navigator.mediaDevices.getUserMedia({audio:false,video:{width:{ideal:640},height:{ideal:480},frameRate:{ideal:60},deviceId:{exact:builtIn.deviceId}}});
-    }
-  }
-
   /** Optional owned stream is for reproducible, local video/canvas benchmarks. */
   async start(source?: MediaStream): Promise<void> {
     if (this.disposed) return;
@@ -151,12 +121,12 @@ export class CameraPoseTracker {
     this.session = session;
     document.addEventListener("visibilitychange", this.onVisibility);
     window.addEventListener("pagehide", this.onPageHide);
-    this.callbacks.onStatus({ state: "loading", message: "Kamera engedélyezése…" });
+    this.callbacks.onStatus({ state: "loading", message: "Kamera indítása…" });
     try {
       if (!globalThis.isSecureContext || (!source && !navigator.mediaDevices?.getUserMedia)) throw new Error("A kamerához HTTPS-kapcsolat vagy localhost szükséges. Nyisd meg az oldalt biztonságos címen.");
       if (typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined" || typeof createImageBitmap === "undefined") throw new Error("A böngésző nem támogatja a háttérben futó kamerakövetést. Frissítsd a Safari vagy Chrome böngészőt.");
       if (document.hidden) throw new Error("A kamera indításához hozd előtérbe ezt az oldalt.");
-      const lease = source ? undefined : sharedCamera.claim(() => this.acquireCamera(session), this.options.role ?? 'game');
+      const lease = source ? undefined : sharedCamera.claim(this.options.role ?? 'game');
       session.releaseCamera = lease?.release;
       const acquisition = (source ? Promise.resolve(source) : lease!.ready).then((stream) => {
         // A cancelled permission request may resolve after a new session starts.
