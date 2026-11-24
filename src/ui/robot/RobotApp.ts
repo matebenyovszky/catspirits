@@ -1,3 +1,4 @@
+import { bindTrackingToggle, trackingToggle } from '../shell/trackingToggle';
 import { gameHeader } from '../shell/GameHeader';
 import { ChipAudio } from '../../core/audio/ChipAudio';
 import { bindSoundToggle } from '../audio/soundToggle';
@@ -55,7 +56,7 @@ export class RobotApp {
             <div class="robot-board-footer"><span data-task role="status">Válassz irányítást a kezdéshez.</span><button data-pause class="blade-text-button" disabled>Szünet</button></div>
           </section>
           <aside class="robot-console">
-            <section class="robot-card robot-input"><span class="blade-eyebrow">01 / PILÓTA</span><h2>Mozdulj, és irányíts!</h2><button class="blade-primary" data-camera>Kamera indítása <span>↗</span></button><button class="blade-secondary" data-pointer>Egér / érintés / billentyűzet</button><p data-camera-status role="status">A kamera képe a gépeden marad.</p><video autoplay muted playsinline hidden aria-label="Tükrözött kamera"></video><label class="robot-gesture-option">Fogásvezérlés<select data-gesture><option value="hand">Kéznyitás / kézcsukás</option><option value="pinch">Csippentés</option></select></label><p data-pinch-status role="status" hidden></p><label class="robot-depth-option"><input type="checkbox" data-depth> Térbeli kézvezérlés · kísérleti</label><p>Tenyérrel a kamera felé: közelítés = emelés, távolítás = süllyesztés. A kéz elfordítása pontatlanságot okozhat.</p><button class="blade-text-button" data-calibrate disabled>Mélység újrakalibrálása</button><p data-height hidden></p></section>
+            <section class="robot-card robot-input"><span class="blade-eyebrow">01 / PILÓTA</span><h2>Mozdulj, és irányíts!</h2><button class="blade-primary" data-camera>Kamera indítása <span>↗</span></button><button class="blade-secondary" data-pointer>Egér / érintés / billentyűzet</button><p data-camera-status role="status">A kamera képe a gépeden marad.</p><video autoplay muted playsinline hidden aria-label="Tükrözött kamera"></video><div class="robot-overlay-control">${trackingToggle}<span>Követési vonalak</span></div><label class="robot-gesture-option">Fogásvezérlés<select data-gesture><option value="hand">Kéznyitás / kézcsukás</option><option value="pinch">Csippentés</option></select></label><p data-pinch-status role="status" hidden></p><label class="robot-depth-option"><input type="checkbox" data-depth> Térbeli kézvezérlés · kísérleti</label><p>Tenyérrel a kamera felé: közelítés = emelés, távolítás = süllyesztés. A kéz elfordítása pontatlanságot okozhat.</p><button class="blade-text-button" data-calibrate disabled>Mélység újrakalibrálása</button><p data-height hidden></p></section>
             <section class="robot-card"><span class="blade-eyebrow">02 / VEZÉRLÉS</span><div class="robot-control-switch"><button data-manual aria-pressed="true" disabled>Én vezetem</button><button data-auto aria-pressed="false" disabled>Bit vezeti</button></div><p data-control-status role="status">Bármikor átveheted a vezérlést.</p><button class="blade-secondary" data-grip disabled>Fogás / elengedés</button><div class="robot-stats"><div><strong data-interventions>0</strong><small>ÁTVÉTEL</small></div><div><strong data-auto-count>0</strong><small>AUTO DOKKOLÁS</small></div></div></section>
             <section class="robot-card robot-how"><span class="blade-eyebrow">03 / ÍGY MŰKÖDIK</span><ol><li>Mutasd a vállad, könyököd és kezed. A kezed a fogót, a könyököd a robotkar hajlását irányítja.</li><li>Alapból zárd össze a kezed a fogáshoz, nyisd ki az elengedéshez. A csippentés külön választható. Egérrel rövid várakozással is megfoghatsz egy cellát.</li><li>A sárga mezőt kerüld meg a fogóval. Ha Bit elakad, vedd át, segíts neki, majd add vissza!</li></ol><p>Egérrel húzz vagy kattints. Billentyűvel: nyilak / WASD, szóköz a fogó, M kézi, Enter automata.</p></section>
           </aside>
@@ -66,7 +67,7 @@ export class RobotApp {
     this.game.reset(level); this.el<HTMLSelectElement>('#robot-level').value = String(level);
     if (level === 2) this.text('[data-banner-title]', t('Segíts Bitnek kerülőutat találni!'));
     this.camera = new RobotCamera(this.el('video'), frame => { this.hands = frame; });
-    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind(); this.resize(); this.hud();
+    bindSoundToggle(this.root, this.audio, this.abort.signal); bindTrackingToggle(this.root, this.abort.signal); this.bind(); this.resize(); this.hud();
     void this.loadView();
   }
   private canvas(): HTMLCanvasElement { return this.el('canvas'); }

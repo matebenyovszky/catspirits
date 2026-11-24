@@ -1,3 +1,4 @@
+import { onTrackingLinesChange, trackingLinesEnabled } from './overlayPreference';
 import type { PoseFrame, PoseLandmark } from './types';
 import { clipBlade, validSword, type SwordFrame, type Point2 } from './sword/types';
 const NS='http://www.w3.org/2000/svg';
@@ -34,6 +35,7 @@ export class TrackingOverlay {
   private width=0;
   private height=0;
   private disposed=false;
+  private unsubscribe:()=>void;
   constructor(private video:HTMLVideoElement) {
     const doc=video.ownerDocument;
     this.svg=doc.createElementNS(NS,'svg');this.svg.classList.add('tracking-overlay');this.svg.setAttribute('aria-hidden','true');
@@ -44,10 +46,11 @@ export class TrackingOverlay {
     this.lines.setAttribute('stroke','#54f5cf');this.lines.setAttribute('stroke-width','1.8');
     this.dots.setAttribute('stroke','#ffffff');this.dots.setAttribute('stroke-width','3.5');
     this.svg.append(this.arm,this.lines,this.dots);video.after(this.svg);
+    this.unsubscribe=onTrackingLinesChange(()=>{if(!trackingLinesEnabled())this.clear();});
   }
   private prepare(timestamp:number,aspect:number,maxAge:number):((p:Point2)=>Point2)|null {
     const now=performance.now();
-    if(this.disposed)return null;
+    if(this.disposed || !trackingLinesEnabled())return null;
     if(this.video.ownerDocument.hidden || !Number.isFinite(timestamp) || now-timestamp>maxAge || timestamp>now+50 || !Number.isFinite(aspect) || aspect<=0
       || this.video.hidden || this.video.closest('[hidden]') || !this.video.getClientRects().length){this.clear();return null;}
     this.expires=timestamp+maxAge;
@@ -68,6 +71,7 @@ export class TrackingOverlay {
     return point=>previewPoint(point,this.width,this.height,aspect,this.fit);
   }
   pose(frame:PoseFrame):void {
+    if(this.disposed || !trackingLinesEnabled())return;
     if(frame.landmarks.length!==21 && frame.landmarks.length!==33){this.clear();return;}
     const project=this.prepare(frame.timestampMs,frame.imageAspectRatio??this.video.videoWidth/this.video.videoHeight,400);if(!project)return;
     const paths=skeletonPaths(frame.landmarks,project);
@@ -77,6 +81,7 @@ export class TrackingOverlay {
     this.arm.setAttribute('d',armFresh && frame.armLandmarks?skeletonPaths(frame.armLandmarks,project).lines:'');
   }
   sword(frame:SwordFrame|null):void {
+    if(this.disposed || !trackingLinesEnabled())return;
     if(!frame || !validSword(frame,performance.now())){this.clear();return;}
     const blade=clipBlade(frame);if(!blade){this.clear();return;}
     const project=this.prepare(frame.timestampMs,frame.imageAspectRatio,120);if(!project)return;
@@ -92,7 +97,7 @@ export class TrackingOverlay {
     else this.timer=setTimeout(()=>this.expire(),remaining);
   }
   clear():void {clearTimeout(this.timer);this.timer=undefined;this.svg.style.display='none';this.lastDraw=-Infinity;}
-  dispose():void {if(this.disposed)return;this.disposed=true;this.clear();this.svg.remove();}
+  dispose():void {if(this.disposed)return;this.disposed=true;this.unsubscribe();this.clear();this.svg.remove();}
 }
 export function createTrackingOverlay(video:HTMLVideoElement):TrackingOverlay|undefined {
   return video.parentElement ? new TrackingOverlay(video) : undefined;

@@ -1,5 +1,6 @@
 import { getLanguage, LANGUAGES } from '../../i18n';
 import './shell.css';
+import { trackingToggle } from './trackingToggle';
 
 export type GameId = 'jumper' | 'blade' | 'pop' | 'robot';
 
@@ -20,7 +21,7 @@ export function gameHeader(current: GameId, controls = '<button class="shell-sou
   return `<header class="shell-header ${current === 'jumper' ? 'jumper-header' : ''}">
     ${brand}
     <nav class="shell-games" aria-label="Játékválasztó">${links}</nav>
-    <div class="shell-tools">${controls}<select class="shell-language" data-language aria-label="Nyelv">
+    <div class="shell-tools">${controls}${trackingToggle}<select class="shell-language" data-language aria-label="Nyelv">
       ${LANGUAGES.map(language => `<option lang="${language}" value="${language}"${language === lang ? ' selected' : ''}>${language.toUpperCase()}</option>`).join('')}
     </select></div>
   </header>`;

@@ -1,6 +1,5 @@
 import { renderPixelRatio } from './renderBudget';
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -38,10 +37,10 @@ export class JumperView {
   private worldGlow = new THREE.MeshStandardMaterial({ color: '#53f2d1', emissive: '#53f2d1', emissiveIntensity: 1.5 });
   private accent = new THREE.MeshStandardMaterial({ color: '#ae7aff', emissive: '#ae7aff', emissiveIntensity: 1.3 });
   private shell = new THREE.MeshStandardMaterial({ color: '#dce1ff', metalness: .35, roughness: .36 });
-  private dark = new THREE.MeshStandardMaterial({ color: '#131b37', metalness: .45, roughness: .4 });
+  private dark = new THREE.MeshStandardMaterial({ color: '#29364e', metalness: .2, roughness: .85 });
   private crystalMaterial = new THREE.MeshStandardMaterial({ color: '#91f9ed', emissive: '#56eacb', emissiveIntensity: 1.4, metalness: .2, roughness: .22 });
-  private particleGeometry = new THREE.OctahedronGeometry(.06);
-  private crystalGeometry = new THREE.OctahedronGeometry(.15);
+  private particleGeometry = new THREE.BoxGeometry(.08,.08,.08);
+  private crystalGeometry = new THREE.BoxGeometry(.22,.22,.22);
   private time = 0;
   private activeWorld = -1;
   private shake = 0;
@@ -68,11 +67,11 @@ export class JumperView {
     const rim = new THREE.DirectionalLight('#7a7bff', 1.3); rim.position.set(3, 3, -5); this.scene.add(rim);
     this.scene.add(this.world, this.road, this.robot, this.hurdle);
     this.buildRobot();
-    this.shield = new THREE.Mesh(new THREE.SphereGeometry(.95, 24, 16), new THREE.MeshBasicMaterial({
+    this.shield = new THREE.Mesh(new THREE.BoxGeometry(1.6,1.8,1.3), new THREE.MeshBasicMaterial({
       color: '#66ccff', transparent: true, opacity: .09, wireframe: true, depthWrite: false,
     }));
     this.shield.position.y = .7; this.robot.add(this.shield); this.shield.visible = false;
-    this.shadow = new THREE.Mesh(new THREE.CircleGeometry(.43, 24), new THREE.MeshBasicMaterial({ color: '#020615', transparent: true, opacity: .5 }));
+    this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(.86,.7), new THREE.MeshBasicMaterial({ color: '#020615', transparent: true, opacity: .5 }));
     this.shadow.rotation.x = -Math.PI / 2; this.shadow.position.y = .008; this.scene.add(this.shadow);
     this.buildRoad(); this.buildHurdle(); this.buildDuckGate();
     this.hurdles = Array.from({ length: LOOK_AHEAD_SECTIONS }, (_, index) => index === 0 ? this.hurdle : this.hurdle.clone());
@@ -82,82 +81,80 @@ export class JumperView {
     this.setWorld(0); this.resize();
   }
 
-  private box(group: THREE.Group, dimensions: number[], position: number[], material: THREE.Material, radius = .045): THREE.Mesh {
-    const geometry = group.parent === this.world
-      ? new THREE.BoxGeometry(dimensions[0], dimensions[1], dimensions[2])
-      : new RoundedBoxGeometry(dimensions[0], dimensions[1], dimensions[2], 2, radius);
+  private box(group: THREE.Group, dimensions: number[], position: number[], material: THREE.Material): THREE.Mesh {
+    const geometry = new THREE.BoxGeometry(dimensions[0], dimensions[1], dimensions[2]);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(position[0], position[1], position[2]); group.add(mesh); return mesh;
   }
 
   private buildRobot(): void {
     this.robot.add(this.body, this.leftLeg, this.rightLeg);
-    this.box(this.body, [.58,.52,.43], [0,.67,0], this.shell, .09);
+    this.box(this.body, [.58,.52,.43], [0,.67,0], this.shell);
     this.box(this.body, [.28,.15,.035], [0,.7,.226], this.dark);
-    this.box(this.body, [.15,.035,.04], [0,.7,.25], this.glow, .015);
-    this.box(this.body, [.8,.53,.59], [0,1.2,.025], this.shell, .11);
-    this.box(this.body, [.65,.29,.06], [0,1.21,.332], this.dark, .07);
+    this.box(this.body, [.15,.035,.04], [0,.7,.25], this.glow);
+    this.box(this.body, [.8,.53,.59], [0,1.2,.025], this.shell);
+    this.box(this.body, [.65,.29,.06], [0,1.21,.332], this.dark);
     for (const side of [-1,1]) {
-      this.box(this.body, [.075,.115,.027], [side * .165,1.23,.367], this.glow, .025);
-      this.box(this.body, [.16,.28,.18], [side * .31,1.58,.02], this.glow, .06).rotation.z = -side * .16;
-      const ear = new THREE.Mesh(new THREE.SphereGeometry(.11, 16, 12), this.dark); ear.position.set(side*.43,1.2,.025); this.body.add(ear);
+      this.box(this.body, [.075,.115,.027], [side * .165,1.23,.367], this.glow);
+      this.box(this.body, [.16,.28,.18], [side * .31,1.58,.02], this.glow);
+      const ear = new THREE.Mesh(new THREE.BoxGeometry(.16,.22,.22), this.dark); ear.position.set(side*.43,1.2,.025); this.body.add(ear);
     }
-    this.box(this.body, [.07,.023,.027], [0,1.125,.367], this.shell, .008);
+    this.box(this.body, [.07,.023,.027], [0,1.125,.367], this.shell);
     this.box(this.body, [.3,.36,.12], [0,.7,-.27], this.dark);
     for (const [arm, side] of [[this.leftArm,-1],[this.rightArm,1]] as const) {
       arm.position.set(side*.37,.89,0); this.body.add(arm);
-      this.box(arm, [.18,.35,.22], [0,-.15,0], this.shell, .06);
-      this.box(arm, [.19,.15,.23], [0,-.33,.02], this.glow, .06);
+      this.box(arm, [.18,.35,.22], [0,-.15,0], this.shell);
+      this.box(arm, [.19,.15,.23], [0,-.33,.02], this.glow);
     }
     for (const [leg,side] of [[this.leftLeg,-1],[this.rightLeg,1]] as const) {
       leg.position.set(side*.18,.42,0);
       this.box(leg, [.18,.28,.2], [0,-.1,0], this.dark);
-      this.box(leg, [.25,.17,.36], [0,-.32,.045], this.shell, .05);
-      this.box(leg, [.26,.055,.37], [0,-.382,.045], this.glow, .02);
+      this.box(leg, [.25,.17,.36], [0,-.32,.045], this.shell);
+      this.box(leg, [.26,.055,.37], [0,-.382,.045], this.glow);
     }
   }
 
   private buildRoad(): void {
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 58), new THREE.MeshStandardMaterial({ color: '#101a32', metalness: .55, roughness: .48 }));
-    ground.rotation.x = -Math.PI / 2; ground.position.set(0,-.025,-24); this.road.add(ground);
+    const ground = new THREE.Mesh(new THREE.BoxGeometry(5.2, .3, 58), new THREE.MeshStandardMaterial({ color: '#101a32', metalness: .55, roughness: .48 }));
+    ground.position.set(0,-.175,-24); this.road.add(ground);
     for (const side of [-1,1]) {
-      this.box(this.road, [.07,.05,58], [side*2.57,.015,-24], this.worldGlow, .02);
+      this.box(this.road, [.07,.05,58], [side*2.57,.015,-24], this.worldGlow);
       this.box(this.road, [.16,.18,58], [side*2.72,-.02,-24], this.dark);
       for (let i = 0; i < 18; i++) {
-        const marker = this.box(this.road, [.045,.015,.7], [side*.575,.008,-i*2.6], this.accent, .005);
+        const marker = this.box(this.road, [.045,.015,.7], [side*.575,.008,-i*2.6], this.accent);
         marker.userData.marker = i;
       }
     }
     for (let i = 0; i < 20; i++) {
-      const stripe = this.box(this.road, [5.05,.006,.025], [0,0,-i*2.6], this.dark, .001);
+      const stripe = this.box(this.road, [5.05,.006,.025], [0,0,-i*2.6], this.dark);
       stripe.userData.grid = i;
     }
-    const target = new THREE.Mesh(new THREE.RingGeometry(.45,.48,48), this.worldGlow);
-    target.rotation.x = -Math.PI/2; target.position.set(0,.014,0); target.userData.target = true; this.road.add(target);
+    const target = new THREE.Mesh(new THREE.RingGeometry(.45,.5,4), this.worldGlow);
+    target.rotation.set(-Math.PI/2,0,Math.PI/4); target.position.set(0,.014,0); target.userData.target = true; this.road.add(target);
   }
 
   private buildHurdle(): void {
-    this.box(this.hurdle, [4.85,.2,.16], [0,.19,0], this.jumpGlow, .04);
-    this.box(this.hurdle, [4.6,.035,.18], [0,.3,0], this.jumpGlow, .014);
+    this.box(this.hurdle, [4.85,.2,.16], [0,.19,0], this.jumpGlow);
+    this.box(this.hurdle, [4.6,.035,.18], [0,.3,0], this.jumpGlow);
     for (const side of [-1,1]) {
       this.box(this.hurdle, [.17,.42,.28], [side*2.35,.21,0], this.dark);
-      this.box(this.hurdle, [.19,.04,.3], [side*2.35,.42,0], this.jumpGlow, .015);
+      this.box(this.hurdle, [.19,.04,.3], [side*2.35,.42,0], this.jumpGlow);
     }
     for (let i = 0; i < 7; i++) {
-      const mesh = this.box(this.hurdle, [.22,.06,.02], [(i-3)*.55,.2,.091], this.jumpGlow, .01);
+      const mesh = this.box(this.hurdle, [.22,.06,.02], [(i-3)*.55,.2,.091], this.jumpGlow);
       mesh.rotation.z = -.5;
     }
   }
 
   private buildDuckGate(): void {
-    this.box(this.duckGate,[4.85,.32,1.0],[0,1.3,0],this.duckGlow,.06);
-    this.box(this.duckGate,[4.6,.05,1.05],[0,1.11,0],this.dark,.02);
+    this.box(this.duckGate,[4.85,.32,1.0],[0,1.3,0],this.duckGlow);
+    this.box(this.duckGate,[4.6,.05,1.05],[0,1.11,0],this.dark);
     for(const side of [-1,1]){
       this.box(this.duckGate,[.16,1.7,.22],[side*2.35,.85,0],this.dark);
-      this.box(this.duckGate,[.06,1.7,.25],[side*2.35,.85,0],this.duckGlow,.02);
+      this.box(this.duckGate,[.06,1.7,.25],[side*2.35,.85,0],this.duckGlow);
     }
     for(let i=0;i<5;i++)for(const side of [-1,1]){
-      const arrow=this.box(this.duckGate,[.2,.06,.035],[(i-2)*.8+side*.055,1.3,.52],this.dark,.01);
+      const arrow=this.box(this.duckGate,[.2,.06,.035],[(i-2)*.8+side*.055,1.3,.52],this.dark);
       arrow.rotation.z=side*Math.PI/4;
     }
   }
@@ -186,24 +183,31 @@ export class JumperView {
     for (let i = 0; i < 240; i++) positions.push((random(i)*2-1)*44,3+random(i+700)*22,-5-random(i+500)*70);
     const stars = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(positions,3)),
       new THREE.PointsMaterial({ color: '#c5d3ff', size: .065, transparent: true, opacity: .75 })); this.world.add(stars);
-    const planet = new THREE.Mesh(new THREE.SphereGeometry(5.2,48,32), new THREE.MeshBasicMaterial({ color: theme.accent }));
-    planet.position.set(-14,12,-49); this.world.add(planet);
-    const orbit = new THREE.Mesh(new THREE.TorusGeometry(7.3,.045,8,80), this.worldGlow);
+    const planet = new THREE.Mesh(new THREE.BoxGeometry(7.4,7.4,7.4), new THREE.MeshStandardMaterial({ color: theme.accent, roughness: 1 }));
+    planet.rotation.set(.2,.45,.15); planet.position.set(-14,12,-49); this.world.add(planet);
+    const orbit = new THREE.Mesh(new THREE.TorusGeometry(7.3,.045,4,4), this.worldGlow);
     orbit.position.copy(planet.position); orbit.rotation.set(.9,.3,.2); this.world.add(orbit);
+    const terrain = new THREE.MeshStandardMaterial({ color: new THREE.Color(theme.color).multiplyScalar(.35), roughness: 1 });
     for (let i = 0; i < 36; i++) {
       const side = i%2 ? -1 : 1, z = -i/2*3.4;
       const structure = new THREE.Group(); structure.position.set(side*(4.3+random(i+70)*6),0,z);
       structure.userData.scenery = { z, index:i }; this.world.add(structure);
+      // Stepped floating terrain is included in the existing scenery batches.
+      this.box(structure,[2.8,.42,2.8],[0,-.24,0],this.dark);
+      this.box(structure,[2,.5,2],[side*.2,-.7,.15],this.dark);
+      this.box(structure,[1.1,.45,1.2],[0,-1.15,0],this.dark);
+      for (let tile=0;tile<3;tile++) this.box(structure,[.82,.06,.82],[(tile-1)*.88,-.015,1],terrain);
       if (level === 1) {
         this.box(structure,[.14,1.6,.14],[0,.8,0],this.accent);
-        const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(.8),this.worldGlow); crown.position.y = 2.1; structure.add(crown);
+        const crown = new THREE.Mesh(new THREE.BoxGeometry(1.55,1.2,1.4),this.worldGlow); crown.position.y = 2.1; structure.add(crown);
+        this.box(structure,[.85,.6,.85],[.15,3,0],this.worldGlow);
         const ring = new THREE.Mesh(new THREE.TorusGeometry(.75,.026,6,24),this.accent); ring.rotation.x = Math.PI/2; ring.position.y = .3; structure.add(ring);
       } else if (level === 3) {
-        const crystal = new THREE.Mesh(new THREE.ConeGeometry(.55,2+random(i)*3,5),this.accent);
+        const crystal = new THREE.Mesh(new THREE.BoxGeometry(.7,2+random(i)*3,.7),this.accent);
         crystal.position.y = 1; crystal.rotation.z = side*.2; structure.add(crystal);
         this.box(structure,[1.4,.04,2.5],[0,.02,0],this.worldGlow);
       } else if (level === 2) {
-        const drone = new THREE.Mesh(new THREE.IcosahedronGeometry(.5),this.dark); drone.position.y = 2.6+random(i)*2; structure.add(drone);
+        const drone = new THREE.Mesh(new THREE.BoxGeometry(.85,.85,.85),this.dark); drone.position.y = 2.6+random(i)*2; structure.add(drone);
         const orbit = new THREE.Mesh(new THREE.TorusGeometry(.9,.035,8,32),this.worldGlow);
         orbit.position.copy(drone.position); orbit.rotation.x = 1; structure.add(orbit);
         this.box(structure,[.12,2,.12],[0,1,0],this.accent);
@@ -212,10 +216,10 @@ export class JumperView {
         const rainbow = new THREE.Mesh(new THREE.TorusGeometry(2,.08,8,32,Math.PI),i%4 ? this.accent : this.worldGlow);
         rainbow.position.set(-side*2,4.8,0); structure.add(rainbow);
       } else {
-        const height = 2.5+random(i+110)*7, width=.8+random(i+180)*1.2;
+        const height = 2.4+Math.floor(random(i+110)*6)*.8, width=.8+Math.floor(random(i+180)*3)*.4;
         this.box(structure,[width,height,1.1],[0,height/2,0],this.dark);
-        this.box(structure,[.035,height,.025],[-width/2+.08,height/2,.57],this.worldGlow,.008);
-        for (let w=0;w<4;w++) this.box(structure,[width*.7,.06,.025],[0,.4+w*height/4,.57],w%2?this.accent:this.worldGlow,.008);
+        this.box(structure,[width*.65,.8,.8],[0,height+.4,0],this.dark);
+        for (let w=0;w<4;w++) for (const column of [-1,1]) this.box(structure,[.18,.2,.025],[column*width*.26,.4+w*height/4,.57],w%2?this.accent:this.worldGlow);
       }
     }
     this.batchScenery();

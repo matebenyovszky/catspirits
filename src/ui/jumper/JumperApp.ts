@@ -1,3 +1,4 @@
+import { bindTrackingToggle } from '../shell/trackingToggle';
 import { gameHeader } from '../shell/GameHeader';
 import { bindSoundToggle } from '../audio/soundToggle';
 import { getLanguage, localizedHtml, t } from '../../i18n';
@@ -86,7 +87,7 @@ export class JumperApp {
       if(this.cameraSetup)this.updateCameraSetup();
     });
     this.el('[data-best]').textContent=t(this.save.best.toLocaleString(getLanguage()));
-    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind(); this.updatePlayLabel(); this.updateHud(); this.raf=requestAnimationFrame(time=>this.frame(time));
+    bindSoundToggle(this.root, this.audio, this.abort.signal); bindTrackingToggle(this.root, this.abort.signal); this.bind(); this.updatePlayLabel(); this.updateHud(); this.raf=requestAnimationFrame(time=>this.frame(time));
     if(import.meta.env.DEV) (window as unknown as { catspirits: unknown }).catspirits={
       snapshot:()=>({phase:this.simulation.phase,level:this.simulation.level,score:this.simulation.score,hearts:this.simulation.hearts,
         crystals:this.simulation.crystals,progress:this.simulation.progress,height:this.simulation.runner.state.height,lane:this.simulation.lane,

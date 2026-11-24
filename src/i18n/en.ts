@@ -1,5 +1,8 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  "Követési vonalak": "Tracking lines",
+  "Követési vonalak elrejtése": "Hide tracking lines",
+  "Követési vonalak megjelenítése": "Show tracking lines",
   "A játék nem töltődött be. Próbáld újra.": "The game did not load. Try again.",
   "A folytatáshoz indítsd el a kézkurzort.": "Start the hand cursor to continue.",
   "A kézkurzor és a játékok közös kamerafolyamot használnak. Játékváltáskor az aktív kézkurzor tovább működik. A kamera háttérben leáll. Visszatéréskor a kézkurzor csak meglévő böngészőengedéllyel indul újra automatikusan.": "The hand cursor and games share a camera stream. The active cursor stays on when you switch games. The camera stops in the background. When you return, the cursor restarts automatically only if the browser already grants permission.",

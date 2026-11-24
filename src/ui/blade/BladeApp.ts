@@ -1,3 +1,4 @@
+import { bindTrackingToggle } from '../shell/trackingToggle';
 import { neonScene } from '../shell/NeonScene';
 import { gameHeader } from '../shell/GameHeader';
 import { ChipAudio } from '../../core/audio/ChipAudio';
@@ -65,7 +66,7 @@ export class BladeApp {
       if (this.phase === 'playing') this.game.accept(frame, performance.now());
     });
     if (import.meta.env.DEV) { const diagnostics = document.createElement("output"); diagnostics.hidden = true; diagnostics.dataset.bladeDiagnostics = ""; this.root.append(diagnostics); }
-    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind();
+    bindSoundToggle(this.root, this.audio, this.abort.signal); bindTrackingToggle(this.root, this.abort.signal); this.bind();
   }
   private el<T extends HTMLElement>(selector: string): T { return this.root.querySelector<T>(selector)!; }
   private on(selector: string, action: () => void): void { this.el(selector).addEventListener('click', action, { signal: this.abort.signal }); }

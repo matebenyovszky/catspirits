@@ -57,18 +57,28 @@ export class RobotView3D {
     this.camera.position.set(0, 10.8, 9.8); this.camera.lookAt(0, 0, 0); this.camera.updateMatrixWorld();
     this.scene.add(new THREE.HemisphereLight(0xc4fff0, 0x26344b, 2.2));
     const light = new THREE.DirectionalLight(0xc0d5ff, 2.6); light.position.set(-3, 9, 5); this.scene.add(light);
-    const table = this.box(10.4, .18, 10.4, 0x172939); table.position.y = -.12; this.scene.add(table);
-    const grid = new THREE.GridHelper(10, 20, 0x395263, 0x253c4c); grid.position.y = -.018; this.scene.add(grid);
+    const table = this.box(10.4, .55, 10.4, 0x253444); table.position.y = -.305; this.scene.add(table);
+    // One instanced draw for the voxel floor; no textures or extra lights.
+    const tiles = new THREE.InstancedMesh(new THREE.BoxGeometry(.98,.08,.98), new THREE.MeshStandardMaterial({roughness:1}),100);
+    const transform = new THREE.Matrix4();
+    for(let x=0;x<10;x++)for(let z=0;z<10;z++){
+      const index=x*10+z;
+      tiles.setMatrixAt(index,transform.makeTranslation(x-4.5,-.055,z-4.5));
+      tiles.setColorAt(index,new THREE.Color((x+z)%2 ? 0x284b50 : 0x31585b));
+    }
+    this.scene.add(tiles);
+    const lower = this.box(9.2,.6,9.2,0x1b293a);lower.position.y=-.88;this.scene.add(lower);
+    const core = this.box(7.4,.5,7.4,0x142333);core.position.y=-1.43;this.scene.add(core);
     const rim = new THREE.LineSegments(new THREE.EdgesGeometry(table.geometry), new THREE.LineBasicMaterial({ color: 0x416072 })); rim.position.copy(table.position); this.scene.add(rim);
-    const metal = new THREE.MeshStandardMaterial({ color: 0xaccbd1, roughness: .38, metalness: .55 });
+    const metal = new THREE.MeshStandardMaterial({ color: 0xaccbd1, roughness: .65, metalness: .25 });
     const joint = new THREE.MeshStandardMaterial({ color: 0x294d60, roughness: .5, metalness: .4 });
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(.40, .55, .8, 20), joint); base.scale.y = 1.9; base.position.copy(toWorld(BASE, .76)); this.scene.add(base);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(.40, .035, 8, 32), new THREE.MeshBasicMaterial({ color: 0x79ebce })); ring.rotation.x = -Math.PI / 2; ring.position.copy(toWorld(BASE, 1.54)); this.scene.add(ring);
-    this.upper = new THREE.Mesh(new THREE.CylinderGeometry(.12, .16, 1, 10), metal);
-    this.fore = new THREE.Mesh(new THREE.CylinderGeometry(.10, .13, 1, 10), metal);
-    this.elbow = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 10), joint);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(.85,.8,.85), joint); base.scale.y = 1.9; base.position.copy(toWorld(BASE, .76)); this.scene.add(base);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.5, .035, 4, 4), new THREE.MeshBasicMaterial({ color: 0x79ebce })); ring.rotation.set(-Math.PI/2,0,Math.PI/4); ring.position.copy(toWorld(BASE, 1.54)); this.scene.add(ring);
+    this.upper = new THREE.Mesh(new THREE.BoxGeometry(.28,1,.28), metal);
+    this.fore = new THREE.Mesh(new THREE.BoxGeometry(.24,1,.24), metal);
+    this.elbow = new THREE.Mesh(new THREE.BoxGeometry(.46,.46,.46), joint);
     this.scene.add(this.upper, this.fore, this.elbow, this.gripper);
-    const wrist = new THREE.Mesh(new THREE.CylinderGeometry(.15, .17, .55, 12), joint); wrist.position.y = 1.12; wrist.scale.y = 2.3; this.gripper.add(wrist);
+    const wrist = new THREE.Mesh(new THREE.BoxGeometry(.3,.55,.3), joint); wrist.position.y = 1.12; wrist.scale.y = 2.3; this.gripper.add(wrist);
     const palm = this.box(.65, .12, .18, 0x75e8cd); palm.position.y = .40; this.gripper.add(palm);
     for (const sign of [-1, 1]) {
       const finger = this.box(.10, .30, .20, 0x9cf2dd); finger.position.set(sign * .32, .26, 0); this.gripper.add(finger); this.fingers.push(finger);
@@ -84,8 +94,8 @@ export class RobotView3D {
     }
     this.shield = this.box(.8, .55, 3, 0xffb76b); const shieldMaterial = this.shield.material as THREE.MeshStandardMaterial;
     shieldMaterial.transparent = true; shieldMaterial.opacity = .45; this.shield.position.copy(toWorld({ x: .5, y: .44 }, .275)); this.scene.add(this.shield);
-    this.target = new THREE.Mesh(new THREE.TorusGeometry(.17, .025, 8, 28), new THREE.MeshBasicMaterial({ color: 0xc7f5e9 }));
-    this.target.rotation.x = -Math.PI / 2; this.scene.add(this.target);
+    this.target = new THREE.Mesh(new THREE.TorusGeometry(.21, .025, 4, 4), new THREE.MeshBasicMaterial({ color: 0xc7f5e9 }));
+    this.target.rotation.set(-Math.PI/2,0,Math.PI/4); this.scene.add(this.target);
     this.resize();
   }
   private box(x: number, y: number, z: number, colour: number): THREE.Mesh {
@@ -129,6 +139,7 @@ export class RobotView3D {
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
     this.scene.traverse(object => {
       if (object instanceof THREE.Mesh || object instanceof THREE.LineSegments) {
+        if (object instanceof THREE.InstancedMesh) object.dispose();
         geometries.add(object.geometry); for (const material of Array.isArray(object.material) ? object.material : [object.material]) materials.add(material);
       }
     });

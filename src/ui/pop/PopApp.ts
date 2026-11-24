@@ -1,3 +1,4 @@
+import { bindTrackingToggle } from '../shell/trackingToggle';
 import { neonScene } from '../shell/NeonScene';
 import { gameHeader } from '../shell/GameHeader';
 import { ChipAudio } from '../../core/audio/ChipAudio';
@@ -53,7 +54,7 @@ export class PopApp {
       const now = performance.now(); if (frame && validSword(frame, now)) { this.sword = frame; this.lastSeen = frame.timestampMs; }
       if (this.phase === 'playing') this.game.acceptSword(frame, now);
     });
-    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind();
+    bindSoundToggle(this.root, this.audio, this.abort.signal); bindTrackingToggle(this.root, this.abort.signal); this.bind();
     if (import.meta.env.DEV) { const output = document.createElement('output'); output.hidden = true; output.dataset.popDiagnostics = ''; this.root.append(output); }
   }
   private el<T extends HTMLElement>(selector: string): T { return this.root.querySelector<T>(selector)!; }
