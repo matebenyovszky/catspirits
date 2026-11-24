@@ -1,4 +1,7 @@
+import { gameElements } from '../shell/gameElements';
 import { bindTrackingToggle, trackingToggle } from '../shell/trackingToggle';
+import { HAND_POINTER_ID } from '../hand/HandPointer';
+import { neonScene } from '../shell/NeonScene';
 import { gameHeader } from '../shell/GameHeader';
 import { ChipAudio } from '../../core/audio/ChipAudio';
 import { bindSoundToggle } from '../audio/soundToggle';
@@ -40,13 +43,15 @@ export class RobotApp {
   private abort = new AbortController();
   private keys = new Set<string>();
   private pointer: number | null = null;
+  private lastHandHover: number | null = null;
   private cameraError = false;
   constructor(private root: HTMLElement) {
+    this.el = gameElements(root);
     root.classList.add('blade-root', 'robot-root'); document.title = `Catspirits · Bit Rescue · ${t('Te vagy a robotpilóta.')}`;
     root.innerHTML = localizedHtml(`
       ${gameHeader('robot')}
       <main class="robot-main shell-workspace">
-        <div class="robot-heading"><div><span class="blade-eyebrow">04 / ROBOT LAB · VIRTUAL</span><h1>BIT <span>RESCUE.</span></h1><p>Te vagy a robotpilóta.</p></div><div class="robot-heading-controls"><div class="robot-mission-select"><label for="robot-level">Küldetés</label><select id="robot-level"><option value="1">01 · Első dokkolás</option><option value="2">02 · Kerülőút</option></select></div></div></div>
+        <div class="robot-heading">${neonScene('robot')}<div><span class="blade-eyebrow">04 / ROBOT LAB · VIRTUAL</span><h1>BIT <span>RESCUE.</span></h1><p>Te vagy a robotpilóta.</p></div><div class="robot-heading-controls"><div class="robot-mission-select"><label for="robot-level">Küldetés</label><select id="robot-level"><option value="1">01 · Első dokkolás</option><option value="2">02 · Kerülőút</option></select></div></div></div>
         <p class="robot-view-note" data-view-note role="status" hidden></p><button class="blade-text-button" data-view-retry hidden>Újrapróbálás</button><div class="robot-workspace">
           <section class="robot-board" aria-label="Robotkaros játék">
             <div class="robot-board-bar"><span class="robot-mode" data-owner>TE VEZETSZ</span><span data-clock>00:00</span><span><b data-count>0</b> / 3 <span>CELLA</span></span></div>
@@ -71,7 +76,7 @@ export class RobotApp {
     void this.loadView();
   }
   private canvas(): HTMLCanvasElement { return this.el('canvas'); }
-  private el<T extends HTMLElement>(selector: string): T { return this.root.querySelector<T>(selector)!; }
+  private readonly el: ReturnType<typeof gameElements>;
   private text(selector: string, value: string): void { const e = this.el(selector); if (e.textContent !== value) e.textContent = value; }
   private on(selector: string, callback: () => void): void { this.el(selector).addEventListener('click', callback, { signal: this.abort.signal }); }
   private bind(): void {
@@ -99,16 +104,36 @@ export class RobotApp {
     };
     stage.addEventListener('pointerdown', event => {
       if (event.target !== this.canvas() || this.phase !== 'playing' || this.source !== 'pointer' || event.button !== 0) return;
+      if (event.isTrusted) this.lastHandHover = null;
       this.mode('manual'); this.pointer = event.pointerId; if(event.isTrusted)this.canvas().setPointerCapture?.(event.pointerId); aim(event); this.canvas().focus();
     }, { signal });
-    stage.addEventListener('pointermove', event => { if (this.phase === 'playing' && this.source === 'pointer' && this.pointer === event.pointerId) aim(event); }, { signal });
+    stage.addEventListener('pointermove', event => {
+      const hand = event.pointerId === HAND_POINTER_ID && !event.isTrusted;
+      if (event.target !== this.canvas()) return;
+      if (hand) {
+        const rect = this.canvas().getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX >= rect.right || event.clientY < rect.top || event.clientY >= rect.bottom) {
+          this.lastHandHover = -Infinity;
+          return;
+        }
+        if (this.phase === 'ready') this.startPointer();
+      }
+      if (this.phase !== 'playing' || this.source !== 'pointer') return;
+      if (hand && this.game.mode === 'manual') {
+        this.lastHandHover = performance.now();
+        aim(event);
+      } else if (this.pointer === event.pointerId) aim(event);
+    }, { signal });
+    stage.addEventListener('pointerout', event => {
+      if (event.pointerId === HAND_POINTER_ID && this.lastHandHover !== null) this.lastHandHover = -Infinity;
+    }, { signal });
     stage.addEventListener('pointerup', () => { this.pointer = null; }, { signal });
     stage.addEventListener('pointercancel', () => { this.pointer = null; this.game.stop(); }, { signal });
     window.addEventListener('keydown', event => {
       if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLButtonElement || event.target instanceof HTMLAnchorElement || this.phase !== 'playing') return;
       const key = event.key.toLowerCase();
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(key) && this.source === 'pointer') {
-        event.preventDefault(); this.mode('manual'); this.keys.add(key);
+        event.preventDefault(); this.lastHandHover = null; this.mode('manual'); this.keys.add(key);
       } else if (!event.repeat && [' ', 'enter', 'm', 'escape'].includes(key)) {
         event.preventDefault(); if (key === 'escape') this.pause(); else if (key === 'enter') this.mode('auto');
         else { this.mode('manual'); if (key === ' ') this.game.grip(); }
@@ -174,8 +199,8 @@ export class RobotApp {
   }
   private play(): void {
     this.heard = { holding: this.game.holding, delivered: this.game.delivered, blocked: this.game.blocked }; this.audio.play(this.game.level);
-    this.phase = 'playing'; this.game.stop(); this.keys.clear(); this.pointer = null;
-    this.el('[data-banner]').hidden = true; this.previous = this.lastHud = 0; this.hud(); this.canvas().focus(); this.startFrames();
+    this.phase = 'playing'; this.lastHandHover = null; this.game.stop(); this.keys.clear(); this.pointer = null;
+    this.el('[data-banner]').hidden = true; this.previous = this.lastHud = 0; this.hud(); this.canvas().focus({ preventScroll: true }); this.startFrames();
   }
   private pause(): void {
     if (this.phase !== 'playing' && this.phase !== 'loading') return;
@@ -204,9 +229,12 @@ export class RobotApp {
     this.previous = time; const dt = Math.min(elapsed, .05);
     this.pinch = this.source === 'camera' && this.camera.running ? this.handInput.update(this.hands, performance.now(), this.game.holding !== null) : null;
     const arm = this.source === 'camera' && this.camera.running && this.pinch?.armed ? this.armInput.update(this.hands, performance.now()) : null;
-    if (!arm && this.pinch?.armed) this.handInput.rearm();
+    if (this.armTracked && !arm && this.game.holding !== null) {
+      this.handInput.rearm();
+      this.pinch = null;
+    }
     this.armTracked = !!arm;
-    const hand = arm && this.pinch?.armed && (!this.depthControl || this.pinch.depth !== null) ? this.pinch : null;
+    const hand = this.pinch?.armed && (!this.depthControl || this.pinch.depth !== null) ? this.pinch : null;
     this.game.setDepth(this.source === 'camera' && this.depthControl && hand ? hand.depth : null);
     if (this.game.mode === 'manual') {
       if (hand) { this.game.armDirection = arm; this.game.aim(hand.point); this.game.setGripper(hand.closed ? 'closed' : 'open'); }
@@ -217,7 +245,8 @@ export class RobotApp {
         this.game.aim({ x: this.game.tool.x + x / length * dt * .38, y: this.game.tool.y + y / length * dt * .38 });
       }
     }
-    this.game.step(dt, this.source === 'pointer' || !!hand, this.source === 'pointer');
+    const pointerActive = this.source === 'pointer' && (this.lastHandHover === null || time - this.lastHandHover < 300);
+    this.game.step(dt, pointerActive || !!hand, pointerActive);
     if (this.source === 'pointer' || hand || this.game.mode === 'auto') this.audio.play(this.game.level); else this.audio.stop();
     if (this.game.delivered > this.heard.delivered) this.audio.cue('correct');
     if (this.game.holding !== this.heard.holding) this.audio.cue(this.game.holding === null ? 'release' : 'grab');
@@ -244,15 +273,15 @@ export class RobotApp {
     this.text('[data-owner]', t(!playing ? this.phase === 'complete' ? 'KÜLDETÉS TELJESÍTVE' : 'KÉSZENLÉT' : this.game.mode === 'auto' ? 'BIT VEZET' : 'TE VEZETSZ'));
     this.text('[data-clock]', `${Math.floor(this.game.elapsed / 60).toString().padStart(2, '0')}:${Math.floor(this.game.elapsed % 60).toString().padStart(2, '0')}`);
     this.text('[data-count]', String(this.game.delivered)); this.text('[data-auto-count]', String(this.game.autoDeliveries)); this.text('[data-interventions]', String(this.game.takeovers));
-    const fresh = this.source === 'camera' && this.camera.running && !!this.pinch && this.armTracked;
+    const fresh = this.source === 'camera' && this.camera.running && !!this.pinch?.armed;
     const cameraControl = playing && this.source === 'camera';
     this.el('[data-pinch-status]').hidden = !cameraControl; this.el('[data-height]').hidden = !cameraControl;
     this.el<HTMLButtonElement>('[data-calibrate]').disabled = !cameraControl || this.game.holding !== null;
     this.text('[data-height]', t('Emelés: {height}%', { height: Math.round(this.game.lift / .12 * 100) }));
-    this.text('[data-pinch-status]', t(!this.pinch?.armed ? this.game.holding !== null ? this.gesture === 'pinch' ? 'A folytatáshoz csippents újra. A tárgyat megtartom.' : 'A folytatáshoz csukd be a kezed. A tárgyat megtartom.' : this.gesture === 'pinch' ? 'Nyisd szét a hüvelyk- és mutatóujjad a kezdéshez.' : 'Nyisd ki a kezed a kezdéshez.' : !this.armTracked ? 'Mutasd a vállad, könyököd és kezed a kamerának.' : this.depthControl && this.pinch.depth === null ? 'Kalibrálás: tartsd nyitott tenyered mozdulatlanul a kamera felé.' : this.pinch.closed ? this.gesture === 'pinch' ? 'CSIPPENTÉS · FOGÁS' : 'CSUKOTT KÉZ · FOGÁS' : 'NYITOTT KÉZ · ELENGEDÉS'));
-    this.text('[data-camera-status]', t(this.cameraError ? this.camera.lastError ?? 'A kamera nem indult el. Próbáld újra, vagy válassz másik irányítást.' : this.phase === 'loading' ? 'A kamerakövetés betöltése…' : playing && this.source === 'camera' ? fresh ? this.gesture === 'pinch' ? 'Megvan a vezérlő kezed. Csippentéssel foghatsz.' : 'Megvan a karod. Kézcsukással foghatsz, kéznyitással engedhetsz el.' : 'Mutasd a vállad, könyököd és kezed a kamerának.' : 'A kamera képe a gépeden marad.'));
+    this.text('[data-pinch-status]', t(!this.pinch?.armed ? this.game.holding !== null ? this.gesture === 'pinch' ? 'A folytatáshoz csippents újra. A tárgyat megtartom.' : 'A folytatáshoz csukd be a kezed. A tárgyat megtartom.' : this.gesture === 'pinch' ? 'Nyisd szét a hüvelyk- és mutatóujjad a kezdéshez.' : 'Nyisd ki a kezed a kezdéshez.' : this.depthControl && this.pinch.depth === null ? 'Kalibrálás: tartsd nyitott tenyered mozdulatlanul a kamera felé.' : this.pinch.closed ? this.gesture === 'pinch' ? 'CSIPPENTÉS · FOGÁS' : 'CSUKOTT KÉZ · FOGÁS' : 'NYITOTT KÉZ · ELENGEDÉS'));
+    this.text('[data-camera-status]', t(this.cameraError ? this.camera.lastError ?? 'A kamera nem indult el. Próbáld újra, vagy válassz másik irányítást.' : this.phase === 'loading' ? 'A kamerakövetés betöltése…' : playing && this.source === 'camera' ? fresh ? this.gesture === 'pinch' ? 'Megvan a vezérlő kezed. Csippentéssel foghatsz.' : 'Követem a kezed. Csukd be a fogáshoz, nyisd ki az elengedéshez.' : 'Nyisd ki a kezed a kezdéshez.' : 'A kamera képe a gépeden marad.'));
     this.text('[data-control-status]', t(this.phase === 'complete' ? 'Mindhárom cella a helyén!' : !playing ? 'A robot megvár.' : this.game.blocked ? 'A mező útban van. Vedd át, kerüld meg, majd add vissza Bitnek!' : this.game.mode === 'auto' ? 'Bit a következő cellán dolgozik. Bármikor visszaveheted.' : 'Bármikor átveheted a vezérlést.'));
-    this.text('[data-task]', t(this.phase === 'complete' ? 'Mindhárom cella a helyén!' : this.phase === 'paused' ? 'A robot megvár.' : !playing ? 'Válassz irányítást a kezdéshez.' : this.game.blocked ? 'Kerüld meg a sárga mezőt felül vagy alul!' : this.game.holding === null ? this.source === 'camera' ? this.gesture === 'pinch' ? 'Vezesd a fogót a cellához, és csippents!' : 'Vezesd a fogót a cellához, és csukd be a kezed!' : 'Vezesd a fogót egy cellához, és tartsd ott.' : 'Vidd a cellát az azonos számú dokkhoz.'));
+    this.text('[data-task]', t(this.phase === 'complete' ? 'Mindhárom cella a helyén!' : this.phase === 'paused' ? 'A robot megvár.' : !playing ? 'Válassz irányítást, vagy vidd a kézkurzort a pályára.' : this.game.blocked ? 'Kerüld meg a sárga mezőt felül vagy alul!' : this.game.holding === null ? this.source === 'camera' ? this.gesture === 'pinch' ? 'Vezesd a fogót a cellához, és csippents!' : 'Vezesd a fogót a cellához, és csukd be a kezed!' : 'Vezesd a fogót egy cellához, és tartsd ott.' : 'Vidd a cellát az azonos számú dokkhoz.'));
     this.root.classList.toggle('robot-blocked', playing && this.game.blocked);
   }
   private draw(): void { this.view.draw(this.game); this.hud(); }

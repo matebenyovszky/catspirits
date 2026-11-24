@@ -92,24 +92,26 @@ export class JumperView {
     this.box(this.body, [.58,.52,.43], [0,.67,0], this.shell);
     this.box(this.body, [.28,.15,.035], [0,.7,.226], this.dark);
     this.box(this.body, [.15,.035,.04], [0,.7,.25], this.glow);
-    this.box(this.body, [.8,.53,.59], [0,1.2,.025], this.shell);
-    this.box(this.body, [.65,.29,.06], [0,1.21,.332], this.dark);
+    this.box(this.body, [.84,.6,.65], [0,1.2,.025], this.shell);
+    this.box(this.body, [.65,.29,.06], [0,1.21,.366], this.dark);
     for (const side of [-1,1]) {
-      this.box(this.body, [.075,.115,.027], [side * .165,1.23,.367], this.glow);
-      this.box(this.body, [.16,.28,.18], [side * .31,1.58,.02], this.glow);
+      this.box(this.body, [.09,.09,.027], [side * .165,1.23,.411], this.glow);
+      this.box(this.body, [.21,.12,.22], [side * .30,1.55,.02], this.glow);
+      this.box(this.body, [.12,.10,.22], [side*.345,1.66,.02], this.glow);
+      this.box(this.body, [.105,.075,.025], [side*.32,1.09,.361], this.accent);
       const ear = new THREE.Mesh(new THREE.BoxGeometry(.16,.22,.22), this.dark); ear.position.set(side*.43,1.2,.025); this.body.add(ear);
     }
-    this.box(this.body, [.07,.023,.027], [0,1.125,.367], this.shell);
+    this.box(this.body, [.07,.023,.027], [0,1.125,.411], this.shell);
     this.box(this.body, [.3,.36,.12], [0,.7,-.27], this.dark);
     for (const [arm, side] of [[this.leftArm,-1],[this.rightArm,1]] as const) {
       arm.position.set(side*.37,.89,0); this.body.add(arm);
-      this.box(arm, [.18,.35,.22], [0,-.15,0], this.shell);
+      this.box(arm, [.21,.35,.23], [0,-.15,0], this.shell);
       this.box(arm, [.19,.15,.23], [0,-.33,.02], this.glow);
     }
     for (const [leg,side] of [[this.leftLeg,-1],[this.rightLeg,1]] as const) {
       leg.position.set(side*.18,.42,0);
       this.box(leg, [.18,.28,.2], [0,-.1,0], this.dark);
-      this.box(leg, [.25,.17,.36], [0,-.32,.045], this.shell);
+      this.box(leg, [.28,.17,.38], [0,-.32,.045], this.shell);
       this.box(leg, [.26,.055,.37], [0,-.382,.045], this.glow);
     }
   }

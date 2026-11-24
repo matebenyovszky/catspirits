@@ -25,6 +25,7 @@ export class HandPointer {
     this.x = x; this.y = y; this.allowCanvas = allowCanvas;
     const hit = this.actionable(document.elementFromPoint(x,y));
     if (hit !== this.hover) {
+      if (this.hover instanceof HTMLCanvasElement) this.dispatch(this.hover, 'pointerout', 0);
       this.hover?.classList.remove('hand-hover'); this.hover = hit; hit?.classList.add('hand-hover');
     }
     if (this.target && (!this.target.isConnected || this.target.closest('[inert],[hidden]') || this.target.matches(':disabled') || (!allowCanvas && this.target instanceof HTMLCanvasElement))) this.cancel();

@@ -1,6 +1,8 @@
 import { ChipAudio } from '../../core/audio/ChipAudio';
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { HAND_POINTER_ID } from '../hand/HandPointer';
+import { RobotSimulation } from '../../core/robot/RobotSimulation';
 import { RobotApp } from './RobotApp';
 import { setLanguage } from '../../i18n';
 import type { PoseFrame } from '../../core/tracking/types';
@@ -144,4 +146,33 @@ it('signals actual robot actions once and suspends audio on pause', () => {
   expect(cue.mock.calls.filter(([c])=>c==='correct')).toHaveLength(3);
   expect(cue.mock.calls.filter(([c])=>c==='finish')).toHaveLength(1);
   click('[data-reset]'); click('[data-pointer]'); click('[data-pause]'); expect(sleep).toHaveBeenCalled();
+});
+
+it('steers from open-hand hover on the board and stops aiming outside it', () => {
+  const canvas = root.querySelector('canvas')!;
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(10, 20, 100, 100));
+  const aim = vi.spyOn(RobotSimulation.prototype, 'aim');
+  const move = (x: number) => canvas.dispatchEvent(new PointerEvent('pointermove', {
+    bubbles: true, pointerId: HAND_POINTER_ID, clientX: x, clientY: 70, buttons: 0,
+  }));
+  move(40);
+  expect(root.dataset.phase).toBe('playing');
+  expect(aim).toHaveBeenLastCalledWith({ x: .3, y: .5 });
+  move(80);
+  expect(aim).toHaveBeenLastCalledWith({ x: .7, y: .5 });
+  move(200);
+  expect(aim).toHaveBeenCalledTimes(2);
+  click('[data-auto]'); move(40);
+  expect(root.dataset.control).toBe('auto');
+  expect(aim).toHaveBeenCalledTimes(2);
+});
+it('steers with a fresh open hand even if the shoulder and elbow are out of frame', async () => {
+  mock.start.mockImplementationOnce(async () => { mock.running = true; return true; });
+  click('[data-camera]'); await settle();
+  const aim = vi.spyOn(RobotSimulation.prototype, 'aim');
+  for (let i = 0; i < 30; i++) {
+    mock.emit!({ ...handFixture(clock), armLandmarks: [] });
+    advance(1);
+  }
+  expect(aim).toHaveBeenCalled();
 });

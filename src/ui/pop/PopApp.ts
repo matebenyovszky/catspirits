@@ -1,3 +1,4 @@
+import { gameElements } from '../shell/gameElements';
 import { bindTrackingToggle } from '../shell/trackingToggle';
 import { neonScene } from '../shell/NeonScene';
 import { gameHeader } from '../shell/GameHeader';
@@ -27,6 +28,7 @@ export class PopApp {
   private level: PopLevel = this.initialLevel();
   private best = { 1: { hands: 0, sword: 0, touch: 0 }, 2: { hands: 0, sword: 0, touch: 0 }, 3: { hands: 0, sword: 0, touch: 0 }, 4: { hands: 0, sword: 0, touch: 0 } };
   constructor(private root: HTMLElement) {
+    this.el = gameElements(root);
     document.title = `Catspirits · Neon Pop · ${t('Célozz és csapj le!')}`; root.classList.add('blade-root', 'pop-root');
     for (const level of [1, 2, 3, 4] as const) try { const saved = JSON.parse(localStorage.getItem(BEST_KEYS[level]) ?? '{}'); for (const key of ['hands', 'sword', 'touch'] as const) if (Number.isSafeInteger(saved?.[key]) && saved[key] >= 0 && saved[key] <= 100000) this.best[level][key] = saved[key]; } catch { /* Optional local scores. */ }
     root.innerHTML = localizedHtml(`
@@ -57,7 +59,7 @@ export class PopApp {
     bindSoundToggle(this.root, this.audio, this.abort.signal); bindTrackingToggle(this.root, this.abort.signal); this.bind();
     if (import.meta.env.DEV) { const output = document.createElement('output'); output.hidden = true; output.dataset.popDiagnostics = ''; this.root.append(output); }
   }
-  private el<T extends HTMLElement>(selector: string): T { return this.root.querySelector<T>(selector)!; }
+  private readonly el: ReturnType<typeof gameElements>;
   private text(selector: string, text: string): void { const el = this.el(selector); if (el.textContent !== text) el.textContent = text; }
   private on(selector: string, action: () => void): void { this.el(selector).addEventListener('click', action, { signal: this.abort.signal }); }
   private initialLevel(): PopLevel {

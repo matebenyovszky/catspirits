@@ -1,5 +1,7 @@
 /** German translations use the same Hungarian phrase IDs as the other interfaces. */
 export const german: Record<string, string> = {
+  "Válassz irányítást, vagy vidd a kézkurzort a pályára.": "Wähle eine Steuerung oder bewege den Handcursor auf das Spielfeld.",
+  "Követem a kezed. Csukd be a fogáshoz, nyisd ki az elengedéshez.": "Deine Hand wird erkannt. Schließe sie zum Greifen und öffne sie zum Loslassen.",
   "Követési vonalak": "Tracking-Linien",
   "Követési vonalak elrejtése": "Tracking-Linien ausblenden",
   "Követési vonalak megjelenítése": "Tracking-Linien einblenden",

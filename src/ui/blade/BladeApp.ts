@@ -1,3 +1,4 @@
+import { gameElements } from '../shell/gameElements';
 import { bindTrackingToggle } from '../shell/trackingToggle';
 import { neonScene } from '../shell/NeonScene';
 import { gameHeader } from '../shell/GameHeader';
@@ -35,6 +36,7 @@ export class BladeApp {
   private heard = { cuts: 0, mistakes: 0, missed: 0 };
 
   constructor(private root: HTMLElement) {
+    this.el = gameElements(root);
     document.title = `Catspirits · Neon Blade · ${t('Mozdulj és vágj!')}`;
     root.classList.add('blade-root');
     for (const level of [1, 2] as const) try { const saved = JSON.parse(localStorage.getItem(BEST_KEYS[level]) ?? '{}'); for (const key of ['camera', 'touch'] as const) if (Number.isSafeInteger(saved?.[key]) && saved[key] >= 0 && saved[key] <= 100000) this.best[level][key] = saved[key]; } catch { /* Optional local scores. */ }
@@ -68,7 +70,7 @@ export class BladeApp {
     if (import.meta.env.DEV) { const diagnostics = document.createElement("output"); diagnostics.hidden = true; diagnostics.dataset.bladeDiagnostics = ""; this.root.append(diagnostics); }
     bindSoundToggle(this.root, this.audio, this.abort.signal); bindTrackingToggle(this.root, this.abort.signal); this.bind();
   }
-  private el<T extends HTMLElement>(selector: string): T { return this.root.querySelector<T>(selector)!; }
+  private readonly el: ReturnType<typeof gameElements>;
   private on(selector: string, action: () => void): void { this.el(selector).addEventListener('click', action, { signal: this.abort.signal }); }
   private text(selector: string, value: string): void { const el = this.el(selector); if (el.textContent !== value) el.textContent = value; }
   private bind(): void {

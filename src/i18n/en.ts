@@ -1,5 +1,7 @@
 /** Hungarian source phrases are stable IDs shared by all interfaces. */
 export const english: Record<string, string> = {
+  "Válassz irányítást, vagy vidd a kézkurzort a pályára.": "Choose a control mode or move the hand cursor onto the board.",
+  "Követem a kezed. Csukd be a fogáshoz, nyisd ki az elengedéshez.": "Tracking your hand. Close it to grab and open it to release.",
   "Követési vonalak": "Tracking lines",
   "Követési vonalak elrejtése": "Hide tracking lines",
   "Követési vonalak megjelenítése": "Show tracking lines",
