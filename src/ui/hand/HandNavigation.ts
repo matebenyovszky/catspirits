@@ -1,5 +1,7 @@
 import { t } from '../../i18n';
 import type { CameraPoseTracker } from '../../core/tracking/CameraPoseTracker';
+import { createTrackingOverlay, type TrackingOverlay } from '../../core/tracking/TrackingOverlay';
+import { bindTrackingToggle, trackingToggle } from '../shell/trackingToggle';
 import type { PoseFrame } from '../../core/tracking/types';
 import { cameraAccessError, sharedCamera, type CameraLease } from '../../core/tracking/SharedCamera';
 import { HandGesture } from './HandGesture';
@@ -13,6 +15,11 @@ export class HandNavigation {
   private panel=document.createElement('aside');
   private toggle=document.createElement('button');
   private video=document.createElement('video');
+  private preview=document.createElement('div');
+  private readonly linesButton: HTMLButtonElement;
+  private readonly refreshLines: () => void;
+  private stream?: MediaStream;
+  private sharedOverlay?: TrackingOverlay;
   private status=document.createElement('span');
   private cursor=document.createElement('div');
   private gesture=new HandGesture();
@@ -43,8 +50,16 @@ export class HandNavigation {
     this.video.autoplay=true;this.video.muted=true;this.video.playsInline=true;this.video.setAttribute('aria-hidden','true');
     this.status.className='hand-status';this.status.setAttribute('role','status');
     this.hint.className='hand-instructions';
-    this.panel.append(this.toggle,this.video,this.status,this.hint);this.cursor.className='hand-cursor';this.cursor.hidden=true;this.cursor.setAttribute('aria-hidden','true');
-    document.body.append(this.panel,this.cursor);this.render();
+    const actions=document.createElement('div');
+    actions.className='hand-actions';
+    actions.innerHTML=trackingToggle;
+    this.linesButton=actions.querySelector('button')!;
+    actions.prepend(this.toggle);
+    this.preview.className='hand-preview';
+    this.preview.append(this.video);
+    this.panel.append(actions,this.preview,this.status,this.hint);this.cursor.className='hand-cursor';this.cursor.hidden=true;this.cursor.setAttribute('aria-hidden','true');
+    document.body.append(this.panel,this.cursor);
+    this.refreshLines=bindTrackingToggle(this.panel,this.abort.signal);
     const signal=this.abort.signal;
     this.toggle.addEventListener('click',()=>this.setEnabled(!this.enabled || !this.lease),{signal});
     document.addEventListener('visibilitychange',()=>{if(document.hidden)this.suspend();else void this.resume();},{signal});
@@ -53,7 +68,15 @@ export class HandNavigation {
     document.addEventListener('fullscreenchange',()=>{this.cancel();this.pointer.closePopup();(document.fullscreenElement ?? document.body).append(this.panel,this.cursor);},{signal});
     document.addEventListener('keydown',event=>{if(event.key==='Escape'){this.cancel();this.pointer.closePopup();}},{signal});
     // Frame/model sharing with Bit Rescue: never run a second hand detector.
-    this.unsubscribe.push(sharedCamera.subscribe(()=>{if(this.enabled && !document.hidden)void this.sync();}),sharedCamera.onHand(frame=>{if(this.lease && this.pageActive && !document.hidden)this.frame(frame);}));
+    this.unsubscribe.push(
+      // A tracker releases its lease synchronously during disposal. Switch video owners after cleanup.
+      sharedCamera.subscribe(() => { if (this.lease) queueMicrotask(() => void this.sync()); }),
+      sharedCamera.onHand(frame => {
+        if (!this.lease || !this.pageActive || document.hidden || !sharedCamera.hasGameHands) return;
+        this.sharedOverlay?.pose(frame);
+        this.frame(frame);
+      })
+    );
     try { this.enabled = sessionStorage.getItem(KEY) === 'on'; } catch { /* Optional session preference. */ }
     this.refreshLanguage();
     void this.resume();
@@ -68,6 +91,7 @@ export class HandNavigation {
     (document.fullscreenElement ?? document.body).append(this.panel, this.cursor);
     this.panel.setAttribute('aria-label',t('Kézkurzor'));
     this.label.textContent=t('Kézkurzor');
+    this.refreshLines();
     this.hint.textContent=t('Mozgasd a kezed. Csippents a kattintáshoz, tartsd össze húzáshoz. A képernyő felső és alsó szélén görgethetsz.');
     this.status.textContent = this.enabled && !this.lease ? t('A folytatáshoz indítsd el a kézkurzort.') : '';
     this.cancel();
@@ -75,6 +99,8 @@ export class HandNavigation {
     this.render();
   }
   private render(): void {
+    this.linesButton.hidden=!this.lease;
+    this.preview.hidden=!this.lease;
     this.panel.classList.toggle('enabled',this.enabled);this.toggle.setAttribute('aria-pressed',String(!!this.lease));
     this.toggle.title=t(this.lease?'Kézkurzor kikapcsolása':'Kézkurzor bekapcsolása');this.toggle.setAttribute('aria-label',this.toggle.title);
   }
@@ -108,6 +134,7 @@ export class HandNavigation {
     this.render();
     void lease.ready.then(stream => {
       if (this.lease !== lease) return;
+      this.stream = stream;
       const events = this.trackEvents = new AbortController();
       for (const track of stream.getTracks()) track.addEventListener('ended', () => {
         if (this.lease !== lease) return;
@@ -123,12 +150,20 @@ export class HandNavigation {
   }
 
   private async sync():Promise<void> {
-    if(this.disposed || !this.enabled || !this.pageActive || document.hidden || !this.lease || !sharedCamera.hasCapture)return;
+    if(this.disposed || !this.enabled || !this.pageActive || document.hidden || !this.stream || !sharedCamera.hasCapture)return;
     if(sharedCamera.hasGameHands){
-      // The game owns the hand stream; keep its preview and reuse its landmarks.
+      // The game's detector supplies landmarks for both previews on the same stream.
       if(this.tracker){const tracker=this.tracker;this.tracker=undefined;++this.generation;tracker.dispose();this.cancel();}
-      this.video.hidden=true;this.tick();return;
+      this.video.hidden=false;
+      if (!this.sharedOverlay) {
+        this.video.srcObject=this.stream;
+        this.sharedOverlay=createTrackingOverlay(this.video);
+        // Autoplay restrictions on a secondary preview must leave cursor input available.
+        void this.video.play().catch(() => {});
+      }
+      this.tick();return;
     }
+    this.closeSharedPreview();
     if(this.tracker || this.startingTracker)return;
     this.startingTracker = true;
     // Mark pending before imports and before claiming a shared camera (which
@@ -180,10 +215,18 @@ export class HandNavigation {
     };this.raf=requestAnimationFrame(run);
   }
   private cancel():void {this.pointer.cancel();this.gesture.reset();this.held=false;this.point=undefined;if(!this.cursor.hidden)this.cursor.hidden=true;this.edgeDirection=0;}
+  private closeSharedPreview():void {
+    if (!this.sharedOverlay) return;
+    this.sharedOverlay.dispose();
+    this.sharedOverlay=undefined;
+    this.video.pause();
+    this.video.srcObject=null;
+  }
   private suspend():void {
     this.pageActive=false;++this.generation;++this.resumeGeneration;this.startingTracker=false;
     const tracker=this.tracker;this.tracker=undefined;
     const lease=this.lease;this.lease=undefined;
+    this.stream=undefined;this.closeSharedPreview();
     // Release after disabling recursion: visibility or enabled flag guards sync.
     this.trackEvents?.abort();this.trackEvents=undefined;tracker?.dispose();lease?.release();this.video.hidden=true;this.render();cancelAnimationFrame(this.raf);this.raf=0;this.cancel();this.pointer.closePopup();
   }
