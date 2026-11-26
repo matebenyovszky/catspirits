@@ -15,7 +15,8 @@ vi.mock('../../core/jumper/JumperAudio', () => ({ JumperAudio: class {
 } }));
 const cameraStart = vi.hoisted(() => vi.fn());
 vi.mock('../../core/jumper/JumperCamera', () => ({ JumperCamera: class {
-  constructor(_video: unknown, _jump: unknown, private status: (message: string, state: string) => void) {}
+  constructor(_jump: unknown, private status: (message: string, state: string) => void) {}
+  setGameplayActive() {}
   async start() { cameraStart(); this.status('Nem található kamera. Csatlakoztass egy kamerát, majd próbáld újra.', 'error'); return false; }
   input() { return { tracked: false, calibrated: false, calibrationProgress: 0, runSpeed: 0, jump: false, crouch: false, lane: 0 }; }
   setResponse() {} stop() {}
@@ -101,7 +102,7 @@ describe('standalone multilingual interface', () => {
     option.checked = true; option.dispatchEvent(new Event('change'));
     click('[data-play]'); await settle();
     expect(text('[data-camera-status]')).toContain('Keine Kamera gefunden');
-    click('[data-use-keys]'); advance(1);
+    click('[data-cancel-camera]'); chooseKeys(); click('[data-play]'); await settle(); advance(1);
     expect(text('[data-level-name]')).toBe('Sternenhafen');
     expect(text('[data-course-preview]')).toContain('↓ DUCKEN');
     expect(root.querySelector('[data-section="2"]')!.getAttribute('aria-label')).toContain('geduckt bleiben');
@@ -112,7 +113,7 @@ describe('standalone multilingual interface', () => {
     expect(text('h1')).toBe('MOVE INTOTHE FUTURE.');
     expect(root.querySelector<HTMLInputElement>('[value="camera"]')!.checked).toBe(true);
     expect(cameraStart).not.toHaveBeenCalled();
-    expect(text('[data-play]')).toContain('START CAMERA');
+    expect(text('[data-play]')).toContain('CALIBRATE MOVEMENT');
     expect(text('.hero-privacy')).toContain('stay on your device');
     expect(root.querySelector('canvas')!.getAttribute('aria-label')).toContain('With your camera');
     expect(text('.control-hint')).toContain('lean sideways');
@@ -128,7 +129,7 @@ describe('standalone multilingual interface', () => {
     expect(text('.help-sword')).toContain('optional');
     expect(root.querySelector<HTMLAnchorElement>('.help-sword a')?.getAttribute('href')).toBe('?game=blade&lang=en');
   });
-  it('translates camera setup and errors while retaining a working keyboard fallback', async () => {
+  it('translates calibration errors and keeps camera rendering out of the game', async () => {
     new JumperApp(root);
     const option = root.querySelector<HTMLInputElement>('[value="camera"]')!;
     option.checked = true; option.dispatchEvent(new Event('change'));
@@ -136,10 +137,10 @@ describe('standalone multilingual interface', () => {
     expect(text('[data-camera-status]')).toContain('No camera found');
     expect(text('.camera-response')).toContain('Steadier');
     expect(root.querySelector<HTMLButtonElement>('[data-camera-go]')!.disabled).toBe(true);
-    click('[data-use-keys]'); advance(1);
+    click('[data-cancel-camera]'); chooseKeys(); click('[data-play]'); await settle(); advance(1);
     expect(root.dataset.phase).toBe('running');
     expect(text('[data-level-name]')).toBe('Neon City');
-    expect(root.querySelector('video')!.closest<HTMLElement>('aside')!.hidden).toBe(true);
+    expect(root.querySelector('video')).toBeNull();
   });
   it('keeps progress independent of the old app and translates duck previews, pause and results', async () => {
     const save = freshSave(); save.stars = [3, 3, 0, 0, 0];
@@ -164,7 +165,7 @@ describe('standalone multilingual interface', () => {
   it('retains the Hungarian game interface', () => {
     setLanguage('hu'); new JumperApp(root);
     expect(text('h1')).toBe('MOZDULJ AJÖVŐBE.');
-    expect(text('[data-play]')).toContain('KAMERA INDÍTÁSA');
+    expect(text('[data-play]')).toContain('TESTKALIBRÁLÁS');
     click('[data-worlds]'); expect(text('.world-list')).toContain('Csillagkikötő');
   });
 });

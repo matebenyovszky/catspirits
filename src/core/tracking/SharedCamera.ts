@@ -1,7 +1,7 @@
 import type { PoseFrame } from './types';
-export type CameraRole = 'game' | 'navigation' | 'game-hand';
+export type CameraRole = 'game' | 'game-preview' | 'navigation' | 'game-hand';
 type Capture = { owners: Map<symbol, CameraRole>; ready: Promise<MediaStream>; stream?: MediaStream };
-export type CameraLease = { ready: Promise<MediaStream>; release(): void };
+export type CameraLease = { ready: Promise<MediaStream>; setRole(role: CameraRole): void; release(): void };
 
 const video: MediaTrackConstraints = { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 } };
 
@@ -46,6 +46,9 @@ export class SharedCamera {
 
   get hasGameHands(): boolean { return !!this.capture && [...this.capture.owners.values()].includes('game-hand'); }
   get hasGame(): boolean { return !!this.capture && [...this.capture.owners.values()].some(role => role !== 'navigation'); }
+  get gameOwnsInput(): boolean {
+    return !!this.capture && [...this.capture.owners.values()].some(role => role === 'game' || role === 'game-hand');
+  }
   get hasCapture(): boolean { return !!this.capture?.stream; }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   onHand(listener: (frame: PoseFrame) => void): () => void { this.handListeners.add(listener); return () => this.handListeners.delete(listener); }
@@ -90,7 +93,11 @@ export class SharedCamera {
       });
     }
     this.changed();
-    return { ready: capture.ready, release: () => {
+    return { ready: capture.ready, setRole: next => {
+      if (this.capture !== capture || !capture.owners.has(owner) || capture.owners.get(owner) === next) return;
+      capture.owners.set(owner, next);
+      this.changed();
+    }, release: () => {
       if (!capture.owners.delete(owner)) return;
       // An open browser prompt cannot be cancelled. Keep it available to new
       // owners until it resolves, but stop an unused stream immediately.

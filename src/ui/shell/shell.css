@@ -14,6 +14,7 @@
   position: absolute;
   top: 0;
   inset-inline: 0;
+  z-index: 4;
 }
 .shell-brand {
   display: inline-flex;
@@ -78,6 +79,31 @@
   color-scheme: dark;
 }
 .shell-header :is(a, button, select):focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.shell-fullscreen {
+  display: inline-grid; place-items: center; flex: 0 0 auto;
+  width: 36px; height: 36px; padding: 0;
+  border: 1px solid #89a6d16b; border-radius: 7px; background: #151f37; color: #dcefff;
+}
+.shell-fullscreen:not(:disabled):hover { color: #a5ffe5; border-color: #76d6c6; background: #1d354c; }
+.shell-fullscreen:disabled { opacity: .45; }
+.shell-fullscreen svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.shell-fullscreen:not([data-exit-fullscreen]) .fullscreen-exit, .shell-fullscreen[data-exit-fullscreen] .fullscreen-enter { display: none; }
+.shell-fullscreen[data-exit-fullscreen] {
+  position: fixed; top: var(--game-edge-top); right: var(--game-edge-right); z-index: 1700;
+  width: 42px; height: 42px; box-shadow: 0 3px 15px #02061078;
+}
+body:has([data-game-expanded]) { overflow: hidden; }
+[data-fullscreen-background] { visibility: hidden !important; }
+[data-game-frame][data-game-expanded] {
+  --game-edge-top: max(12px, env(safe-area-inset-top));
+  --game-edge-right: max(12px, env(safe-area-inset-right));
+  --game-edge-left: max(12px, env(safe-area-inset-left));
+  --game-edge-bottom: max(12px, env(safe-area-inset-bottom));
+  position: fixed; inset: 0; z-index: 30; width: 100%; height: 100%; min-height: 0; max-width: none; margin: 0;
+  overflow: auto; overscroll-behavior: contain; scroll-padding-bottom: var(--camera-preview-space);
+  background: #0b1225; color: #eaf4fb;
+}
+[data-game-frame]::backdrop { background: #0b1225; }
 .jumper-header .jumper-tools button { height: 36px; padding-inline: 9px; }
 .jumper-header .jumper-tools .icon-button { width: 36px; padding-inline: 0; }
 #jumper[data-phase]:not([data-phase="ready"]) .jumper-header .shell-games { visibility: hidden; }
@@ -156,12 +182,6 @@
   .jumper-header .shell-brand > span:last-child { display: none; }
 }
 
-/* One visualisation preference across camera modes; tracking stays active. */
-button.tracking-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; width: 36px; min-height: 36px; padding: 6px; border: 1px solid #89a6d141; border-radius: 7px; color: #9aaac1; background: #151f37; }
-button.tracking-toggle[aria-pressed="true"] { color: #83f3d4; background: #1e404a; }
-.tracking-toggle svg { width: 22px; height: 22px; pointer-events: none; }
-.tracking-toggle[aria-pressed="true"] .tracking-off { display: none; }
-.robot-overlay-control { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #b9c9dc; }
 @media (max-width: 520px) {
   .jumper-header .shell-brand > span:last-child { display: none; }
   .shell-tools { gap: 5px; }

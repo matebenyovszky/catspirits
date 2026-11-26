@@ -5,7 +5,7 @@ import { setLanguage } from '../../i18n';
 import type { HandFrame } from '../../core/pop/HandInput';
 const mock = vi.hoisted(() => ({ start: vi.fn(async () => false), stop: vi.fn(), running: false, emit: null as ((f: HandFrame|null) => void)|null }));
 vi.mock('../../core/pop/PopCamera', () => ({ PopCamera: class {
-  constructor(_v: unknown, emit: (f: HandFrame|null) => void) { mock.emit = emit; }
+  constructor(emit: (f: HandFrame|null) => void) { mock.emit = emit; }
   get running() { return mock.running; } loading = false; start = mock.start; stop() { mock.running = false; mock.emit?.(null); mock.stop(); }
 } }));
 vi.mock('./PopView', () => ({ PopView: class { resize() {} draw() {} } }));
@@ -22,7 +22,7 @@ afterEach(() => { app.dispose(); vi.restoreAllMocks(); vi.unstubAllGlobals(); })
 const click = (selector: string) => (root.querySelector(selector) as HTMLElement).click();
 function advance(from: number, count: number) { for (let i = 0; i < count; i++) { const entry = callbacks.entries().next().value; if (!entry) break; callbacks.delete(entry[0]); clock = from+i*20; entry[1](clock); } }
 it('offers hands, wand and touch with no camera or render loop on the menu', () => {
-  expect(root.textContent).toContain('Camera · hands'); expect(root.textContent).toContain('Camera · marker wand');
+  expect(root.textContent).toContain('Play with hands'); expect(root.textContent).toContain('Play with the marker wand');
   expect(mock.start).not.toHaveBeenCalled(); expect(callbacks.size).toBe(0);
   expect(root.querySelector('a[href="?game=blade&lang=en"]')).not.toBeNull();
 });
@@ -64,7 +64,7 @@ it('uses fresh hand observations to start and pauses a genuine loss without rest
   mock.running = false; advance(2500, 1); expect(callbacks.size).toBe(0); expect(root.textContent).toContain('The camera stopped.');
 });
 it('shows the controls and rules in Hungarian and German', () => {
-  for (const [language, label, rule] of [['hu', 'Kamera · kézzel', 'Minden célpont aktív.'], ['de', 'Kamera · Hände', 'Jedes Ziel ist aktiv.']] as const) {
+  for (const [language, label, rule] of [['hu', 'Játék kézzel', 'Minden célpont aktív.'], ['de', 'Mit Händen spielen', 'Jedes Ziel ist aktiv.']] as const) {
     app.dispose(); setLanguage(language); app = new PopApp(root); expect(root.textContent).toContain(label); expect(root.textContent).toContain(rule);
   }
 });

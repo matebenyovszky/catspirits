@@ -1,8 +1,8 @@
 import { gameElements } from '../shell/gameElements';
-import { bindTrackingToggle, trackingToggle } from '../shell/trackingToggle';
 import { HAND_POINTER_ID } from '../hand/HandPointer';
 import { neonScene } from '../shell/NeonScene';
 import { gameHeader } from '../shell/GameHeader';
+import { GAME_LAYOUT_EVENT } from '../shell/GameFullscreen';
 import { ChipAudio } from '../../core/audio/ChipAudio';
 import { bindSoundToggle } from '../audio/soundToggle';
 import { localizedHtml, t } from '../../i18n';
@@ -52,7 +52,7 @@ export class RobotApp {
       ${gameHeader('robot')}
       <main class="robot-main shell-workspace">
         <div class="robot-heading">${neonScene('robot')}<div><span class="blade-eyebrow">04 / ROBOT LAB · VIRTUAL</span><h1>BIT <span>RESCUE.</span></h1><p>Te vagy a robotpilóta.</p></div><div class="robot-heading-controls"><div class="robot-mission-select"><label for="robot-level">Küldetés</label><select id="robot-level"><option value="1">01 · Első dokkolás</option><option value="2">02 · Kerülőút</option></select></div></div></div>
-        <p class="robot-view-note" data-view-note role="status" hidden></p><button class="blade-text-button" data-view-retry hidden>Újrapróbálás</button><div class="robot-workspace">
+        <p class="robot-view-note" data-view-note role="status" hidden></p><button class="blade-text-button" data-view-retry hidden>Újrapróbálás</button><div class="robot-workspace" data-game-frame>
           <section class="robot-board" aria-label="Robotkaros játék">
             <div class="robot-board-bar"><span class="robot-mode" data-owner>TE VEZETSZ</span><span data-clock>00:00</span><span><b data-count>0</b> / 3 <span>CELLA</span></span></div>
             <div class="robot-stage"><canvas tabindex="0" aria-label="Robotkar munkatere. Nyilak: mozgatás. Szóköz: fogás vagy elengedés. Enter: automata. M: kézi vezérlés."></canvas>
@@ -61,7 +61,7 @@ export class RobotApp {
             <div class="robot-board-footer"><span data-task role="status">Válassz irányítást a kezdéshez.</span><button data-pause class="blade-text-button" disabled>Szünet</button></div>
           </section>
           <aside class="robot-console">
-            <section class="robot-card robot-input"><span class="blade-eyebrow">01 / PILÓTA</span><h2>Mozdulj, és irányíts!</h2><button class="blade-primary" data-camera>Kamera indítása <span>↗</span></button><button class="blade-secondary" data-pointer>Egér / érintés / billentyűzet</button><p data-camera-status role="status">A kamera képe a gépeden marad.</p><video autoplay muted playsinline hidden aria-label="Tükrözött kamera"></video><div class="robot-overlay-control">${trackingToggle}<span>Követési vonalak</span></div><label class="robot-gesture-option">Fogásvezérlés<select data-gesture><option value="hand">Kéznyitás / kézcsukás</option><option value="pinch">Csippentés</option></select></label><p data-pinch-status role="status" hidden></p><label class="robot-depth-option"><input type="checkbox" data-depth> Térbeli kézvezérlés · kísérleti</label><p>Tenyérrel a kamera felé: közelítés = emelés, távolítás = süllyesztés. A kéz elfordítása pontatlanságot okozhat.</p><button class="blade-text-button" data-calibrate disabled>Mélység újrakalibrálása</button><p data-height hidden></p></section>
+            <section class="robot-card robot-input"><span class="blade-eyebrow">01 / PILÓTA</span><h2>Mozdulj, és irányíts!</h2><button class="blade-primary" data-camera>Kar- és kézkövetés <span>↗</span></button><button class="blade-secondary" data-pointer>Kézkurzoros irányítás</button><p data-camera-status role="status">A kamera képe a gépeden marad.</p><label class="robot-gesture-option">Fogásvezérlés<select data-gesture><option value="hand">Kéznyitás / kézcsukás</option><option value="pinch">Csippentés</option></select></label><p data-pinch-status role="status" hidden></p><label class="robot-depth-option"><input type="checkbox" data-depth> Térbeli kézvezérlés · kísérleti</label><p>Tenyérrel a kamera felé: közelítés = emelés, távolítás = süllyesztés. A kéz elfordítása pontatlanságot okozhat.</p><button class="blade-text-button" data-calibrate disabled>Mélység újrakalibrálása</button><p data-height hidden></p></section>
             <section class="robot-card"><span class="blade-eyebrow">02 / VEZÉRLÉS</span><div class="robot-control-switch"><button data-manual aria-pressed="true" disabled>Én vezetem</button><button data-auto aria-pressed="false" disabled>Bit vezeti</button></div><p data-control-status role="status">Bármikor átveheted a vezérlést.</p><button class="blade-secondary" data-grip disabled>Fogás / elengedés</button><div class="robot-stats"><div><strong data-interventions>0</strong><small>ÁTVÉTEL</small></div><div><strong data-auto-count>0</strong><small>AUTO DOKKOLÁS</small></div></div></section>
             <section class="robot-card robot-how"><span class="blade-eyebrow">03 / ÍGY MŰKÖDIK</span><ol><li>Mutasd a vállad, könyököd és kezed. A kezed a fogót, a könyököd a robotkar hajlását irányítja.</li><li>Alapból zárd össze a kezed a fogáshoz, nyisd ki az elengedéshez. A csippentés külön választható. Egérrel rövid várakozással is megfoghatsz egy cellát.</li><li>A sárga mezőt kerüld meg a fogóval. Ha Bit elakad, vedd át, segíts neki, majd add vissza!</li></ol><p>Egérrel húzz vagy kattints. Billentyűvel: nyilak / WASD, szóköz a fogó, M kézi, Enter automata.</p></section>
           </aside>
@@ -71,8 +71,8 @@ export class RobotApp {
     const level: RobotLevel = new URLSearchParams(location.search).get('level') === '2' ? 2 : 1;
     this.game.reset(level); this.el<HTMLSelectElement>('#robot-level').value = String(level);
     if (level === 2) this.text('[data-banner-title]', t('Segíts Bitnek kerülőutat találni!'));
-    this.camera = new RobotCamera(this.el('video'), frame => { this.hands = frame; });
-    bindSoundToggle(this.root, this.audio, this.abort.signal); bindTrackingToggle(this.root, this.abort.signal); this.bind(); this.resize(); this.hud();
+    this.camera = new RobotCamera(frame => { this.hands = frame; });
+    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind(); this.resize(); this.hud();
     void this.loadView();
   }
   private canvas(): HTMLCanvasElement { return this.el('canvas'); }
@@ -143,7 +143,9 @@ export class RobotApp {
     window.addEventListener('blur', () => { if (this.phase === 'playing') this.pause(); }, { signal });
     document.addEventListener('visibilitychange', () => { if (document.hidden) { this.audio.sleep(); this.pause(); } }, { signal });
     window.addEventListener('pagehide', () => { this.audio.sleep(); this.pause(); }, { signal });
+    window.addEventListener('catspirits-camera-lost', () => this.pause(), { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
+    window.addEventListener(GAME_LAYOUT_EVENT, () => this.resize(), { signal });
   }
   private mode(mode: 'manual' | 'auto'): void {
     if (this.phase !== 'playing') return;
@@ -172,7 +174,7 @@ export class RobotApp {
     this.el('[data-view-note]').hidden = false; this.el('[data-view-retry]').hidden = false;
     this.text('[data-view-note]', t('A 3D gyorsítás nem elérhető. Kapcsold be a hardveres gyorsítást, majd próbáld újra.'));
   }
-  private stopCamera(): void { ++this.generation; this.camera.stop(); this.hands = null; this.pinch = null; this.handInput.reset(); this.armInput.reset(); this.armTracked = false; this.game.setDepth(null); this.el('video').hidden = true; }
+  private stopCamera(): void { ++this.generation; this.camera.stop(); this.hands = null; this.pinch = null; this.handInput.reset(); this.armInput.reset(); this.armTracked = false; this.game.setDepth(null); }
   private startPointer(): void {
     if (this.destroyed || document.hidden || !this.spatialView) return;
     void this.audio.unlock();
@@ -185,7 +187,7 @@ export class RobotApp {
     this.audio.stop(); void this.audio.unlock();
     this.stopCamera(); this.stopFrames(); this.keys.clear(); this.pointer = null; this.game.stop();
     this.source = 'camera'; this.phase = 'loading'; this.cameraError = false; const generation = this.generation;
-    this.el('video').hidden = false; this.el('[data-banner]').hidden = true; this.hud();
+    this.el('[data-banner]').hidden = true; this.hud();
     try {
       const ready = await this.camera.start();
       if (generation !== this.generation || this.destroyed) return;
@@ -279,7 +281,7 @@ export class RobotApp {
     this.el<HTMLButtonElement>('[data-calibrate]').disabled = !cameraControl || this.game.holding !== null;
     this.text('[data-height]', t('Emelés: {height}%', { height: Math.round(this.game.lift / .12 * 100) }));
     this.text('[data-pinch-status]', t(!this.pinch?.armed ? this.game.holding !== null ? this.gesture === 'pinch' ? 'A folytatáshoz csippents újra. A tárgyat megtartom.' : 'A folytatáshoz csukd be a kezed. A tárgyat megtartom.' : this.gesture === 'pinch' ? 'Nyisd szét a hüvelyk- és mutatóujjad a kezdéshez.' : 'Nyisd ki a kezed a kezdéshez.' : this.depthControl && this.pinch.depth === null ? 'Kalibrálás: tartsd nyitott tenyered mozdulatlanul a kamera felé.' : this.pinch.closed ? this.gesture === 'pinch' ? 'CSIPPENTÉS · FOGÁS' : 'CSUKOTT KÉZ · FOGÁS' : 'NYITOTT KÉZ · ELENGEDÉS'));
-    this.text('[data-camera-status]', t(this.cameraError ? this.camera.lastError ?? 'A kamera nem indult el. Próbáld újra, vagy válassz másik irányítást.' : this.phase === 'loading' ? 'A kamerakövetés betöltése…' : playing && this.source === 'camera' ? fresh ? this.gesture === 'pinch' ? 'Megvan a vezérlő kezed. Csippentéssel foghatsz.' : 'Követem a kezed. Csukd be a fogáshoz, nyisd ki az elengedéshez.' : 'Nyisd ki a kezed a kezdéshez.' : 'A kamera képe a gépeden marad.'));
+    this.text('[data-camera-status]', t(this.cameraError ? this.camera.lastError ?? 'A követés nem indult el. Próbáld újra.' : this.phase === 'loading' ? 'A kamerakövetés betöltése…' : playing && this.source === 'camera' ? fresh ? this.gesture === 'pinch' ? 'Megvan a vezérlő kezed. Csippentéssel foghatsz.' : 'Követem a kezed. Csukd be a fogáshoz, nyisd ki az elengedéshez.' : 'Nyisd ki a kezed a kezdéshez.' : 'A kamera képe a gépeden marad.'));
     this.text('[data-control-status]', t(this.phase === 'complete' ? 'Mindhárom cella a helyén!' : !playing ? 'A robot megvár.' : this.game.blocked ? 'A mező útban van. Vedd át, kerüld meg, majd add vissza Bitnek!' : this.game.mode === 'auto' ? 'Bit a következő cellán dolgozik. Bármikor visszaveheted.' : 'Bármikor átveheted a vezérlést.'));
     this.text('[data-task]', t(this.phase === 'complete' ? 'Mindhárom cella a helyén!' : this.phase === 'paused' ? 'A robot megvár.' : !playing ? 'Válassz irányítást, vagy vidd a kézkurzort a pályára.' : this.game.blocked ? 'Kerüld meg a sárga mezőt felül vagy alul!' : this.game.holding === null ? this.source === 'camera' ? this.gesture === 'pinch' ? 'Vezesd a fogót a cellához, és csippents!' : 'Vezesd a fogót a cellához, és csukd be a kezed!' : 'Vezesd a fogót egy cellához, és tartsd ott.' : 'Vidd a cellát az azonos számú dokkhoz.'));
     this.root.classList.toggle('robot-blocked', playing && this.game.blocked);

@@ -1,5 +1,5 @@
-import { bindTrackingToggle } from '../shell/trackingToggle';
 import { gameHeader } from '../shell/GameHeader';
+import { GAME_LAYOUT_EVENT } from '../shell/GameFullscreen';
 import { bindSoundToggle } from '../audio/soundToggle';
 import { getLanguage, localizedHtml, t } from '../../i18n';
 import { JumperSimulation, WORLDS, SUITS, DUCK_GATE_HALF_DEPTH, freshSave, validateSave, type JumperSave, type JumperPhase } from '../../core/jumper/JumperSimulation';
@@ -7,9 +7,9 @@ import { JumperView } from '../../core/jumper/JumperView';
 import { JumperAudio } from '../../core/jumper/JumperAudio';
 import { JumperCamera } from '../../core/jumper/JumperCamera';
 
-const icon = (name: 'play' | 'pause' | 'settings' | 'expand' | 'robot' | 'world' | 'close' | 'arrow' | 'home') => {
+const icon = (name: 'play' | 'pause' | 'settings' | 'robot' | 'world' | 'close' | 'arrow' | 'home') => {
   const paths = { play:'M9 5l11 7-11 7V5z', pause:'M8 5v14M16 5v14', settings:'M4 6h4m4 0h8M4 12h10m4 0h2M4 18h3m4 0h9M8 3v6m6 0v6m-7 0v6',
-    expand:'M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5', robot:'M8 6V3M16 6V3M5 7h14v12H5V7zM9 11v3M15 11v3M10 17h4',
+    robot:'M8 6V3M16 6V3M5 7h14v12H5V7zM9 11v3M15 11v3M10 17h4',
     world:'M3 12a9 9 0 1018 0 9 9 0 10-18 0zM3 12h18M12 3a18 18 0 010 18 18 18 0 010-18z', close:'M6 6l12 12M18 6L6 18',
     arrow:'M4 12h16M14 6l6 6-6 6', home:'M3 11l9-8 9 8M6 9v12h12V9M10 21v-7h4v7',
   };
@@ -47,47 +47,46 @@ export class JumperApp {
   constructor(private root: HTMLElement) {
     try { this.save = validateSave(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')); } catch { this.save = freshSave(); }
     root.innerHTML = localizedHtml(`
-      <canvas class="jumper-scene" tabindex="0" aria-label="Cyber Jumper játékpálya. Szóköz: ugrás, le nyíl vagy S: lehajolás, bal és jobb nyíl: sávváltás, P: szünet."></canvas>
-      <div class="jumper-vignette" aria-hidden="true"></div>
       ${gameHeader('jumper', `<nav class="jumper-tools" aria-label="Játék menü">
           <button data-worlds class="nav-text">${icon('world')}<span>Pályák</span></button>
           <button data-suits class="nav-text" aria-label="Robotom">${icon('robot')}<span>Robotom</span></button>
           <button data-sound class="sound-button" aria-pressed="true">Hang: be</button><button data-settings class="icon-button" aria-label="Hang és megjelenés beállításai" title="Hang és megjelenés">${icon('settings')}</button>
-          <button data-fullscreen class="icon-button" aria-label="Teljes képernyő" title="Teljes képernyő">${icon('expand')}</button>
-          <button data-pause class="icon-button pause-button" hidden aria-label="Játék szüneteltetése" title="Szünet (P)">${icon('pause')}</button>
         </nav>`)}
+      <div class="jumper-frame" data-game-frame>
+      <canvas class="jumper-scene" tabindex="0" aria-label="Cyber Jumper játékpálya. Szóköz: ugrás, le nyíl vagy S: lehajolás, bal és jobb nyíl: sávváltás, P: szünet."></canvas>
+      <div class="jumper-vignette" aria-hidden="true"></div>
       <section class="jumper-hero" aria-label="Kezdőképernyő">
         <div class="hero-badge"><span></span> KAMERÁS MOZGÁS · 5 VILÁG</div>
         <h1>MOZDULJ A<br><span>JÖVŐBE.</span></h1>
         <p>A mozdulataid irányítják Bitet.<br class="desktop-break"> Ugorj, hajolj le, és dőlj oldalra a kamera előtt!</p>
         <div class="hero-actions"><button class="jumper-primary" data-play>${icon('play')} JÁTSSZUNK! ${icon('arrow')}</button><button class="how-button" data-help>Hogyan játszom?</button></div><button class="how-button privacy-button" data-privacy>Adatvédelem és licencek</button>
-        <fieldset class="input-mode"><legend>Így játszom</legend><label><input type="radio" name="mode" value="camera" checked> Kamerás mozgás</label><label><input type="radio" name="mode" value="keys"> Billentyű / érintés</label></fieldset>
+        <fieldset class="input-mode"><legend>Így játszom</legend><label><input type="radio" name="mode" value="camera" checked> Testmozgás</label><label><input type="radio" name="mode" value="keys"> Játékgombok</label></fieldset>
         <small class="hero-privacy">A kamera képe a gépeden marad.</small>
         <div class="hero-world"><span class="world-orbit">01</span><div><small>ITT KEZDŐDIK</small><strong data-selected-world>Neonváros</strong></div><button data-worlds-link aria-label="Másik világ választása">${icon('arrow')}</button></div>
       </section>
       <div class="robot-caption" aria-hidden="true"><span>ISMERD MEG BITET!</span><small>A te kis neon útitársad.</small></div>
       <section class="jumper-hud" hidden aria-label="Játék állapota">
         <div class="hud-world"><span data-level-number>01 / 05</span><strong data-level-name>Neonváros</strong></div>
-        <div class="hud-stats"><div><small>PONT</small><strong data-score>0</strong></div><div class="crystal-stat"><span>◆</span><strong data-crystals>0</strong></div><div data-hearts class="hearts" aria-label="3 élet">♥ ♥ ♥</div><span data-shield hidden title="Védőpajzs">◈</span></div>
+        <div class="hud-stats"><div><small>PONT</small><strong data-score>0</strong></div><div class="crystal-stat"><span>◆</span><strong data-crystals>0</strong></div><div data-hearts class="hearts" aria-label="3 élet">♥ ♥ ♥</div><span data-shield hidden title="Védőpajzs">◈</span><button type="button" data-pause class="pause-button" hidden aria-label="Játék szüneteltetése" title="Szünet (P)">${icon('pause')}</button></div>
       </section>
       <aside class="course-lookahead" hidden aria-label="Következő pályaszakaszok"><span class="lookahead-title">JÖN A PÁLYÁN <small>↑ ugrás · ↓ hajolás · ◈ pajzs</small></span><ol data-course-preview></ol></aside>
       <div class="game-toast" role="status" aria-live="polite" hidden></div>
       <div class="tracking-notice" role="status" hidden></div>
       <div class="jump-cue" hidden><span>↑</span> UGROTTAM!</div>
       <div class="course-progress" hidden><div><span data-course-label>FÉNYFUTAM</span><span data-course-count>0 / 8</span></div><progress max="1" value="0" aria-label="Pálya haladása"></progress></div>
-      <div class="touch-controls" hidden><div class="lane-controls"><button data-left aria-label="Bal sáv">←</button><button data-right aria-label="Jobb sáv">→</button></div><div class="action-controls"><button data-duck hidden aria-label="Lehajolás: tartsd lenyomva" aria-pressed="false"><span>↓</span>HAJOLJ LE</button><button data-jump aria-label="Ugrás"><span>↑</span>UGRÁS</button></div></div>
+      <div class="touch-controls" data-hand-playfield hidden><div class="lane-controls"><button data-left aria-label="Bal sáv">←</button><button data-right aria-label="Jobb sáv">→</button></div><div class="action-controls"><button data-duck hidden aria-label="Lehajolás: tartsd lenyomva" aria-pressed="false"><span>↓</span>HAJOLJ LE</button><button data-jump aria-label="Ugrás"><span>↑</span>UGRÁS</button></div></div>
       <footer class="jumper-footer"><div class="control-hint"><kbd>SPACE</kbd><span>ugrás</span><kbd>← →</kbd><span>sávváltás</span><kbd class="duck-key-hint">↓ / S</kbd><span class="duck-key-hint">lehajolás</span><kbd>P</kbd><span>szünet</span></div><span class="best-score">REKORD <strong data-best>0</strong></span></footer>
-      <aside class="camera-preview" hidden aria-label="Kamera előnézet"><video autoplay muted playsinline></video><span>TE · TÜKÖRKÉP</span><button data-camera-off aria-label="Kamerás mód kikapcsolása">${icon('close')}</button></aside>
-      <div class="jumper-modal-backdrop" hidden><section class="jumper-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"></section></div>`);
+
+      <div class="jumper-modal-backdrop" hidden><section class="jumper-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"></section></div></div>`);
     const canvas=this.el<HTMLCanvasElement>('canvas');
     this.view=new JumperView(canvas); this.view.setSuit(this.save.suit);
     this.audio.setVolumes(this.save.music,this.save.effects);
-    this.camera=new JumperCamera(this.el('video'), strength=>this.simulation.jump(strength), (message,state)=>{
+    this.camera=new JumperCamera(strength=>this.simulation.jump(strength), (message,state)=>{
       this.cameraMessage=t(message);this.cameraError=state==='error';
       if(this.cameraSetup)this.updateCameraSetup();
     });
     this.el('[data-best]').textContent=t(this.save.best.toLocaleString(getLanguage()));
-    bindSoundToggle(this.root, this.audio, this.abort.signal); bindTrackingToggle(this.root, this.abort.signal); this.bind(); this.updatePlayLabel(); this.updateHud(); this.raf=requestAnimationFrame(time=>this.frame(time));
+    bindSoundToggle(this.root, this.audio, this.abort.signal); this.bind(); this.updatePlayLabel(); this.updateHud(); this.raf=requestAnimationFrame(time=>this.frame(time));
     if(import.meta.env.DEV) (window as unknown as { catspirits: unknown }).catspirits={
       snapshot:()=>({phase:this.simulation.phase,level:this.simulation.level,score:this.simulation.score,hearts:this.simulation.hearts,
         crystals:this.simulation.crystals,progress:this.simulation.progress,height:this.simulation.runner.state.height,lane:this.simulation.lane,
@@ -101,7 +100,7 @@ export class JumperApp {
   private on(selector:string,action:()=>void):void {this.el(selector).addEventListener('click',action,{signal:this.abort.signal});}
   private updatePlayLabel():void {
     const camera=this.mode==='camera';
-    this.el('[data-play]').innerHTML=`${icon('play')} ${t(camera?'KAMERA INDÍTÁSA':'JÁTSSZUNK!')} ${icon('arrow')}`;
+    this.el('[data-play]').innerHTML=`${icon('play')} ${t(camera?'TESTKALIBRÁLÁS':'JÁTSSZUNK!')} ${icon('arrow')}`;
     const hint=this.el('.control-hint');hint.classList.toggle('camera-controls',camera);
     hint.innerHTML=localizedHtml(camera?'<span>↑ ugrás · ↓ hajolás · ↔ oldalra dőlés</span>':'<kbd>SPACE</kbd><span>ugrás</span><kbd>← →</kbd><span>sávváltás</span><kbd class="duck-key-hint">↓ / S</kbd><span class="duck-key-hint">lehajolás</span><kbd>P</kbd><span>szünet</span>');
     this.el('canvas').setAttribute('aria-label',t(camera?'Cyber Jumper játékpálya. Kamerával: ugrás, lehajolás, oldalra dőlés. P: szünet.':'Cyber Jumper játékpálya. Szóköz: ugrás, le nyíl vagy S: lehajolás, bal és jobb nyíl: sávváltás, P: szünet.'));
@@ -113,12 +112,6 @@ export class JumperApp {
     this.on('[data-home]',()=>this.home()); this.on('[data-pause]',()=>this.pause());
     this.on('[data-worlds]',()=>this.showWorlds()); this.on('[data-worlds-link]',()=>this.showWorlds());
     this.on('[data-suits]',()=>this.showSuits()); this.on('[data-settings]',()=>this.showSettings()); this.on('[data-help]',()=>this.showHelp()); this.on('[data-privacy]',()=>this.showPrivacy());
-    this.on('[data-fullscreen]',()=>{
-      if(document.fullscreenElement) void document.exitFullscreen().catch(()=>{});
-      else if(this.root.requestFullscreen) void this.root.requestFullscreen().catch(()=>this.toast('Teljes képernyő ezen a böngészőn nem érhető el.'));
-      else this.toast('Teljes képernyő ezen a böngészőn nem érhető el.');
-    });
-    this.on('[data-camera-off]',()=>{this.home();this.mode='keys';this.el<HTMLInputElement>('[value="keys"]').checked=true;this.updatePlayLabel();});
     this.root.querySelectorAll<HTMLInputElement>('[name="mode"]').forEach(input=>input.addEventListener('change',()=>{
       this.mode=input.value as 'keys'|'camera';this.updatePlayLabel();
     },{signal:this.abort.signal}));
@@ -143,10 +136,12 @@ export class JumperApp {
     window.addEventListener('keyup',event=>{const key=event.key.toLowerCase();if(['arrowdown','s'].includes(key))this.holdDuck(`key:${key}`,false);},{signal:this.abort.signal});
     window.addEventListener('blur',()=>{this.releaseDuckControls();this.pause();},{signal:this.abort.signal});
     window.addEventListener('resize',()=>this.view.resize(),{signal:this.abort.signal});
+    window.addEventListener(GAME_LAYOUT_EVENT,()=>this.view.resize(),{signal:this.abort.signal});
     document.addEventListener('visibilitychange',()=>{
       if(document.hidden){cancelAnimationFrame(this.raf);this.raf=0;this.pause();this.audio.sleep();if(this.mode==='camera'){this.camera.stop();this.cameraMessage='A kamera leállt a lapváltáskor.';}}
       else this.restartFrames();
     },{signal:this.abort.signal});
+    window.addEventListener('catspirits-camera-lost', () => this.pause(), { signal: this.abort.signal });
     window.addEventListener('pagehide',event=>{
       if(event.persisted){cancelAnimationFrame(this.raf);this.raf=0;this.pause();this.audio.sleep();this.camera.stop();}
       else this.dispose();
@@ -222,7 +217,7 @@ export class JumperApp {
     if(this.destroyed || document.hidden){this.starting=false;this.audio.sleep();return;}
     if(this.mode==='camera'){
       this.cameraSetup=true;this.starting=true;this.cameraError=false;
-      this.el('.camera-preview').hidden=false;this.showCameraSetup();
+      this.showCameraSetup();
       await this.camera.start();this.starting=false;
       if(this.cameraSetup)this.updateCameraSetup();
       return;
@@ -238,7 +233,7 @@ export class JumperApp {
   }
 
   private home():void {
-    this.camera.stop();this.starting=this.cameraSetup=false;this.el('.camera-preview').hidden=true;
+    this.camera.stop();this.starting=this.cameraSetup=false;
     this.simulation.phase='ready';this.simulation.runner.reset();this.simulation.pickups=[];
     this.simulation.level=this.selectedLevel;this.simulation.lane=0;this.closeModal(false);this.audio.sleep();this.syncPhase();
   }
@@ -261,7 +256,7 @@ export class JumperApp {
     if(this.simulation.phase==='running'){this.simulation.pause();this.audio.sleep();this.syncPhase();}
     this.modalName=name;const backdrop=this.el('.jumper-modal-backdrop');backdrop.hidden=false;
     this.el('.jumper-modal').innerHTML=localizedHtml(html);this.el('.jumper-modal').focus();
-    this.root.querySelectorAll<HTMLElement>('.jumper-header,.jumper-hero,.touch-controls,canvas,.camera-preview').forEach(element=>element.inert=true);
+    this.root.querySelectorAll<HTMLElement>('.jumper-header,.jumper-hero,.jumper-hud,.touch-controls,canvas').forEach(element=>element.inert=true);
     this.el('.jumper-modal').querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
   }
   private modalOn(selector:string,action:()=>void):void {this.el(selector).addEventListener('click',action,{signal:this.abort.signal});}
@@ -309,17 +304,17 @@ export class JumperApp {
   private volumes():void {this.audio.setVolumes(this.save.music,this.save.effects);}
 
   private showPrivacy():void {
-    this.openModal('privacy',`${this.closeButton()}<span class="modal-eyebrow">A TE ESZKÖZÖDÖN</span><h2 id="modal-title">Adatvédelem és licencek</h2><p>A kamera csak gombnyomás és böngészőengedély után indul. A képkockák és testpontok a böngésző memóriájában maradnak; a játék nem rögzíti és nem tölti fel őket. A mikrofont nem használjuk. Lapváltáskor vagy kilépéskor a kamera leáll.</p><p>A kézkurzor és a játékok közös kamerafolyamot használnak. Játékváltáskor az aktív kézkurzor tovább működik. A kamera háttérben leáll. Visszatéréskor a kézkurzor csak meglévő böngészőengedéllyel indul újra automatikusan.</p><p>A testkövető és a modell erről az oldalról töltődik le. Nincs reklám, felhasználói fiók vagy a játékba épített analitika.</p><p>A nyelv, eredmények és beállítások ezen a böngészőn maradnak. Törlésükhöz töröld a catspirits.com webhelyadatait a böngésződben.</p><p>A tárhelyet és a botvédelmet a Cloudflare biztosítja. Ehhez IP-címet és technikai kérésadatokat kezelhet, valamint biztonsági sütiket használhat.</p><p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare adatvédelem</a> · <a href="./licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">Külső licencek</a> · <a href="./licenses/Catspirits-MIT.txt" target="_blank" rel="noopener noreferrer">MIT-licenc</a></p>`);
+    this.openModal('privacy',`${this.closeButton()}<span class="modal-eyebrow">A TE ESZKÖZÖDÖN</span><h2 id="modal-title">Adatvédelem és licencek</h2><p>A kamera böngészőengedéllyel indul, és a játékhoz szükséges. A képkockák és testpontok a böngésző memóriájában maradnak. A játék nem rögzíti és nem tölti fel őket. A mikrofont nem használjuk. Lapváltáskor vagy kilépéskor a kamera leáll.</p><p>A játékok és a kézkurzor egy kamerát használnak. Az előnézet a jobb alsó sarokban követi a mozdulatokat. Háttérbe kerülve a kamera leáll.</p><p>A testkövető és a modell erről az oldalról töltődik le. Nincs reklám, felhasználói fiók vagy a játékba épített analitika.</p><p>A nyelv, eredmények és beállítások ezen a böngészőn maradnak. Törlésükhöz töröld a catspirits.com webhelyadatait a böngésződben.</p><p>A tárhelyet és a botvédelmet a Cloudflare biztosítja. Ehhez IP-címet és technikai kérésadatokat kezelhet, valamint biztonsági sütiket használhat.</p><p><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare adatvédelem</a> · <a href="./licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">Külső licencek</a> · <a href="./licenses/Catspirits-MIT.txt" target="_blank" rel="noopener noreferrer">MIT-licenc</a></p>`);
     this.modalOn('[data-modal-close]',()=>this.closeModal());
   }
 
   private showHelp():void {
-    this.openModal('help',`${this.closeButton()}<span class="modal-eyebrow">EGY PERC, ÉS MEHETÜNK</span><h2 id="modal-title">Ugorj. Gyűjts. Ragyogj.</h2><p class="help-camera">Kamerával: állj úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugorj, hajolj le, és dőlj oldalra! A képet helyben dolgozzuk fel. Billentyűvel és érintéssel kamera nélkül is játszhatsz.</p><div class="help-steps"><p><b>01</b><span><strong>Ugorj át a fénykapun!</strong>Szóköz / ↑ / W, vagy az UGRÁS gomb. Akkor ugorj, amikor a kapu közel ér. A 3. világtól az arany felső rúd alatt hajolj le: tartsd a ↓ / S billentyűt vagy a HAJOLJ LE gombot, amíg átérsz.</span></p><p><b>02</b><span><strong>Kövesd a kristályokat!</strong>← → / A D, a képernyő nyilai vagy oldalra húzás vált sávot. A kék pajzs egy ütközést kivéd.</span></p><p><b>03</b><span><strong>Hódítsd meg az öt világot!</strong>8 kapu egy pálya. 3 csillag: hibátlan futam és legalább 15 kristály. 2 csillag: legfeljebb 2 hibázás.</span></p></div><p class="help-safety">Hagyj szabad helyet magad körül, stabil talajon mozogj, és ha kellemetlen, állj meg. A játékhoz nem kell magasra ugrani. Kamerával csak az legyen a képben, aki játszani szeretne.</p><p class="help-sword"><strong>Neon Blade · kamerás kardkaland</strong><br>Opcionális játékmód rózsaszín–zöld jelölőbottal. <a data-route href="?game=blade&lang=${getLanguage()}">Kipróbálom →</a></p>`);
+    this.openModal('help',`${this.closeButton()}<span class="modal-eyebrow">EGY PERC, ÉS MEHETÜNK</span><h2 id="modal-title">Ugorj. Gyűjts. Ragyogj.</h2><p class="help-camera">Kamerával: állj úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugorj, hajolj le, és dőlj oldalra! A képet helyben dolgozzuk fel. A kézkurzor és a játékgombok a kamera mellett is használhatók.</p><div class="help-steps"><p><b>01</b><span><strong>Ugorj át a fénykapun!</strong>Szóköz / ↑ / W, vagy az UGRÁS gomb. Akkor ugorj, amikor a kapu közel ér. A 3. világtól az arany felső rúd alatt hajolj le: tartsd a ↓ / S billentyűt vagy a HAJOLJ LE gombot, amíg átérsz.</span></p><p><b>02</b><span><strong>Kövesd a kristályokat!</strong>← → / A D, a képernyő nyilai vagy oldalra húzás vált sávot. A kék pajzs egy ütközést kivéd.</span></p><p><b>03</b><span><strong>Hódítsd meg az öt világot!</strong>8 kapu egy pálya. 3 csillag: hibátlan futam és legalább 15 kristály. 2 csillag: legfeljebb 2 hibázás.</span></p></div><p class="help-safety">Hagyj szabad helyet magad körül, stabil talajon mozogj, és ha kellemetlen, állj meg. A játékhoz nem kell magasra ugrani. Kamerával csak az legyen a képben, aki játszani szeretne.</p><p class="help-sword"><strong>Neon Blade · kamerás kardkaland</strong><br>Opcionális játékmód rózsaszín–zöld jelölőbottal. <a data-route href="?game=blade&lang=${getLanguage()}">Kipróbálom →</a></p>`);
     this.modalOn('[data-modal-close]',()=>this.closeModal());
   }
 
   private showCameraSetup(resuming=false):void {
-    this.openModal('camera',`<span class="modal-eyebrow">MOZDULJ, BIT KÖVET!</span><h2 id="modal-title">Készülj az ugrásra!</h2><p>Állj egyenesen, a vállad és a csípőd is legyen a képben. Tartsd a telefont vagy kamerát stabilan.</p><p class="camera-setup-status" role="status" data-camera-status>Kamera indítása…</p><progress data-calibration max="1" value="0" aria-label="Kamera kalibrálása"></progress><fieldset class="camera-response"><legend>Kamera reakciója</legend><label><input type="radio" name="camera-response" value="quick" ${this.cameraResponse==='quick'?'checked':''}> Gyors · játékhoz</label><label><input type="radio" name="camera-response" value="steady" ${this.cameraResponse==='steady'?'checked':''}> Stabilabb · ha remeg a kép</label><small>Váltás után állj egyenesen egy pillanatra az új kalibráláshoz.</small></fieldset><label class="setting-row"><span>Automatikus futás<small>Kikapcsolva helyben futással adod a tempót.</small></span><input data-auto-run type="checkbox" checked></label><button class="jumper-primary wide" data-camera-go disabled>${icon('play')} ${resuming?'Folytatás':'Indulhat!'}</button><button class="jumper-secondary wide" data-camera-retry hidden>Kamera újraindítása</button><button class="jumper-secondary wide" data-use-keys>Billentyűvel / érintéssel játszom</button><button class="modal-text-button" data-cancel-camera>Mégsem</button><small class="local-privacy">A kamera képe a gépeden marad. Az első indításhoz internet kell a testkövető modell letöltéséhez.</small>`);
+    this.openModal('camera',`<span class="modal-eyebrow">MOZDULJ, BIT KÖVET!</span><h2 id="modal-title">Készülj az ugrásra!</h2><p>Állj egyenesen, a vállad és a csípőd is legyen a képben. Tartsd a telefont vagy kamerát stabilan.</p><p class="camera-setup-status" role="status" data-camera-status>Kamera indítása…</p><progress data-calibration max="1" value="0" aria-label="Kamera kalibrálása"></progress><fieldset class="camera-response"><legend>Kamera reakciója</legend><label><input type="radio" name="camera-response" value="quick" ${this.cameraResponse==='quick'?'checked':''}> Gyors · játékhoz</label><label><input type="radio" name="camera-response" value="steady" ${this.cameraResponse==='steady'?'checked':''}> Stabilabb · ha remeg a kép</label><small>Váltás után állj egyenesen egy pillanatra az új kalibráláshoz.</small></fieldset><label class="setting-row"><span>Automatikus futás<small>Kikapcsolva helyben futással adod a tempót.</small></span><input data-auto-run type="checkbox" checked></label><button class="jumper-primary wide" data-camera-go disabled>${icon('play')} ${resuming?'Folytatás':'Indulhat!'}</button><button class="modal-text-button" data-cancel-camera>Mégsem</button><small class="local-privacy">A kamera képe a gépeden marad. Az első indításhoz internet kell a testkövető modell letöltéséhez.</small>`);
     this.root.querySelectorAll<HTMLInputElement>('[name="camera-response"]').forEach(option=>option.addEventListener('change',()=>{
       this.cameraResponse=option.value==='steady'?'steady':'quick';
       this.camera.setResponse(this.cameraResponse);this.updateCameraSetup();
@@ -329,8 +324,6 @@ export class JumperApp {
       this.autoRun=this.el<HTMLInputElement>('[data-auto-run]').checked;
       if(resuming){this.closeModal(false);this.simulation.resume();this.syncPhase();void this.audio.unlock();this.audio.play(this.simulation.level);}else this.begin();
     });
-    this.modalOn('[data-use-keys]',()=>{this.camera.stop();this.el('.camera-preview').hidden=true;this.mode='keys';this.el<HTMLInputElement>('[value="keys"]').checked=true;this.updatePlayLabel();this.begin();});
-    this.modalOn('[data-camera-retry]',()=>{this.cameraError=false;void this.camera.start();});
     this.modalOn('[data-cancel-camera]',()=>this.home());
   }
   private autoRun=true;
@@ -339,7 +332,6 @@ export class JumperApp {
     const input=this.camera.input(true);
     this.el<HTMLProgressElement>('[data-calibration]').value=input.calibrationProgress;
     this.el<HTMLButtonElement>('[data-camera-go]').disabled=!input.tracked || !input.calibrated;
-    this.el('[data-camera-retry]').hidden=!this.cameraError && this.cameraMessage!==t('A kamera ki van kapcsolva.');
     this.el('[data-camera-status]').textContent=t(input.calibrated?'Készen állsz! Ugorj, hajolj le, és dőlj oldalra a sávváltáshoz.':this.cameraError?this.cameraMessage:input.tracked?'Kalibrálás… állj egyenesen egy pillanatra.':this.cameraMessage);
   }
 
@@ -358,6 +350,7 @@ export class JumperApp {
 
   private syncPhase():void {
     const phase=this.simulation.phase,playing=phase!=='ready';
+    this.camera.setGameplayActive(this.mode === 'camera' && phase === 'running');
     if(phase!=='running')this.releaseDuckControls();
     this.root.dataset.phase=phase;this.el('.jumper-hero').hidden=playing;this.el('.robot-caption').hidden=playing;
     this.el('.jumper-hud').hidden=!playing;this.el('.course-progress').hidden=!playing;

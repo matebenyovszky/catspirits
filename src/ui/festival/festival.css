@@ -34,8 +34,6 @@
 .arc-controls input { accent-color:#6aeed0; margin-right:8px; }
 .arc-controls button,.arc-top button { padding:11px 15px; border:1px solid #455a72; border-radius:8px; background:#243447; color:white; font-weight:750; }
 .arc-controls .arc-start { width:100%; background:var(--accent); color:#102331; }
-.arc-preview { position:relative; width:100%; max-width:140px; }
-.arc-preview video { width:100%; display:block; max-height:110px; transform:scaleX(-1); object-fit:contain; }
 .arc-more { display:inline-block; margin-top:8px; font-size:13px; }
 @media(max-width:800px) {
   .arc-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -74,3 +72,13 @@
 .arc-controls [data-rover-message] { margin-top:7px; }
 
 .arc-controls .arc-robot-link { display:block; color:var(--accent); margin:10px 0; }
+.arc-room[data-game-expanded] {
+  padding: var(--game-edge-top) var(--game-edge-right) var(--camera-preview-space) var(--game-edge-left);
+}
+.arc-room[data-game-expanded] .arc-top { min-height: 42px; margin-bottom: 8px; padding-right: 52px; }
+.arc-room[data-game-expanded] .arc-top h1 { font-size: clamp(20px, 4vw, 36px); }
+.arc-room[data-game-expanded] .arc-arena { width: min(100%, max(250px, calc((100dvh - 132px) * 10 / 7))); justify-self: center; }
+@media (min-width: 801px) {
+  .arc-room[data-game-expanded] .arc-layout { grid-template-columns: minmax(0, 1fr) clamp(215px, 25vw, 320px); }
+  .arc-room[data-game-expanded] .arc-controls { max-height: calc(100dvh - var(--camera-preview-space) - var(--game-edge-top) - 50px); overflow: auto; }
+}

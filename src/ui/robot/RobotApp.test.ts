@@ -9,7 +9,7 @@ import type { PoseFrame } from '../../core/tracking/types';
 import { handFixture } from '../../core/robot/handFixture';
 const mock = vi.hoisted(() => ({ start: vi.fn(async () => false), stop: vi.fn(), running: false, viewError: false, emit: null as ((f: PoseFrame | null) => void) | null }));
 vi.mock('../../core/robot/RobotCamera', () => ({ RobotCamera: class {
-  constructor(_video: unknown, callback: (f: PoseFrame | null) => void) { mock.emit = callback; }
+  constructor(callback: (f: PoseFrame | null) => void) { mock.emit = callback; }
   get running() { return mock.running; } start = mock.start;
   stop() { mock.running = false; mock.emit?.(null); mock.stop(); }
 } }));
@@ -48,9 +48,9 @@ it('pauses on backgrounding without auto-resuming, and keeps progress on explici
 it('cancels a late camera start after switching to pointer and offers fallback on error', async () => {
   let finish!: (ready: boolean) => void; mock.start.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
   click('[data-camera]'); expect(root.dataset.phase).toBe('loading'); click('[data-pointer]'); finish(true); await settle();
-  expect(root.dataset.phase).toBe('playing'); expect(root.querySelector<HTMLVideoElement>('video')!.hidden).toBe(true);
+  expect(root.dataset.phase).toBe('playing'); expect(root.querySelector('video')).toBeNull();
   click('[data-camera]'); await settle(); expect(root.dataset.phase).toBe('paused'); expect(callbacks.size).toBe(0);
-  expect(root.textContent).toContain('The camera could not start'); click('[data-pointer]'); expect(root.dataset.phase).toBe('playing');
+  expect(root.textContent).toContain('Tracking did not start'); click('[data-pointer]'); expect(root.dataset.phase).toBe('playing');
 });
 it('waits for a fresh camera hand and stops the stream on pause', async () => {
   mock.start.mockImplementationOnce(async () => { mock.running = true; return true; }); click('[data-camera]'); await settle();
@@ -72,7 +72,7 @@ it('keeps camera control for the next mission and shows a completed status', asy
   expect(root.dataset.phase).toBe('complete'); expect(root.querySelector('[data-control-status]')!.textContent).toBe('All three cells are docked!');
   expect(mock.running).toBe(false); click('[data-next]'); await settle();
   expect(mock.start).toHaveBeenCalledTimes(2); expect(root.dataset.phase).toBe('playing');
-  expect(root.querySelector<HTMLVideoElement>('video')!.hidden).toBe(false);
+  expect(root.querySelector('video')).toBeNull();
 });
 
 it('loads only the 3D game by default without a view selector or camera request', () => {

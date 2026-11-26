@@ -1,6 +1,10 @@
 /** Detector-neutral input: image landmarks are unmirrored; world landmarks are in metres. */
 export type PoseLandmark = { x: number; y: number; z: number; visibility?: number };
+export type HandLandmarks = { side: string; score: number; points: PoseLandmark[]; worldPoints?: PoseLandmark[] };
 export type PoseFrame = {
+  /** Multi-hand observations; legacy hand modes still use the first result. */
+  hands?: HandLandmarks[];
+  handTimestampMs?: number;
   /** Optional single-hand detector metadata; absent for body tracking. */
   handedness?: "left" | "right";
   handednessScore?: number;

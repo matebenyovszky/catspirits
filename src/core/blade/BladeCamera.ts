@@ -1,52 +1,51 @@
-import { createTrackingOverlay, type TrackingOverlay } from '../tracking/TrackingOverlay';
-import { sharedCamera } from '../tracking/SharedCamera';
+import { cameraFeed } from '../tracking/CameraFeed';
 import { CameraSwordTracker } from '../tracking/sword/CameraSwordTracker';
 import { SwordMeasurementGate } from '../tracking/sword/SwordMeasurementGate';
 import type { SwordFrame } from '../tracking/sword/types';
 
-/** Independent colour tracking: no body model, microphone, recording or upload. */
 export class BladeCamera {
   private generation = 0;
-  private overlay?: TrackingOverlay;
-  private releaseCamera?: () => void;
-  private cameraAbort?: AbortController;
-  private stream: MediaStream | null = null;
-  private tracker: CameraSwordTracker | null = null;
+  private releaseInput?: () => void;
+  private tracker?: CameraSwordTracker;
   private gate = new SwordMeasurementGate();
-  constructor(private video: HTMLVideoElement, private onFrame: (frame: SwordFrame | null) => void) {}
-  get running(): boolean { return !!this.stream && !!this.tracker?.running; }
+  constructor(private readonly onFrame: (frame: SwordFrame | null) => void) {}
+
+  get running(): boolean { return cameraFeed.running && !!this.tracker?.running; }
   get stats() { return this.tracker?.stats; }
+
   async start(): Promise<boolean> {
-    this.stop(); const generation = this.generation;
-    if (document.hidden || !navigator.mediaDevices?.getUserMedia) throw new Error('camera-unavailable');
-    const lease = sharedCamera.claim('game');
-    this.releaseCamera = lease.release;
-    let stream: MediaStream;
-    try { stream = await lease.ready; }
-    catch (error) { if (generation === this.generation) this.stop(); throw error; }
-    if (generation !== this.generation || document.hidden) { lease.release(); return false; }
-    this.stream = stream; this.video.srcObject = stream;
-    this.video.muted = true; this.video.playsInline = true;
-    this.cameraAbort = new AbortController();
-    for (const track of stream.getTracks()) track.addEventListener('ended', () => {
-      if (generation === this.generation) this.stop();
-    }, { once: true, signal: this.cameraAbort.signal });
+    this.stop();
+    const generation = this.generation;
+    const ready = await cameraFeed.whenReady();
+    if (!ready || generation !== this.generation || document.hidden) return false;
+    const tracker = this.tracker = new CameraSwordTracker(cameraFeed.video, frame => {
+      if (generation !== this.generation) return;
+      const measured = this.gate.accept(frame, performance.now());
+      cameraFeed.publishSword(measured);
+      this.onFrame(measured);
+    });
+    this.releaseInput = cameraFeed.claimInput();
     try {
-      await this.video.play();
-      if (generation !== this.generation) return false;
-      if (document.hidden) { this.stop(); return false; }
-      this.overlay = createTrackingOverlay(this.video);
-      this.tracker = new CameraSwordTracker(this.video, frame => {
-        const measured = this.gate.accept(frame, performance.now());
-        this.overlay?.sword(measured);this.onFrame(measured);
-      });
-      this.tracker.start(); return this.running;
-    } catch (error) { if (generation === this.generation) this.stop(); throw error; }
+      tracker.start();
+      if (this.running) return true;
+    } catch (error) {
+      this.stop();
+      throw error;
+    }
+    this.stop();
+    return false;
   }
+
   stop(): void {
-    ++this.generation; this.cameraAbort?.abort(); this.cameraAbort = undefined; this.tracker?.stop(); this.tracker = null; this.gate.reset();
-    this.overlay?.dispose();this.overlay = undefined;
-    this.releaseCamera?.(); this.releaseCamera = undefined; this.stream = null;
-    this.video.pause(); this.video.srcObject = null; this.onFrame(null);
+    ++this.generation;
+    if (this.tracker) {
+      this.tracker.stop();
+      this.tracker = undefined;
+      cameraFeed.publishSword(null);
+    }
+    this.gate.reset();
+    this.releaseInput?.();
+    this.releaseInput = undefined;
+    this.onFrame(null);
   }
 }

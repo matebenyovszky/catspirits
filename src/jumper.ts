@@ -1,5 +1,7 @@
 import { getLanguage, initializeLanguage, isLanguage, LANGUAGE_KEY, localizedHtml } from './i18n';
+import { HandNavigation } from './ui/hand/HandNavigation';
 import type { GameId } from './ui/shell/GameHeader';
+import { GameFullscreen } from './ui/shell/GameFullscreen';
 import './ui/jumper/jumper.css';
 
 const root = document.querySelector<HTMLElement>('#jumper')!;
@@ -8,22 +10,26 @@ const loaders = {
   jumper: () => import('./ui/jumper/JumperApp').then(({ JumperApp }) => JumperApp),
   blade: () => import('./ui/blade/BladeApp').then(({ BladeApp }) => BladeApp),
   pop: () => import('./ui/pop/PopApp').then(({ PopApp }) => PopApp),
+  galaxy: () => import('./ui/galaxy/GalaxyApp').then(({ GalaxyApp }) => GalaxyApp),
   robot: () => import('./ui/robot/RobotApp').then(({ RobotApp }) => RobotApp),
 };
 let active: { dispose(): void } | undefined;
-let navigation: import('./ui/hand/HandNavigation').HandNavigation | undefined;
+initializeLanguage();
+const navigation = new HandNavigation(root);
+const fullscreen = new GameFullscreen(root, frame => navigation.setFullscreenFrame(frame));
 let revision = 0;
 
 async function renderRoute(focus = false): Promise<void> {
   const current = ++revision;
   const name = new URLSearchParams(location.search).get('game');
-  const game: GameId = name === 'arcade' || name === 'blade' || name === 'pop' || name === 'robot' ? name : 'jumper';
+  const game: GameId = name === 'arcade' || name === 'blade' || name === 'pop' || name === 'robot' || name === 'galaxy' ? name : 'jumper';
   // Load the selected module before replacing a working screen. A rapid click
   // or history traversal can overtake an earlier import.
   try {
     const App = await loaders[game]();
     if (current !== revision) return;
-    navigation?.beforeRouteChange();
+    fullscreen.beforeRouteChange();
+    navigation.beforeRouteChange();
     active?.dispose();
     active = undefined;
     for (const attr of root.getAttributeNames()) if (attr.startsWith('data-')) root.removeAttribute(attr);
@@ -41,7 +47,8 @@ async function renderRoute(focus = false): Promise<void> {
     root.innerHTML = localizedHtml('<section class="jumper-fallback"><h1>Catspirits</h1><p>A játék nem töltődött be. Próbáld újra.</p><button type="button">Újrapróbálás</button></section>');
     root.querySelector('button')?.addEventListener('click', () => void renderRoute());
   }
-  navigation?.refreshLanguage();
+  fullscreen.refresh();
+  navigation.refreshLanguage();
 }
 
 function navigate(url: URL): void {
@@ -72,7 +79,4 @@ root.addEventListener('change', event => {
 });
 window.addEventListener('popstate', () => void renderRoute(true));
 
-initializeLanguage();
 await renderRoute();
-const { HandNavigation } = await import('./ui/hand/HandNavigation');
-navigation = new HandNavigation();

@@ -1,44 +1,63 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { BladeCamera } from './BladeCamera';
-const { started, stopped } = vi.hoisted(() => ({ started: vi.fn(), stopped: vi.fn() }));
-vi.mock('../tracking/sword/CameraSwordTracker', () => ({ CameraSwordTracker: class { running = false; start() { started(); this.running = true; } stop() { stopped(); this.running = false; } } }));
-const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
-describe('standalone sword camera ownership', () => {
-  let camera: BladeCamera, video: HTMLVideoElement, permission: ReturnType<typeof vi.fn<() => Promise<MediaStream>>>;
-  const stream = () => { const track = Object.assign(new EventTarget(), { stop: vi.fn() }); return { track, media: { getTracks: () => [track] } as unknown as MediaStream }; };
+import type { SwordFrame } from '../tracking/sword/types';
+
+const mocked = vi.hoisted(() => ({
+  ready: vi.fn<() => Promise<boolean>>(), started: vi.fn(), stopped: vi.fn(), released: vi.fn(), publish: vi.fn(),
+  video: { pause: vi.fn(), play: vi.fn(), srcObject: {} },
+  callback: undefined as ((frame: SwordFrame | null) => void) | undefined,
+}));
+vi.mock('../tracking/CameraFeed', () => ({
+  cameraFeed: { video: mocked.video, running: true, whenReady: mocked.ready, claimInput: () => mocked.released, publishSword: mocked.publish },
+}));
+vi.mock('../tracking/sword/CameraSwordTracker', () => ({
+  CameraSwordTracker: class {
+    running = false;
+    constructor(video: HTMLVideoElement, receive: (frame: SwordFrame | null) => void) {
+      expect(video).toBe(mocked.video);
+      mocked.callback = receive;
+    }
+    start() { mocked.started(); this.running = true; }
+    stop() { mocked.stopped(); this.running = false; }
+  },
+}));
+
+describe('wand consumer of the shared preview', () => {
+  let camera: BladeCamera;
+  const frame = (): SwordFrame => ({
+    timestampMs: performance.now(), base: { x: .16, y: .2 }, tip: { x: .54, y: .25 }, confidence: 1,
+    imageAspectRatio: 4 / 3, source: 'four-ring-2d',
+  });
   beforeEach(() => {
-    started.mockClear(); stopped.mockClear(); permission = vi.fn();
-    vi.stubGlobal('document', { hidden: false }); vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: permission } });
-    video = { play: vi.fn(async () => {}), pause: vi.fn(), srcObject: null } as unknown as HTMLVideoElement;
-    camera = new BladeCamera(video, vi.fn());
+    vi.clearAllMocks();
+    vi.stubGlobal('document', { hidden: false });
+    mocked.ready.mockResolvedValue(true);
+    camera = new BladeCamera(vi.fn());
   });
   afterEach(() => { camera.stop(); vi.unstubAllGlobals(); });
-  it('closes a permission grant that arrives after cancel, without starting a worker', async () => {
-    const source = stream(); let grant!: (s: MediaStream) => void;
-    permission.mockReturnValueOnce(new Promise(resolve => { grant = resolve; }));
-    const start = camera.start(); camera.stop(); grant(source.media); await start;
-    expect(source.track.stop).toHaveBeenCalledOnce(); expect(started).not.toHaveBeenCalled(); expect(video.srcObject).toBeNull();
+
+  it('publishes valid wand measurements and clears only its layer on stop', async () => {
+    expect(await camera.start()).toBe(true);
+    mocked.callback?.(frame());
+    expect(mocked.publish).toHaveBeenCalledWith(expect.objectContaining({ source: 'four-ring-2d' }));
+    camera.stop();
+    expect(mocked.stopped).toHaveBeenCalledOnce();
+    expect(mocked.released).toHaveBeenCalledOnce();
+    expect(mocked.publish).toHaveBeenLastCalledWith(null);
+    expect(mocked.video.pause).not.toHaveBeenCalled();
+    expect(mocked.video.play).not.toHaveBeenCalled();
+    expect(mocked.video.srcObject).not.toBeNull();
   });
-  it('shares a pending prompt on restart and stops on an ended track', async () => {
-    const source = stream();
-    let grant!: (s: MediaStream) => void;
-    permission.mockReturnValueOnce(new Promise(resolve => { grant = resolve; }));
-    const first = camera.start(), second = camera.start();
-    grant(source.media);
-    expect(await first).toBe(false);
-    expect(await second).toBe(true);
-    expect(permission).toHaveBeenCalledOnce();
-    expect(video.srcObject).toBe(source.media);
-    expect(started).toHaveBeenCalledOnce();
-    source.track.dispatchEvent(new Event('ended'));
-    expect(camera.running).toBe(false);
-    expect(video.srcObject).toBeNull();
-  });
-  it('releases the stream when playback fails or the page hides while permission is pending', async () => {
-    const source = stream(); permission.mockResolvedValue(source.media); vi.mocked(video.play).mockRejectedValueOnce(new Error('play'));
-    await expect(camera.start()).rejects.toThrow('play'); expect(source.track.stop).toHaveBeenCalledOnce();
-    let grant!: (s: MediaStream) => void; permission.mockReturnValueOnce(new Promise(resolve => { grant = resolve; }));
-    const late = stream(), start = camera.start(); Object.assign(document, { hidden: true }); grant(late.media); await start; await flush();
-    expect(late.track.stop).toHaveBeenCalledOnce(); expect(started).not.toHaveBeenCalled();
+
+  it('ignores a late ready result after cancellation and does not start in the background', async () => {
+    let ready!: (value: boolean) => void;
+    mocked.ready.mockReturnValueOnce(new Promise(resolve => { ready = resolve; }));
+    const pending = camera.start();
+    camera.stop();
+    ready(true);
+    expect(await pending).toBe(false);
+    Object.assign(document, { hidden: true });
+    expect(await camera.start()).toBe(false);
+    expect(mocked.started).not.toHaveBeenCalled();
   });
 });

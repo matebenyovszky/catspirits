@@ -10,12 +10,16 @@ export class HandPointer {
   private popup?: HTMLElement;
   private rangeChanged = false;
   private allowCanvas = true;
+  get pressed(): boolean { return this.target !== null; }
   get canDrag(): boolean { return this.target instanceof HTMLCanvasElement || (this.target instanceof HTMLInputElement && this.target.type === 'range'); }
+  private gameOwns(target: HTMLElement): boolean {
+    return !this.allowCanvas && (target instanceof HTMLCanvasElement || !!target.closest('[data-hand-playfield]'));
+  }
   private actionable(element: Element | null): HTMLElement | null {
     const target = element?.closest<HTMLElement>('button,a[href],input,select,label,summary,canvas,[role="button"]') ?? null;
     if (!target || target.closest('[inert],[hidden]') || target.matches(':disabled,[aria-disabled="true"]')) return null;
     if (target instanceof HTMLLabelElement && target.control) return target.control.matches(':disabled') ? null : target.control;
-    return target instanceof HTMLCanvasElement && !this.allowCanvas ? null : target;
+    return this.gameOwns(target) ? null : target;
   }
   private dispatch(target: HTMLElement, type: string, buttons: number): boolean {
     return target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: HAND_POINTER_ID,
@@ -24,17 +28,22 @@ export class HandPointer {
   move(x: number, y: number, allowCanvas = true): boolean {
     this.x = x; this.y = y; this.allowCanvas = allowCanvas;
     const hit = this.actionable(document.elementFromPoint(x,y));
-    if (hit !== this.hover) {
-      if (this.hover instanceof HTMLCanvasElement) this.dispatch(this.hover, 'pointerout', 0);
-      this.hover?.classList.remove('hand-hover'); this.hover = hit; hit?.classList.add('hand-hover');
-    }
-    if (this.target && (!this.target.isConnected || this.target.closest('[inert],[hidden]') || this.target.matches(':disabled') || (!allowCanvas && this.target instanceof HTMLCanvasElement))) this.cancel();
+    this.setHover(hit);
+    if (this.target && (!this.target.isConnected || this.target.closest('[inert],[hidden]') || this.target.matches(':disabled') || this.gameOwns(this.target))) this.cancel();
     if (this.target) {
       this.dispatch(this.target, 'pointermove', 1);
       this.updateRange(this.target);
     } else if (hit) this.dispatch(hit, 'pointermove', 0);
     return !!hit;
   }
+  private setHover(target: HTMLElement | null): void {
+    if (target === this.hover) return;
+    if (this.hover instanceof HTMLCanvasElement) this.dispatch(this.hover, 'pointerout', 0);
+    this.hover?.classList.remove('hand-hover');
+    this.hover = target;
+    this.hover?.classList.add('hand-hover');
+  }
+  leave(): void { this.cancel(); this.setHover(null); }
   down(): void {
     if (this.target) return;
     this.target = this.actionable(document.elementFromPoint(this.x,this.y));
@@ -75,7 +84,7 @@ export class HandPointer {
       button.addEventListener('click',()=>{ if(!select.isConnected || select.disabled){this.closePopup();return;}const changed=select.value!==option.value;select.value=option.value;this.closePopup();if(changed){select.dispatchEvent(new Event('input',{bubbles:true}));select.dispatchEvent(new Event('change',{bubbles:true}));} });popup.append(button);
     }
     const close=document.createElement('button');close.type='button';close.textContent=t('Bezárás');close.addEventListener('click',()=>this.closePopup());popup.append(close);
-    (document.fullscreenElement ?? document.body).append(popup);this.popup=popup;
+    (select.closest('[data-game-expanded]') ?? document.body).append(popup);this.popup=popup;
   }
   closePopup(): void { this.popup?.remove();this.popup=undefined; }
   scroll(direction: number): void {
@@ -91,5 +100,5 @@ export class HandPointer {
     }
     window.scrollBy(0,direction);
   }
-  dispose(): void {this.cancel();this.hover?.classList.remove('hand-hover');this.hover=null;this.closePopup();}
+  dispose(): void { this.leave(); this.closePopup(); }
 }

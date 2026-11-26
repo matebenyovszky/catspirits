@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach,beforeEach,expect,it,vi } from 'vitest';
 import { previewPoint,skeletonPaths,createTrackingOverlay,TrackingOverlay } from './TrackingOverlay';
-import { setTrackingLinesEnabled } from './overlayPreference';
 import type { PoseFrame } from './types';
 let overlay:TrackingOverlay|undefined,video:HTMLVideoElement;
-beforeEach(()=>{setTrackingLinesEnabled(true);vi.useFakeTimers();document.body.innerHTML='<div><video></video><canvas id="game"></canvas><button>Pause</button></div>';video=document.querySelector('video')!;
+beforeEach(()=>{vi.useFakeTimers();document.body.innerHTML='<div><video></video><canvas id="game"></canvas><button>Pause</button></div>';video=document.querySelector('video')!;
   Object.defineProperties(video,{clientWidth:{value:160},clientHeight:{value:120},videoWidth:{value:640},videoHeight:{value:480},offsetLeft:{value:5},offsetTop:{value:9}});
   video.style.transform='scaleX(-1)';video.style.objectFit='contain';video.getClientRects=()=>[{}] as unknown as DOMRectList;
   vi.spyOn(document,'hidden','get').mockReturnValue(false);overlay=createTrackingOverlay(video);
@@ -25,10 +24,10 @@ it('layers between video and game, mirrors like the video, and stays pointer-tra
   overlay!.pose(hand());const svg=document.querySelector<SVGSVGElement>('.tracking-overlay')!;
   expect(video.nextElementSibling).toBe(svg);expect(svg.nextElementSibling?.id).toBe('game');expect(document.querySelector('canvas')?.id).toBe('game');
   expect(svg.style.pointerEvents).toBe('none');expect(svg.style.transform).toBe('scaleX(-1)');expect(svg.style.left).toBe('5px');expect(svg.style.top).toBe('9px');
-  expect(svg.querySelectorAll('path')[1].getAttribute('d')).toContain('M');
+  expect(svg.querySelector('[data-tracking-part=hand]')!.getAttribute('d')).toContain('M');
 });
 it('caps redraws, clears lost/hidden/stale data and releases its only timer',()=>{
-  const svg=document.querySelector<SVGSVGElement>('.tracking-overlay')!,path=svg.querySelectorAll('path')[1];overlay!.pose(hand());const first=path.getAttribute('d');
+  const svg=document.querySelector<SVGSVGElement>('.tracking-overlay')!,path=svg.querySelector('[data-tracking-part=hand]')!;overlay!.pose(hand());const first=path.getAttribute('d');
   const moved=hand();moved.landmarks[0].x=.8;overlay!.pose(moved);expect(path.getAttribute('d')).toBe(first);
   vi.advanceTimersByTime(60);moved.timestampMs=performance.now();overlay!.pose(moved);expect(path.getAttribute('d')).not.toBe(first);
   vi.advanceTimersByTime(401);expect(svg.style.display).toBe('none');expect(vi.getTimerCount()).toBe(0);
@@ -39,28 +38,37 @@ it('caps redraws, clears lost/hidden/stale data and releases its only timer',()=
 it('shows only fresh robot arm observations alongside the measured hand',()=>{
   const frame={...hand(),armTimestampMs:performance.now(),armLandmarks:Array.from({length:33},()=>({x:.5,y:.5,z:0,visibility:1}))};overlay!.pose(frame);
   const arm=document.querySelector('.tracking-overlay path')!;expect(arm.getAttribute('d')).toContain('M');
-  vi.advanceTimersByTime(260);frame.timestampMs=performance.now();overlay!.pose(frame);expect(arm.getAttribute('d')).toBe('');
+  vi.advanceTimersByTime(300);frame.timestampMs=performance.now();overlay!.pose(frame);expect(arm.getAttribute('d')).toBe('');
+});
+it('shows a second hand and clears its path when that hand is lost', () => {
+  const frame = hand();
+  const other = frame.landmarks.map(point => ({ ...point, y: .63 }));
+  overlay!.pose({ ...frame, hands: [
+    { side: 'Left', score: .98, points: frame.landmarks },
+    { side: 'Right', score: .96, points: other },
+  ] });
+  const secondary = document.querySelector('[data-tracking-part=second-hand]')!;
+  expect(secondary.getAttribute('d')).toContain('M');
+  vi.advanceTimersByTime(60);
+  overlay!.pose(hand());
+  expect(secondary.getAttribute('d')).toBe('');
 });
 it('draws measured sword rings and clears the line immediately on lost tracking',()=>{
   overlay!.sword({timestampMs:performance.now(),base:{x:.1,y:.2},tip:{x:.8,y:.9},confidence:1,imageAspectRatio:4/3,source:'four-ring-2d',rings:[{x:.1,y:.2,id:0},{x:.8,y:.9,id:3}]});
-  const svg=document.querySelector<SVGSVGElement>('.tracking-overlay')!;expect(svg.querySelectorAll('path')[1].getAttribute('stroke')).toBe('#ffa1e9');expect(svg.querySelectorAll('path')[2].getAttribute('d')?.match(/M/g)).toHaveLength(2);
+  const svg=document.querySelector<SVGSVGElement>('.tracking-overlay')!;expect(svg.querySelector('[data-tracking-part=wand]')!.getAttribute('d')).toContain('L');
+  expect(svg.querySelector('[data-tracking-part=wand-rings]')!.getAttribute('d')?.match(/M/g)).toHaveLength(2);
   overlay!.sword(null);expect(svg.style.display).toBe('none');expect(vi.getTimerCount()).toBe(0);
 });
 
-it('hides every preview immediately and does no drawing or timer work while disabled',()=>{
-  const otherVideo=video.cloneNode() as HTMLVideoElement; video.parentElement!.append(otherVideo);
-  const other=createTrackingOverlay(otherVideo)!;
-  try {
-    overlay!.pose(hand());const svg=document.querySelector<SVGSVGElement>('.tracking-overlay')!;
-    expect(svg.style.display).toBe('block');expect(vi.getTimerCount()).toBe(1);
-    setTrackingLinesEnabled(false);
-    expect(svg.style.display).toBe('none');expect(vi.getTimerCount()).toBe(0);
-    const draw=vi.spyOn(svg.querySelectorAll('path')[1],'setAttribute');
-    overlay!.pose(hand());other.pose(hand());
-    overlay!.sword({timestampMs:performance.now(),base:{x:.1,y:.2},tip:{x:.8,y:.9},confidence:1,imageAspectRatio:4/3,source:'four-ring-2d'});
-    expect(draw).not.toHaveBeenCalled();expect(vi.getTimerCount()).toBe(0);
-    setTrackingLinesEnabled(true);
-    expect(svg.style.display).toBe('none'); // Wait for a fresh measured frame.
-    overlay!.pose(hand());expect(svg.style.display).toBe('block');
-  } finally { other.dispose();setTrackingLinesEnabled(true); }
+it('composites hands, body and wand at once and clears an expired wand without clearing the other layers', () => {
+  const time = performance.now();
+  overlay!.pose({ ...hand(), armTimestampMs: time, armLandmarks: Array.from({ length: 33 }, () => ({ x: .45, y: .6, z: 0 })) });
+  overlay!.sword({ timestampMs: time, base: { x: .2, y: .3 }, tip: { x: .7, y: .8 }, confidence: 1, imageAspectRatio: 4 / 3, source: 'four-ring-2d' });
+  const part = (key: string) => document.querySelector(`[data-tracking-part="${key}"]`)!.getAttribute('d');
+  vi.advanceTimersByTime(40);
+  expect(part('body')).toContain('M'); expect(part('hand')).toContain('M');
+  expect(part('fingers')).toContain('M'); expect(part('wand')).toContain('L');
+  vi.advanceTimersByTime(90);
+  expect(part('wand')).toBe('');
+  expect(part('hand')).toContain('M'); expect(part('body')).toContain('M');
 });

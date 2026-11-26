@@ -1,63 +1,65 @@
 import type { MotionInput } from '../tracking/types';
 import { emptyMotionInput } from '../tracking/types';
 import { BodyMotionInput } from '../tracking/BodyMotionInput';
-import type { CameraPoseTracker } from '../tracking/CameraPoseTracker';
+import { cameraFeed } from '../tracking/CameraFeed';
 import type { CameraSwordTracker } from '../tracking/sword/CameraSwordTracker';
 import { validSword, type SwordFrame } from '../tracking/sword/types';
 
 export class JumperCamera {
-  private tracker?: CameraPoseTracker;
+  private subscriptions: (() => void)[] = [];
+  private releaseInput?: () => void;
   private body = new BodyMotionInput('quick', 'torso');
   private response: 'quick' | 'steady' = 'quick';
   private motion = emptyMotionInput();
   private lastFrame = 0;
   private generation = 0;
   private active = false;
+  private gameplayActive = false;
   private sword?: CameraSwordTracker;
   private swordFrame: SwordFrame | null = null;
   private swordGeneration = 0;
-  constructor(private video: HTMLVideoElement, private onJump: (strength: number) => void,
+  constructor(private onJump: (strength: number) => void,
     private onStatus: (message: string, state: string) => void) {}
+
+  setGameplayActive(active: boolean): void {
+    this.gameplayActive = active;
+    if (active && this.subscriptions.length && !this.releaseInput) this.releaseInput = cameraFeed.claimInput();
+    if (!active) {
+      this.releaseInput?.();
+      this.releaseInput = undefined;
+    }
+  }
 
   setResponse(response: 'quick' | 'steady'): void {
     if (this.response === response) return;
     this.response = response;
     this.body = new BodyMotionInput(response === 'quick' ? 'quick' : 'standard', 'torso');
     this.motion = emptyMotionInput(); this.lastFrame = 0;
-    this.tracker?.setInputWidth(response === 'quick' ? 320 : 480);
   }
 
   async start(): Promise<boolean> {
-    this.stop(); const generation = ++this.generation;
-    this.active = true; this.body.reset();
-    this.onStatus('Kamera és testkövető indítása…', 'loading');
-    try {
-      const { CameraPoseTracker } = await import('../tracking/CameraPoseTracker');
-      if (generation !== this.generation) return false;
-      this.tracker = new CameraPoseTracker(this.video, {
-        onFrame: frame => {
-          if (generation !== this.generation || !this.active) return;
-          this.lastFrame = performance.now(); this.motion = this.body.update(frame);
-          if (this.motion.jump) this.onJump(this.motion.jumpStrength ?? .8);
-        },
-        onStatus: status => {
-          if (generation !== this.generation) return;
-          if (status.state === 'error' || status.state === 'idle') {
-            this.active = false; this.motion = emptyMotionInput();
-            this.stopSword();
-          }
-          this.onStatus(status.message, status.state);
-        },
-      });
-      this.tracker.setInputWidth(this.response === 'quick' ? 320 : 480);
-      await this.tracker.start();
-      return generation === this.generation && this.active;
-    } catch (error) {
-      if (generation !== this.generation) return false;
-      this.stop();
-      this.onStatus(error instanceof Error ? error.message : 'A kamera nem indult el.', 'error');
-      return false;
-    }
+    this.stop();
+    const generation = this.generation;
+    this.body.reset();
+    this.subscriptions = [
+      cameraFeed.onBody(frame => {
+        if (!this.active) return;
+        this.lastFrame = performance.now();
+        this.motion = this.body.update(frame);
+        if (this.motion.jump) this.onJump(this.motion.jumpStrength ?? .8);
+      }),
+      cameraFeed.onStatus(status => {
+        this.active = status.state === 'tracking';
+        if (!this.active) {
+          this.motion = emptyMotionInput();
+          this.stopSword();
+        }
+        this.onStatus(status.message, status.state);
+      }),
+    ];
+    this.setGameplayActive(this.gameplayActive);
+    const ready = await cameraFeed.whenReady();
+    return ready && generation === this.generation;
   }
 
   input(autoRun: boolean): MotionInput {
@@ -73,8 +75,10 @@ export class JumperCamera {
     try {
       const { CameraSwordTracker } = await import('../tracking/sword/CameraSwordTracker');
       if (generation !== this.swordGeneration || !this.active) return false;
-      this.sword = new CameraSwordTracker(this.video, frame => {
-        if (generation === this.swordGeneration) this.swordFrame = frame;
+      this.sword = new CameraSwordTracker(cameraFeed.video, frame => {
+        if (generation !== this.swordGeneration) return;
+        this.swordFrame = frame;
+        cameraFeed.publishSword(frame);
       });
       this.sword.start();
       return this.sword.running;
@@ -88,11 +92,19 @@ export class JumperCamera {
     return this.active && frame && validSword(frame, performance.now()) ? frame : null;
   }
   private stopSword(): void {
-    ++this.swordGeneration; this.sword?.stop(); this.sword = undefined; this.swordFrame = null;
+    ++this.swordGeneration;
+    if (this.sword) { this.sword.stop(); cameraFeed.publishSword(null); }
+    this.sword = undefined;
+    this.swordFrame = null;
   }
   stop(): void {
     this.stopSword();
-    ++this.generation; this.active = false; this.tracker?.dispose(); this.tracker = undefined;
+    ++this.generation;
+    this.active = false;
+    this.subscriptions.forEach(release => release());
+    this.subscriptions = [];
+    this.releaseInput?.();
+    this.releaseInput = undefined;
     this.motion = emptyMotionInput(); this.body.reset(); this.lastFrame = 0;
   }
 }

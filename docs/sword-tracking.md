@@ -19,9 +19,9 @@ Use the existing **50 cm, approximately 25 mm diameter, soft-ended pink/green ma
 
 Bands wrap around the wand. Show all four to acquire; three can also acquire a compatible, unambiguous fit. Two fresh identified rings may maintain an existing fit. Diffuse light and a plain background help. Use a soft play wand, leave clear space, and keep the phone stable. Only the section between the outer band centres is the virtual blade. It is a 2D image-plane measurement, not a calibrated 3D sword or a general detector for arbitrary swords.
 
-Press **Camera & marker wand**, allow video access, show the bands, then start. No full-body framing or body-model download is needed. The camera image and arena share the same aspect ratio and mirrored coordinates, without cropping the camera frame. No software zoom or higher camera resolution was added.
+Allow camera access when you open CatSpirits. Press **Play with the marker wand**, show the bands, then start. The camera preview and arena use mirrored coordinates. The preview shows the measured wand alongside any visible body and hand landmarks.
 
-Drag while pressed for mouse/touch practice. Pause stops the camera. Resume explicitly restarts it and waits for a fresh measurement. Hidden pages stop camera, audio and animation; returning to the page never silently reacquires the camera. Every rejected/missing observation immediately breaks the collision sweep. The clock and loss notice tolerate gaps up to 240 ms from the last accepted capture, so a single blurred frame does not freeze gameplay. Visible blade freshness and collision input remain limited to 120 ms; a stale or rejected frame never earns points. Longer loss freezes the clock and targets; a stopped camera pauses immediately.
+Drag while pressed to practise with the hand cursor, mouse or touch. Pausing stops wand detection and leaves the shared preview available. Resume waits for a fresh wand measurement. Hidden pages stop the camera, audio and animation. The shared feed resumes in the foreground. Each missing observation breaks the collision sweep. The clock and loss notice tolerate gaps up to 240 ms from the last accepted capture. Visible blade and collision input use measurements up to 120 ms old. Longer loss freezes the clock and targets. A stopped camera pauses immediately.
 
 ## Ported tracking
 
@@ -37,7 +37,7 @@ The original two-colour detector and camera-sharing `JumperCamera.setSwordEnable
 
 ## Budget and privacy
 
-Neon Blade uses Canvas 2D, a fixed ten-target pool and bounded particles. No Three.js, MediaPipe model, AprilTag, native helper, WebGPU neural runtime or new npm runtime dependency is loaded for it. Rendering caps at 60 Hz; idle menus do not animate. Crystal glows and hit-number glyphs are pre-rendered at resize, and the adaptive collision search has a fixed 128-node budget. Unresolved grazing contacts fail closed. Canvas pixels are capped at 1440×1080 / DPR 1.5. Camera frames remain on the device and are neither recorded nor uploaded. The colour kernel is hosted on the same origin, with JavaScript fallback if it cannot load.
+Neon Blade uses Canvas 2D, a fixed ten-target pool and bounded particles. The wand tracker reads the shared video in its own worker. Arena rendering caps at 60 Hz. Crystal glows and hit-number glyphs are pre-rendered at resize, and the adaptive collision search has a fixed 128-node budget. Unresolved grazing contacts fail closed. Canvas pixels are capped at 1440×1080 / DPR 1.5. Camera frames stay on the device. The colour kernel is hosted on the same origin, with JavaScript fallback if it cannot load.
 
 Only language and best scores are persisted. Level 1 uses `catspirits.neon-blade.best.v1`; level 2 uses `catspirits.neon-blade.best.v2`, preserving both earlier records. Cloudflare still handles ordinary hosting/security metadata, as explained in the in-game privacy information and [security review](security-review.md).
 

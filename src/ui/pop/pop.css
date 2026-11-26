@@ -4,3 +4,9 @@
 @media(max-width:700px){.pop-math-panel{gap:2px;padding:5px 2px}.pop-math-panel strong{font-size:16px}.pop-math-panel small{font-size:7px}.pop-math-panel span{font-size:8px}.pop-math-controls{gap:8px}.pop-math-controls button{font-size:10px}}
 
 .pop-math-panel[data-feedback=resetting]{border-color:#ffb18c;background:#452d28ee}
+
+.blade-play[data-game-expanded] .pop-math-controls {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  padding-inline-end: calc(var(--camera-preview-width) + var(--camera-preview-right) + 8px);
+}

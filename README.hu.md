@@ -1,10 +1,14 @@
 # Catspirits · Kamerával irányítható mozgásjátékok
 
-**Kamerával vezérelt, aktív mozgásjáték: a tested mozdulataival irányítod Bitet.** Ugorj, hajolj le, és dőlj oldalra öt neonvilágon át a [catspirits.com](https://catspirits.com) játékában! A mozgást a böngésző helyben követi, a kamerakép a gépeden marad. Magyarul, angolul és németül játszható. Kamera nélkül billentyűvel és érintéssel is működik.
+**Kamerával vezérelt, aktív mozgásjáték: a tested mozdulataival irányítod Bitet.** Ugorj, hajolj le, és dőlj oldalra öt neonvilágon át a [catspirits.com](https://catspirits.com) játékában! A mozgást a böngésző helyben követi, a kamerakép a gépeden marad. Magyarul, angolul és németül játszható. A kamera mellett billentyűvel és érintéssel is irányíthatod a játékot.
 
 [Motion Arcade – hat játszható küldetés](https://catspirits.com/?game=arcade&lang=hu) · [Standi bemutató és játékötletek](docs/festival-hu.md) · [English README](README.md) · [Mozgás és vezérlés](docs/game.md) · [Neon Blade kardos játék](docs/sword-tracking.md) · [Neon Pop célzós játék](docs/neon-pop.md) · [Cloudflare útmutató](docs/cloudflare.md)
 
 A repó minden szükséges forrást, függőséget, tesztet és saját buildet tartalmaz. Nem kell hozzá az eredeti avataros alkalmazás, AI-fiók, API-kulcs, backend vagy helyi kamerasegéd.
+
+## Galaxisfa
+
+A játékválasztóban a **Galaxisfa** egy 3D-s merülés a csillagtengerben. A nyolc ágon tizenhat fényhernyót kell elkapni, majd a törzs túloldalán megkeresni a Csillagmagot. Húzással vagy a nyilakkal fordulhatsz, a látható hernyókat kattintással, koppintással vagy Tab és Enter billentyűvel foghatod el. A helyi kamerakövetés csippentéssel működteti a hernyókat és a navigációs nyilakat. Tartott csippentéssel fordulhatsz, két kézzel közelíthetsz. A Tératlasz macOS-segédjével az AirPods fejkövetés az 5173-as fejlesztői és a 4173-as előnézeti localhost porton használható.
 
 ## Indítás
 
@@ -34,7 +38,7 @@ A helyi publikálási parancs `npm run deploy:cloudflare`; a feltöltés nélkü
 
 ## Kamera és mentés
 
-A kamerás mozgás az alapértelmezett vezérlés. Nyomd meg a **Kamera indítása** gombot, engedélyezd a hozzáférést, és állj egyenesen úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugrással, lehajolással és oldalra dőléssel játszhatsz. A kamera az indítógomb megnyomásáig nem kapcsol be. Kamera nélküli játékhoz válaszd a billentyűs/érintéses módot. A képet a böngésző helyben dolgozza fel, nem rögzítjük vagy küldjük játékszerverre. Az első indításhoz internet kell a MediaPipe és a modell letöltéséhez; a billentyűs/érintéses játék ezeket nem tölti le. Kamerához HTTPS vagy localhost szükséges. A szintetikus próbák mellett az emberes pontosságot még ellenőrizni kell.
+A CatSpirits megnyitásakor engedélyezd a kamerát. Minden játékhoz szükség van rá. A Cyber Jumperben a **Testkalibrálás** után állj egyenesen úgy, hogy a vállad és a csípőd látszódjon. Kalibrálás után ugrással, lehajolással és oldalra dőléssel játszhatsz. A böngésző helyben dolgozza fel a képet, a képkockák az eszközödön maradnak. Az első indításkor a MediaPipe és a kéz- és testkövető modellek erről az oldalról töltődnek le. A kamerához HTTPS vagy localhost szükséges.
 
 A mentés saját `catspirits.cyber-jumper.v1` kulcsot használ, az eredeti app mentését nem módosítja. A localhost és a majdani catspirits.com külön böngészős mentést kap. Nincs fiók, mérés, szerveres ranglista vagy felhőmentés.
 
@@ -42,7 +46,7 @@ A mentés saját `catspirits.cyber-jumper.v1` kulcsot használ, az eredeti app m
 
 A [Neon Blade](https://catspirits.com/?game=blade&lang=hu) külön választható, egyperces kardos játék. A Puppet2-ben használt négysávos rózsaszín–zöld, puha jelölőbottal vághatók a kristályok. Az 1. szinten bármilyen irányú vágás jó, tüskék nélkül. A 2. szinten a nyilakat kell követni; a második hullámtól piros tüskék is jönnek. Minden kristály külön aktív, egy suhintás többet is eltalálhat. Három hullám, aranykristályok, kombók és legfeljebb négyszeres pontszorzó; egérrel és érintéssel is kipróbálható. A két vezérlés rekordja külön tárolódik.
 
-A kardkövetés helyben fut, testkövető modell és 3D motor nélkül. A gyors natív képbemenet mellett megmarad a kompatibilis tartalékút. A bot méretei és a működés részletei: [kardos útmutató](docs/sword-tracking.md). Az átvett optimalizálások: [Puppet2-port](docs/puppet2-port.md).
+A kardkövetés helyben fut, és játék közben a közös kamerát használja. A gyors natív képbemenet mellett megmarad a kompatibilis tartalékút. [A bot méretei és követése](docs/sword-tracking.md) · [Puppet2-port](docs/puppet2-port.md)
 
 ## Licenc, biztonság és erőforrások
 
@@ -57,7 +61,7 @@ Játék közben legfeljebb 60, menüben 30 renderfrissítés történik másodpe
 
 A [Neon Pop](https://catspirits.com/?game=pop&lang=hu) külön, 45 másodperces célzós tesztjáték. A felbukkanó fénylényeket kamerával követett kézzel vagy jelölőbottal lehet lecsapni; egérrel és érintéssel is működik. Mindkét kéz és minden célpont külön aktív, nincs kötelező vágási irány. A körív mutatja a célpont hátralévő idejét.
 
-Kézi módban a meglévő, helyben futó modell a csuklókat figyeli; a váll, könyök és kéz legyen látható. A kardos mód csak a könnyebb színkövetést használja. Nincs kameraképfeltöltés, és egyszerre csak a kiválasztott követő fut. A valódi kamerás pontosságot még érdemes különféle telefonokon kipróbálni.
+Kézi módban a közös testkövető a csuklókat figyeli. A váll, könyök és kéz legyen látható. Botos játékban a színkövető ugyanazt a kameraképet használja. [Neon Pop vezérlése](docs/neon-pop.md)
 
 
 ## Bit Rescue — virtuális robotkar
@@ -73,12 +77,14 @@ A **hangszóróikon** minden játékban megjegyzi a választást. A Cyber Jumper
 
 ### Kézkurzor a teljes felületen
 
-A **Kézkurzor** gombot először egérrel vagy érintéssel kapcsold be, és engedélyezd a kamerát. Nyitott kézzel mozgasd a kurzort; a hüvelyk- és mutatóujj összecsippentésével lenyomsz, elengedésével kattintasz, összetartva húzhatsz. A felső/alsó képernyőszélen rövid várakozás után görget. Gombok, linkek, választók, jelölőnégyzetek és csúszkák is működnek; a legördülőket oldalon belüli választó jeleníti meg. Kamerás játék közben a kurzor a kezelőfelületet vezérli, a játéktér saját mozgásvezérlése megmarad. Egér/érintés módban a játéktérre is küldhet mutatóeseményeket. A böngésző saját felülete, engedélykérései és a teljes képernyőbe lépés továbbra is fizikai kattintást igényelhetnek.
+A kézkurzor a kameraengedély megadása után automatikusan elindul. Nyitott kézzel mozgasd a kurzort. Csippents a hüvelyk- és mutatóujjaddal, majd kattintáshoz engedd el őket. Tartott csippentéssel húzhatsz, a képernyőszélen várva pedig görgethetsz a menükben. A menüre célzott csippentést a menü kapja, a pályán pedig az adott játék kezeli a saját gesztusait.
 
-A kézkurzor játék- és nyelvváltáskor tovább működik ugyanabban a lapon. A játék és a kurzor egy kamerafolyamot használ. Háttérben a kamera leáll. Visszatérve a kurzor csak meglévő böngészőengedéllyel indul el automatikusan, egyébként a következő kattintásra vár. A Kézkurzor gombbal kikapcsolható. A kézkurzor legfeljebb 24 Hz-en, aktív kamerás játék mellett 12 Hz-en dolgozik, a testkövetéssel sorosan. A Bit Rescue meglévő kézpontjait újabb kézmodell nélkül használja. Kézvesztés megszakítja a kattintást. Minden képfeldolgozás helyi; a bekapcsolt kurzor további CPU/GPU-munkát jelent.
+A jobb felső teljesképernyő-ikon az aktuális játékteret nagyítja ki a vezérlőkkel és az élő kameraelőnézettel együtt. Csippentésre a játék kitölti a böngészőablakot. Kattintással vagy koppintással a támogatott böngészőkben a teljes kijelzőt is használhatod. Visszalépéshez használd újra az ikont vagy nyomd meg az Esc billentyűt.
+
+Játék- és nyelvváltáskor ugyanaz a kamera és kézkövető működik tovább. A háttérbe tett lap elengedi a kamerát, visszatéréskor újraindítja. Ha a hozzáférés sikertelen, a **Kamera újraindítása** gombbal próbálkozhatsz újra. A kézvesztés és az irányítás átadása megszakítja a csippentést. Új csippentés előtt nyisd ki a kezed.
 
 ### Stabil csippentés és kamerajelölések
 
 A csippentés a nyitott kéz utolsó kurzorhelyét rögzíti, rövid elengedési türelmi idővel. Gomboknál és linkeknél megmarad a célpont; a játéktér és csúszkák húzása 200 ms tartás és tartós, legalább 24 képernyőpixelnyi tenyérmozgás után indul. Kézvesztés megszakítja a kattintást.
 
-Minden aktív kamera-előnézet a saját követője által már mért test-, kéz- vagy kardpontokat mutatja. A robotnál a friss kar- és ujjpontok együtt látszanak. A tükrözést és képkivágást követő SVG nem fogja el a kattintásokat, legfeljebb 20-szor frissül másodpercenként, és eltűnik a jel vagy a kamera megszűnésekor. Ehhez nincs újabb modell, kamerafolyam, képpont-visszaolvasás vagy szerverkérés.
+A jobb alsó sarokban lévő, tükrözött előnézet megmutatja a követett testet és mindkét kéz ujjait. Botos játékban ugyanitt a bot vonala és az érzékelt gyűrűk is megjelennek. Ha valamelyik már nincs a képen, a hozzá tartozó vonalak eltűnnek.

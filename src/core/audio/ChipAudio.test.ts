@@ -91,14 +91,17 @@ it('can restart music after a temporary tracking stop without a new user gesture
   audio.play(); expect(audio.snapshot().active).toBe(true); expect(vi.getTimerCount()).toBe(1); audio.dispose();
 });
 
-it('gives each game a distinct upbeat arrangement with bounded voices', async () => {
-  expect(new Set(Object.values(AUDIO_THEMES).map(t=>JSON.stringify(t.melody))).size).toBe(10);
-  expect(Object.values(AUDIO_THEMES).every(t=>t.bpm>=126 && t.bpm<=154)).toBe(true);
-  for (const theme of ['jumper','pop','blade','robot'] as const) {
+it('gives each game a distinct arrangement with bounded voices', async () => {
+  const themes = Object.values(AUDIO_THEMES);
+  expect(new Set(themes.map(t=>JSON.stringify(t.melody))).size).toBe(themes.length);
+  const { galaxy, ...arcade } = AUDIO_THEMES;
+  expect(Object.values(arcade).every(t=>t.bpm>=126 && t.bpm<=154)).toBe(true);
+  expect(galaxy.bpm).toBeLessThan(126);
+  for (const theme of ['jumper','pop','blade','robot','galaxy'] as const) {
     const audio=new ChipAudio(theme);await audio.unlock();audio.play(3);
     const context=contexts[contexts.length-1];
     for(let i=0;i<300;i++){context.currentTime=i*.05;vi.advanceTimersByTime(50);expect(audio.snapshot().voices).toBeLessThanOrEqual(48);for(const node of sources.splice(0))node.dispatchEvent(new Event('ended'));}
-    expect(audio.snapshot().scheduledNotes).toBeGreaterThan(100);audio.dispose();expect(vi.getTimerCount()).toBe(0);
+    expect(audio.snapshot().scheduledNotes).toBeGreaterThan(theme === 'galaxy' ? 56 : 100);audio.dispose();expect(vi.getTimerCount()).toBe(0);
   }
 });
 

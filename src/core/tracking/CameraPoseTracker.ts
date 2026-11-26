@@ -1,7 +1,7 @@
 import { createTrackingOverlay, type TrackingOverlay } from './TrackingOverlay';
 import { createPoseWorker, type PoseWorkerMessage } from "./pose.worker";
 import type { PoseFrame } from "./types";
-import { sharedCamera, cameraAccessError, claimInference, releaseInference, type CameraRole } from "./SharedCamera";
+import { sharedCamera, cameraAccessError, claimInference, releaseInference, type CameraLease, type CameraRole } from "./SharedCamera";
 import { videoFrameKey } from './videoFrameKey';
 
 export type TrackingStatus = {
@@ -28,7 +28,7 @@ type Session = {
   abort: AbortController;
   stream?: MediaStream;
   overlay?: TrackingOverlay;
-  releaseCamera?: () => void;
+  lease?: CameraLease;
   worker?: Worker;
   raf?: number;
   videoCallback?: number;
@@ -105,7 +105,16 @@ export class CameraPoseTracker {
   };
   private readonly onPageHide = () => this.stop();
 
-  constructor(private readonly video: HTMLVideoElement, private readonly callbacks: Callbacks, private readonly workerFactory = createPoseWorker, private readonly options: { role?: CameraRole; maxFps?: number } = {}) {}
+  private role: CameraRole;
+  constructor(private readonly video: HTMLVideoElement, private readonly callbacks: Callbacks, private readonly workerFactory = createPoseWorker, private readonly options: { role?: CameraRole; maxFps?: number; overlay?: boolean } = {}) {
+    this.role = options.role ?? 'game';
+  }
+
+  setGameplayActive(active: boolean): void {
+    if (this.role !== 'game' && this.role !== 'game-preview') return;
+    this.role = active ? 'game' : 'game-preview';
+    this.session?.lease?.setRole(this.role);
+  }
 
   /** Optional owned stream is for reproducible, local video/canvas benchmarks. */
   async start(source?: MediaStream): Promise<void> {
@@ -128,8 +137,8 @@ export class CameraPoseTracker {
       if (!globalThis.isSecureContext || (!source && !navigator.mediaDevices?.getUserMedia)) throw new Error("A kamerához HTTPS-kapcsolat vagy localhost szükséges. Nyisd meg az oldalt biztonságos címen.");
       if (typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined" || typeof createImageBitmap === "undefined") throw new Error("A böngésző nem támogatja a háttérben futó kamerakövetést. Frissítsd a Safari vagy Chrome böngészőt.");
       if (document.hidden) throw new Error("A kamera indításához hozd előtérbe ezt az oldalt.");
-      const lease = source ? undefined : sharedCamera.claim(this.options.role ?? 'game');
-      session.releaseCamera = lease?.release;
+      const lease = source ? undefined : sharedCamera.claim(this.role);
+      session.lease = lease;
       const acquisition = (source ? Promise.resolve(source) : lease!.ready).then((stream) => {
         // A cancelled permission request may resolve after a new session starts.
         if (!this.isCurrent(session)) { if (source) stream.getTracks().forEach((track) => track.stop()); throw abortError(); }
@@ -149,7 +158,7 @@ export class CameraPoseTracker {
       this.video.srcObject = session.stream;
       await cancellable(this.video.play(), session.abort.signal, 15000);
       if (!this.isCurrent(session)) return;
-      session.overlay = createTrackingOverlay(this.video);
+      if (this.options.overlay !== false) session.overlay = createTrackingOverlay(this.video);
       this.callbacks.onStatus({ state: "loading", message: `${session.cameraLabel} megnyitva. Testkövető modell betöltése…`, cameraLabel: session.cameraLabel });
       try { await this.initializeWorker(session, "GPU"); }
       catch (error) {
@@ -244,7 +253,7 @@ export class CameraPoseTracker {
       ? session.decodedFrameNumber : videoFrameKey(this.video);
     if (key === session.lastVideoTime) return;
     session.lastVideoAt = now;
-    const maxFps = this.options.maxFps ?? (this.options.role === 'navigation' ? (sharedCamera.hasGame ? 12 : 24) : Infinity);
+    const maxFps = this.options.maxFps ?? (this.role === 'navigation' ? (sharedCamera.hasGame ? 12 : 24) : Infinity);
     if (now - session.lastCaptureAt < 1000 / maxFps || !claimInference(session)) return;
     session.lastVideoTime = key;
     session.lastCaptureAt = now;
@@ -306,7 +315,7 @@ export class CameraPoseTracker {
     }
     frame.imageAspectRatio = this.video.videoWidth / this.video.videoHeight;
     session.overlay?.pose(frame);
-    if (this.options.role === 'game-hand') sharedCamera.publishHand(frame);
+    if (this.role === 'game-hand') sharedCamera.publishHand(frame);
     this.callbacks.onFrame(frame);
     if (now - session.lastStatusAt >= 500) {
       session.lastStatusAt = now;
@@ -317,7 +326,7 @@ export class CameraPoseTracker {
         cameraFps: session.stream?.getVideoTracks?.()[0]?.getSettings?.().frameRate,
         cameraLabel: session.cameraLabel,
         warmingUp: false,
-        message: frame.landmarks.length ? "A kamera követi a mozgásodat." : "Nem látok követhető testpontokat. Nézz a kamerába, és ellenőrizd a megvilágítást."
+        message: frame.landmarks.length || frame.armLandmarks?.length ? "A kamera követi a mozgásodat." : "Nem látok követhető testpontokat. Nézz a kamerába, és ellenőrizd a megvilágítást."
       });
     }
     // If inference took >33 ms, a newer video frame may already be decoded.
@@ -379,7 +388,7 @@ export class CameraPoseTracker {
     session.clearedStalePose = true;
     session.overlay?.clear();
     const empty = { timestampMs: performance.now(), landmarks: [], worldLandmarks: [], inferenceMs: 0 };
-    if (this.options.role === 'game-hand') sharedCamera.publishHand(empty);
+    if (this.role === 'game-hand') sharedCamera.publishHand(empty);
     this.callbacks.onFrame(empty);
   }
 
@@ -402,7 +411,7 @@ export class CameraPoseTracker {
     clearInterval(session.watchdog);
     session.worker?.terminate();
     releaseInference(session);
-    if (session.releaseCamera) session.releaseCamera();
+    if (session.lease) session.lease.release();
     else session.stream?.getTracks().forEach((track) => track.stop());
     this.video.pause();
     this.video.srcObject = null;

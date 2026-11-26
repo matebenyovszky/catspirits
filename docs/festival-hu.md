@@ -4,7 +4,7 @@ A Telekom PlayIT Show 2026. december 5–6-án lesz az MTK Sportparkban. A hat j
 
 ## Mit adj a látogató kezébe?
 
-A játékválasztó **Standi bemutató** gombja kamerahasználat nélkül, zenével váltogatja a hat játékot. Az **Ezt játszom** gomb az éppen futó küldetéshez vezet.
+A játékválasztó **Standi bemutató** gombja zenével váltogatja a hat játékot. A közös kamera és kézkurzor végig elérhető. Az **Ezt játszom** gomb az éppen futó küldetéshez vezet.
 
 Elsőre a **Glow Ferryt** érdemes megmutatni. Tartsd vízszintesen a puha botot, majd billentsd meg épp annyira, hogy a látogató lássa elindulni a kis utast. Add át neki a botot, mielőtt az utas elérné a szélét. Egyetlen ellendöntésből érthetővé válik, hogyan hat a valódi mozdulat a virtuális teherre.
 

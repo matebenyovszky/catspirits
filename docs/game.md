@@ -2,7 +2,7 @@
 
 ## English
 
-**Move to play.** Camera movement is selected by default. Press **Start camera**, allow camera access and stand upright with your shoulders and hips visible for calibration. Jump to clear purple gates, duck under gold beams and lean sideways to change lanes. Images are processed on your device. If you prefer, choose keyboard/touch before starting.
+**Move to play.** Allow camera access when you open CatSpirits. Choose **Calibrate movement** and stand upright with your shoulders and hips visible. Jump to clear purple gates, duck under gold beams and lean sideways to change lanes. Your device processes the camera image. Choose **On-screen controls** to play with the hand cursor, keyboard or touch.
 
 
 - **Space / ↑ / W:** jump. **← → / A D:** change lanes. **↓ / S held:** duck. **P / Escape:** pause.
@@ -14,11 +14,11 @@
 
 For camera mode, keep your shoulders and hips visible, stand upright to calibrate, and then jump, duck or lean sideways. Feet can be cropped for jumps and ducking; running on the spot needs visible knees or ankles. Auto-run is enabled by default. When disabled, a duck retains your preceding running pace until you stand up; loss of tracking stops the course.
 
-Fast mode uses a smaller input and shorter motion smoothing. Steadier mode uses more detail and longer smoothing. Changing this setting requires recalibration. Neither profile is a measurement of complete real-world reaction time. Choose keyboard/touch if the camera is unavailable.
+Fast mode reacts to movement sooner. Steadier mode smooths the movement over a longer interval. Changing this setting requires recalibration.
 
 ## Magyar
 
-**Mozogj, és játssz!** A kamerás mozgás alapból ki van választva. A **Kamera indítása** gomb után engedélyezd a kamerát, és kalibráláshoz állj egyenesen, látható vállal és csípővel. A lila kapunál ugorj, az arany gerenda alatt hajolj le, sávváltáshoz dőlj oldalra. A képet a géped dolgozza fel. Indítás előtt billentyűs/érintéses vezérlésre is válthatsz.
+**Mozogj, és játssz!** A CatSpirits megnyitásakor engedélyezd a kamerát. Válaszd a **Testkalibrálás** gombot, és állj egyenesen, látható vállal és csípővel. A lila kapunál ugorj, az arany gerenda alatt hajolj le, sávváltáshoz dőlj oldalra. A képet a géped dolgozza fel. A **Játékgombok** módban kézkurzorral, billentyűvel vagy érintéssel játszhatsz.
 
 
 - **Szóköz / ↑ / W:** ugrás. **← → / A D:** sávváltás. **↓ / S nyomva tartása:** lehajolás. **P / Escape:** szünet.
@@ -30,11 +30,11 @@ Fast mode uses a smaller input and shorter motion smoothing. Steadier mode uses 
 
 Kamerával a vállad és a csípőd legyen látható. Kalibráláskor állj egyenesen, utána ugorj, hajolj le vagy dőlj oldalra. Ugráshoz és lehajoláshoz nem kell látszania a lábfejnek; helyben futáshoz a térdnek vagy bokának igen. Az automatikus futás alapból bekapcsolt. Kikapcsolva lehajolás alatt az előző futótempó megmarad; követésvesztéskor megáll a pálya.
 
-A Gyors mód kisebb képpel és rövidebb simítással, a Stabilabb mód több részlettel és hosszabb simítással dolgozik. Módváltás után újrakalibrál. Ezek beállítások, nem mért teljes reakcióidők. Kamera nélkül a billentyű és érintés mindig használható.
+A Gyors mód hamarabb reagál a mozdulatokra. A Stabilabb mód hosszabb időszakon át simítja a mozgást. Módváltás után újrakalibrál.
 
 ## Deutsch
 
-**Beweg dich und spiel!** Kamerasteuerung ist standardmäßig ausgewählt. Drücke **Kamera starten**, erlaube den Zugriff und steh zur Kalibrierung aufrecht, sodass deine Schultern und Hüften sichtbar sind. Springe über lila Tore, ducke dich unter goldenen Querbalken und lehne dich zur Seite, um die Spur zu wechseln. Die Bilder werden auf deinem Gerät verarbeitet. Tastatur und Touch stehen als alternative Steuerung zur Verfügung.
+**Beweg dich und spiel!** Erlaube den Kamerazugriff beim Öffnen von CatSpirits. Wähle **Bewegung kalibrieren** und stell dich so hin, dass deine Schultern und Hüften sichtbar sind. Springe über lila Tore, ducke dich unter goldenen Querbalken und lehne dich zur Seite, um die Spur zu wechseln. Die Bilder werden auf deinem Gerät verarbeitet. Du kannst mit dem Handcursor, der Tastatur oder per Touch spielen.
 
 Mit Tastatur: Leertaste / ↑ / W zum Springen, ← → / A D zum Spurwechsel, ↓ / S gedrückt halten zum Ducken, P / Escape für Pause. Ab Welt 3 gibt es goldene Querbalken; bleib geduckt, bis sie vorbeigezogen sind.
 

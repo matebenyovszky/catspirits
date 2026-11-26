@@ -30,7 +30,7 @@ vi.mock('./RoverView3D', () => ({
 }));
 vi.mock('../../core/blade/BladeCamera', () => ({
   BladeCamera: class {
-    constructor(_video: HTMLVideoElement, emit: (frame: SwordFrame | null) => void) { wand.emit = emit; }
+    constructor(emit: (frame: SwordFrame | null) => void) { wand.emit = emit; }
     start = wand.start;
     stop = wand.stop;
     get running() { return wand.running; }
@@ -149,7 +149,7 @@ describe('festival gallery and camera lifecycle', () => {
     wand.start.mockRejectedValueOnce(new DOMException('Camera permission denied', 'NotAllowedError'));
     expect(wand.start).not.toHaveBeenCalled();
     start(); await Promise.resolve();
-    expect(el('[data-result]').textContent).toBeTruthy(); expect(el('.arc-preview').hidden).toBe(true);
+    expect(el('[data-result]').textContent).toBeTruthy(); expect(root.querySelector('video')).toBeNull();
     expect(wand.stop).toHaveBeenCalledOnce(); expect(callbacks.size).toBe(0);
     start(); await Promise.resolve();
     advance(60);
@@ -166,7 +166,7 @@ describe('festival gallery and camera lifecycle', () => {
     advance(3, wandSample); expect(game.update.mock.calls.length).toBeGreaterThan(updates);
     wand.running = false; advance(1);
     expect(el('[data-result]').textContent).toContain('camera stopped'); expect(callbacks.size).toBe(0);
-    expect(el('.arc-preview').hidden).toBe(true);
+    expect(root.querySelector('video')).toBeNull();
   });
 
   it('ignores an old camera promise and its late frames after switching input during startup', async () => {

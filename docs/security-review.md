@@ -8,7 +8,7 @@ The shipped application is a static Vite/TypeScript browser game. There is no ap
 
 Production has no development control object. DOM HTML comes from authored templates, fixed dictionaries, authored course data and validated numeric saves. Camera device labels and error messages are displayed as text. URL languages are restricted to en/hu/de. Save values are reconstructed into a fixed schema with bounded stars, suit and volumes. There is no remote HTML, user-generated markup or external script CDN in the game.
 
-Camera access is opt-in, requests video without audio, and never records or uploads frames/landmarks in application code. One image is in flight; decoded-frame deduplication, stale-frame rejection, timeouts, GPU-to-CPU recovery and cancellation prevent an unbounded image queue. Hidden/closed pages stop tracks and workers. The optional sword detector remains inactive in normal play. Images sent to its worker stay local; its purpose is entertainment, not identity or medically accurate measurement.
+CatSpirits requires browser permission for one shared video feed. It requests video only and processes frames and landmarks in memory on the device. Serial inference, decoded-frame deduplication, stale-frame rejection, timeouts, GPU-to-CPU recovery and cancellation bound the tracking worker's image queue. Hidden or closed pages stop tracks and workers. The wand detector runs in a local worker during wand play.
 
 ## Dependency and secret checks
 

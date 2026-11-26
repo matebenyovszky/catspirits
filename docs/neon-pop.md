@@ -4,13 +4,13 @@
 
 Choose one input in the menu:
 
-- **Camera · hands:** the existing local pose model follows each visible wrist. Keep shoulders, elbows and hands in view. Move either coloured wrist circle through a target. Both hands can hit at once; one disappearing hand does not replace the other hand's identity. This is wrist tracking, not finger/gesture recognition.
-- **Camera · marker wand:** use the [four-band soft wand](sword-tracking.md). Sweep the glowing section through a target in any direction. No body model is loaded in this mode.
-- **Mouse/touch:** tap a visible target. No camera starts.
+- **Play with hands:** the shared body tracker follows each visible wrist. Keep shoulders, elbows and hands in view. Move either coloured wrist circle through a target. Both hands can hit at once.
+- **Play with the marker wand:** the colour tracker uses the shared camera. Sweep the glowing section of the four-band soft wand through a target in any direction. [Wand setup](sword-tracking.md)
+- **Hand cursor controls:** select a visible target with a pinch, mouse click or tap.
 
 Rounds last 45 active seconds across three waves. A target's outer ring shows how long it remains available. Every visible target is active; one sweep can clear several. Gold is worth three times as much and consecutive hits build a multiplier up to 4×. Letting a target expire resets the combo. A stationary hand or blade does not automatically collect newly appearing targets.
 
-The game measures contacts between fresh observations rather than scoring render predictions. Hand measurements are limited to 200 ms age and 160 ms inter-frame gaps; wand measurements retain the existing 120 ms bound and ring-support continuity. A lost observation breaks hit history. The clock tolerates a short gap (360 ms from the last hand capture, 240 ms for a wand), then pauses. Pause, hidden pages, cancellation and round end stop the stream. Returning to a hidden page does not restart the camera automatically.
+The game scores contacts between fresh observations. Hand measurements are limited to 200 ms age and 160 ms inter-frame gaps. Wand measurements retain the 120 ms bound and ring-support continuity. A lost observation breaks hit history. The clock tolerates a short gap (360 ms from the last hand capture, 240 ms for a wand), then pauses. Pausing or ending the round stops gameplay scoring and leaves the shared preview available. The app releases the camera in the background and resumes the feed when the page returns to the foreground.
 
 Input is processed on the device. There is no recording, image upload, account or remote inference. Only the selected tracker runs. The body model/runtime and colour kernel are hosted by this site, with no new dependencies or permissions. Best scores are stored locally under `catspirits.neon-pop.best.v1`, separately for hands, wand and touch.
 

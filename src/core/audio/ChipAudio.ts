@@ -1,6 +1,6 @@
 import { FESTIVAL_SCORES, HERD_ENCORE, isFestivalTheme, type FestivalTheme } from './festivalScores';
 
-export type AudioTheme = 'jumper' | 'pop' | 'blade' | 'robot' | FestivalTheme;
+export type AudioTheme = 'jumper' | 'pop' | 'blade' | 'robot' | 'galaxy' | FestivalTheme;
 export type AudioCue = 'pop' | 'correct' | 'wrong' | 'pick' | 'undo' | 'miss' | 'grab' | 'release' | 'blocked' | 'finish' | 'jump' | 'duck' | 'land' | 'crystal' | 'shield' | 'hit' | 'clear' | 'level';
 const SOUND_KEY = 'catspirits.sound.enabled.v1';
 const midi = (note: number) => 440 * 2 ** ((note - 69) / 12);
@@ -12,6 +12,7 @@ export const AUDIO_THEMES = {
   jumper: { bpm: 138, root: 45, chords: [0, 5, 8, 7], third: 3, lead: 'sawtooth', bass: [0,-1,0,12,-1,0,7,-1], melody: [12, 7, 15, -1, 19, 15, 14, 7, 12, -1, 19, 24, 20, 19, 15, 14] },
   pop: { bpm: 132, root: 53, chords: [0, 7, 9, 5], third: 4, lead: 'square', bass: [0,-1,12,-1,7,0,-1,12], melody: [12, 16, 19, -1, 21, 19, 14, 7, 12, -1, 16, 24, 21, 19, 16, -1] },
   blade: { bpm: 148, root: 42, chords: [0, 0, 3, 7], third: 3, lead: 'sawtooth', bass: [0,0,12,-1,0,7,0,12], melody: [12, 15, 19, 22, -1, 19, 15, 10, 12, -1, 17, 19, 22, 19, 15, 7] },
+  galaxy: { bpm: 82, root: 43, chords: [0, 3, 7, 10], third: 3, lead: 'sine', bass: [0,-1,-1,12,-1,-1,7,-1], melody: [12, -1, 19, 24, -1, 15, -1, 19, 22, -1, 27, -1, 19, 15, -1, 10] },
   robot: { bpm: 128, root: 50, chords: [0, 5, 9, 7], third: 4, lead: 'triangle', bass: [0,-1,7,12,0,-1,12,7], melody: [12, 19, 16, 24, -1, 21, 19, 14, 16, 12, 19, -1, 24, 21, 19, 16] },
 } as const;
 
