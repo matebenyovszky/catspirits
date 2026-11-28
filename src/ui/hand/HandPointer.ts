@@ -11,6 +11,9 @@ export class HandPointer {
   private rangeChanged = false;
   private allowCanvas = true;
   get pressed(): boolean { return this.target !== null; }
+  get usesGameCursor(): boolean {
+    return (this.target ?? this.hover)?.hasAttribute('data-hand-game-cursor') ?? false;
+  }
   get canDrag(): boolean { return this.target instanceof HTMLCanvasElement || (this.target instanceof HTMLInputElement && this.target.type === 'range'); }
   private gameOwns(target: HTMLElement): boolean {
     return !this.allowCanvas && (target instanceof HTMLCanvasElement || !!target.closest('[data-hand-playfield]'));

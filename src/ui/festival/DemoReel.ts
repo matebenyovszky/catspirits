@@ -93,14 +93,16 @@ export class DemoReel {
       } while (this.accumulator >= STEP);
       const w = this.canvas.width, h = this.canvas.height;
       this.game.draw(this.ctx, w, h);
-      this.ctx.save();
-      this.ctx.translate(input.x * w, input.y * h);
-      this.ctx.rotate(input.angle);
-      this.ctx.lineWidth = 3;
-      this.ctx.strokeStyle = '#fff';
-      this.ctx.beginPath(); this.ctx.arc(0, 0, 7, 0, Math.PI * 2);
-      this.ctx.moveTo(-32, 0); this.ctx.lineTo(-8, 0); this.ctx.stroke();
-      this.ctx.restore();
+      if (!this.game.showsOwnAim) {
+        this.ctx.save();
+        this.ctx.translate(input.x * w, input.y * h);
+        this.ctx.rotate(input.angle);
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = '#fff';
+        this.ctx.beginPath(); this.ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        this.ctx.moveTo(-32, 0); this.ctx.lineTo(-8, 0); this.ctx.stroke();
+        this.ctx.restore();
+      }
       if (this.elapsed >= CLIP_SECONDS) this.select(this.index + 1);
     }
     this.raf = requestAnimationFrame(this.frame);

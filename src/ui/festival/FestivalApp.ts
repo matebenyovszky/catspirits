@@ -54,7 +54,8 @@ export class FestivalApp {
   private pausedButton=false;
   private lastHud='';
   private readonly elements = new Map<string,HTMLElement>();
-  private cross={x:.5,y:.5};
+  private aim?: { x: number; y: number };
+  private pointerOnBoard=false;
   private wasTracked=false;
   private missingSince?:number;
 
@@ -122,15 +123,19 @@ export class FestivalApp {
       if(!rect.width || !rect.height)return;
       this.x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
       this.y=Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));
+      this.pointerOnBoard=true;
       this.pointer(action);
     };
     board.addEventListener('pointerdown',e=>{if(e.button===0){position(e,true);board.focus({preventScroll:true});}},{signal});
     board.addEventListener('pointermove',e=>position(e,false),{signal});
+    for(const event of ['pointerout','pointercancel']) {
+      board.addEventListener(event,()=>{this.pointerOnBoard=false;},{signal});
+    }
     board.addEventListener('keydown',e=>{
       if(e.key==='Escape'){this.pause();return;}
       if(this.phase!=='playing' || this.mode!=='touch')return;
       if(e.key.startsWith('Arrow') || e.code==='Space'){
-        e.preventDefault();this.keys.add(e.key); if(e.code==='Space' && !e.repeat)this.pointer(true);
+        e.preventDefault();this.pointerOnBoard=true;this.keys.add(e.key); if(e.code==='Space' && !e.repeat)this.pointer(true);
       }
     },{signal});
     window.addEventListener('keyup',e=>this.keys.delete(e.key),{signal});
@@ -147,7 +152,7 @@ export class FestivalApp {
     const resume=this.phase==='paused', generation=++this.generation;
     if(!resume) { this.audio.stop(); this.game=create(this.id); this.remaining=ROUND; }
     this.phase='loading';this.el('[data-result]').textContent='';this.countdown=2;this.previous=0;this.wasTracked=false;this.missingSince=undefined;
-    this.controls.reset(); this.x=this.y=.5; this.pointer(false); this.hud();
+    this.controls.reset(); this.pointerOnBoard=false; this.x=this.y=.5; this.pointer(false); this.hud();
     void this.audio.unlock();
     try {
       if(this.mode!=='touch') {
@@ -176,6 +181,8 @@ export class FestivalApp {
     ++this.generation;cancelAnimationFrame(this.raf);this.raf=0;this.previous=0;
     this.camera?.stop();this.camera=undefined;this.controls.reset();this.keys.clear();
     this.audio.stop();
+    this.aim=undefined; this.draw();
+    this.board?.removeAttribute('data-hand-game-cursor');
   }
   private pause():void {
     if(this.phase==='over'){this.audio.sleep();return;}
@@ -203,19 +210,21 @@ export class FestivalApp {
     }
     const input=this.controls.read(now,this.mode!=='touch');
     if(!input){
+      if(this.aim){this.aim=undefined;this.draw();}
       this.missingSince ??= now;
       if (!this.wasTracked || now-this.missingSince>=220) {
         this.message(this.mode==='wand'?say('Mutasd a jelölőbot négy gyűrűjét','Show all four wand rings','Zeige alle vier Ringe'):say('Mutasd a nyitott kezed','Show your open hand','Zeige die offene Hand'));
-        if(this.wasTracked){this.audio.stop();this.draw();}
+        if(this.wasTracked)this.audio.stop();
         this.wasTracked=false;
       }
     } else {
       const elapsed=this.missingSince===undefined ? clockStep : 0;
       this.missingSince=undefined;
-      this.wasTracked=true;this.cross=input;
+      this.wasTracked=true;
+      this.aim=this.mode!=='touch' || this.pointerOnBoard ? input : undefined;
       const playTime=Math.max(0,elapsed-this.countdown);
       this.countdown=Math.max(0,this.countdown-elapsed);
-      if(this.countdown>0){this.message(String(Math.ceil(this.countdown)));this.draw(true);}
+      if(this.countdown>0){this.message(String(Math.ceil(this.countdown)));this.draw();}
       else {
         this.message('');this.remaining=Math.max(0,this.remaining-playTime);this.audio.play();
         if(this.id==='paint')input.beatPhase=this.audio.beatPhase();
@@ -228,18 +237,18 @@ export class FestivalApp {
           stepBudget-=step;
           if(stepBudget>0 && stepInput.action)stepInput={...input,action:false};
         }
-        this.draw(true);this.hud();
+        this.draw();this.hud();
         if(this.game!.won || this.game!.lost || this.remaining<=0){this.finish();return;}
       }
     }
     this.raf=requestAnimationFrame(time=>this.frame(time));
   }
-  private draw(cursor=false):void {
-    if(!this.ctx || !this.game)return;
+  private draw():void {
+    if(!this.ctx || !this.game || !this.id)return;
     if(this.rover?.draw(this.game as QuarryRover))return;
-    this.ctx.save();this.game.draw(this.ctx,WIDTH,HEIGHT);this.ctx.restore();
-    if(cursor){
-      const ctx=this.ctx,x=this.cross.x*WIDTH,y=this.cross.y*HEIGHT;
+    this.ctx.save();this.game.draw(this.ctx,WIDTH,HEIGHT,!!this.aim);this.ctx.restore();
+    if(this.aim && !this.game.showsOwnAim){
+      const ctx=this.ctx,x=this.aim.x*WIDTH,y=this.aim.y*HEIGHT;
       ctx.save();ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);
       ctx.lineWidth=4;ctx.strokeStyle='#12263c';ctx.stroke();ctx.lineWidth=2;ctx.strokeStyle='white';ctx.stroke();ctx.restore();
     }
@@ -255,6 +264,7 @@ export class FestivalApp {
     if(!this.id)return;
     const key=[this.phase,this.game?.score,Math.ceil(this.remaining),this.mode].join('.');
     if(key===this.lastHud)return;this.lastHud=key;
+    this.board?.toggleAttribute('data-hand-game-cursor',this.phase==='playing' && this.mode==='touch');
     this.el('[data-score]').textContent=String(this.game?.score??0);this.el('[data-time]').textContent=String(Math.ceil(this.remaining));
     const active=this.phase==='playing' || this.phase==='loading';
     if(this.pausedButton!==active || !active) {

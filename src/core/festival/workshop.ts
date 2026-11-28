@@ -107,13 +107,13 @@ abstract class WorkshopGame implements FestivalGame {
     return this.tick(step, input);
   }
   protected abstract tick(dt: number, input: FestivalInput): Cue;
-  protected abstract scene(c: Context): void;
-  draw(c: Context, width: number, height: number) {
+  protected abstract scene(c: Context, showAim: boolean): void;
+  draw(c: Context, width: number, height: number, showAim = true) {
     c.save();
     c.scale(width / W, height / H);
     c.lineJoin = 'round';
     c.lineCap = 'round';
-    this.scene(c);
+    this.scene(c, showAim);
     c.restore();
   }
 }
@@ -128,6 +128,7 @@ export function bridgeSocket(column: number, row: number): Point {
 
 /** A convoy follows the player's confirmed bridge, one tile at a time. */
 export class Convoy extends WorkshopGame {
+  readonly showsOwnAim = true;
   readonly trail: number[] = [1];
   convoy = 0;
   crossing = 0;
@@ -203,7 +204,7 @@ export class Convoy extends WorkshopGame {
     }
     return cue;
   }
-  protected scene(c: Context) {
+  protected scene(c: Context, showAim: boolean) {
     sky(c,220,'#090f26','#21405c');
     circle(c,point(635,95),42,'#c089ab');
     for (let i=0;i<12;i++) {
@@ -250,7 +251,7 @@ export class Convoy extends WorkshopGame {
     c.strokeRect(644,49,98,17);
     c.fillStyle='#afc9d1';c.fillRect(742,54,5,7);
     c.fillStyle=this.reserve>.35?'#89f9cb':'#ff987e';c.fillRect(648,53,90*this.reserve,9);
-    ring(c,this.cursor,12,1,this.feedback>0?'#ff826e':'#ffffd9',2);
+    if(showAim) ring(c,this.cursor,12,1,this.feedback>0?'#ff826e':'#ffffd9',2);
   }
 }
 
@@ -264,6 +265,7 @@ export const brushDocks = [point(206,460),point(400,460),point(594,460)];
 /** A measured stroke advances one ordered waypoint at a time. Painting the
  * outline with the matching nib and catching the beat on closure add points. */
 export class PulsePainter extends WorkshopGame {
+  readonly showsOwnAim = true;
   brush = -1;
   stroke = 0;
   motif = 0;
@@ -328,7 +330,7 @@ export class PulsePainter extends WorkshopGame {
     this.motif++; this.stroke=0; this.brush=-1; this.last=null;
     return 'correct';
   }
-  protected scene(c: Context) {
+  protected scene(c: Context, showAim: boolean) {
     sky(c,140,'#211538','#473054');
     const beat=.5+.5*Math.cos(this.beatPhase*2*Math.PI);
     for(let i=0;i<23;i++) {
@@ -371,8 +373,10 @@ export class PulsePainter extends WorkshopGame {
       number(c,point(p.x,p.y+26),String(i+1),ink[0],15);
       if(i===pattern.color && this.brush!==i) ring(c,p,36+beat*3,1,ink[0],2);
     }
-    line(c,point(this.cursor.x+14,this.cursor.y+23),this.cursor,'#e2dbe6',5);
-    circle(c,this.cursor,7,this.brush>=0?inkColors[this.brush][0]:'#eee2f3');
+    if(showAim) {
+      line(c,point(this.cursor.x+14,this.cursor.y+23),this.cursor,'#e2dbe6',5);
+      circle(c,this.cursor,7,this.brush>=0?inkColors[this.brush][0]:'#eee2f3');
+    }
     if(this.feedback>0)number(c,point(this.feedbackAt.x,this.feedbackAt.y-24),this.bonus?'+'+this.bonus:'×',this.bonus?'#ffe6a5':'#ff888d',21);
   }
 }

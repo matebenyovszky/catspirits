@@ -93,11 +93,12 @@ export class BladeApp {
     const canvas = this.el('canvas');
     canvas.addEventListener('pointerdown', event => {
       if (this.mode !== 'touch' || this.phase !== 'playing' || event.button !== 0 || this.pointer !== null) return;
+      canvas.setAttribute('data-hand-game-cursor', '');
       this.pointer = event.pointerId; if(event.isTrusted)canvas.setPointerCapture(event.pointerId); this.game.breakSweep(); this.movePointer(event);
     }, { signal });
     canvas.addEventListener('pointermove', event => { if (this.pointer === event.pointerId) this.movePointer(event); }, { signal });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) canvas.addEventListener(name, event => {
-      if (event.pointerId === this.pointer) { if (name === 'pointerup') this.movePointer(event); this.pointer = null; this.measured = null; this.game.breakSweep(); }
+      if (event.pointerId === this.pointer) { if (name === 'pointerup') this.movePointer(event); this.clearPointer(); }
     }, { signal });
     window.addEventListener('keydown', event => { if (event.key === 'Escape' || (event.key.toLowerCase() === 'p' && !(event.target instanceof HTMLSelectElement))) this.pause(); }, { signal });
     window.addEventListener('resize', () => this.resize(), { signal });
@@ -112,6 +113,7 @@ export class BladeApp {
     window.addEventListener('pageshow', () => { if (this.phase !== 'menu' && !document.hidden) this.resize(); }, { signal });
   }
   private enter(mode: 'camera' | 'touch'): void {
+    this.clearPointer();
     this.mode = mode; this.tracking.reset(); this.phase = 'setup'; this.root.classList.toggle('blade-calibrating', mode === 'camera'); this.root.classList.add('blade-in-game');
     this.el('.blade-menu').hidden = true; this.el('.blade-play').hidden = false;
     this.el('[data-results]').hidden = true;
@@ -160,7 +162,8 @@ export class BladeApp {
   }
   private pause(): void {
     if (this.phase !== 'playing' && this.phase !== 'setup') return;
-    this.root.classList.remove('blade-calibrating'); this.phase = 'paused'; ++this.generation; this.camera.stop(); this.tracking.reset(); this.game.update(0, false); this.pointer = null;
+    this.root.classList.remove('blade-calibrating'); this.phase = 'paused'; ++this.generation; this.camera.stop(); this.tracking.reset(); this.game.update(0, false); this.clearPointer();
+    this.view.reset(); this.view.draw(this.game, null, performance.now(), this.mode === 'camera');
     this.panel('Egy kis pihenő.', 'A köröd megvár.');
     this.text('[data-begin]', t('Folytatás'));
     this.el('[data-restart]').hidden = true; this.el('.blade-tracking').hidden = true;
@@ -168,8 +171,8 @@ export class BladeApp {
   }
   private suspend(): void { this.audio.sleep(); this.pause(); this.camera.stop(); cancelAnimationFrame(this.raf); this.raf = 0; ++this.generation; }
   private home(): void {
-    ++this.generation; this.camera.stop(); this.phase = 'menu'; this.tracking.reset(); this.game.phase = 'ready'; this.measured = null; this.pointer = null;
-    this.game.breakSweep(); this.view.reset(); this.root.classList.remove('blade-in-game');
+    ++this.generation; this.camera.stop(); this.phase = 'menu'; this.tracking.reset(); this.game.phase = 'ready'; this.clearPointer();
+    this.view.reset(); this.root.classList.remove('blade-in-game');
     this.el('.blade-play').hidden = true; this.el('.blade-menu').hidden = false;
     cancelAnimationFrame(this.raf); this.raf = 0; this.audio.sleep();
     this.el('[data-camera]').focus();
@@ -183,6 +186,12 @@ export class BladeApp {
       : Math.max(180, Math.min((innerWidth - 32) / aspect, innerHeight - (innerWidth < 600 ? 274 : 280), 750));
     const arena = this.el('.blade-arena'); arena.style.width = `${height * aspect}px`; arena.style.height = `${height}px`;
     this.view.resize(); this.view.draw(this.game, this.measured, performance.now(), this.mode === 'camera');
+  }
+  private clearPointer(): void {
+    this.pointer = null;
+    this.measured = null;
+    this.game.breakSweep();
+    this.el('canvas').removeAttribute('data-hand-game-cursor');
   }
   private movePointer(event: PointerEvent): void {
     if (this.phase !== 'playing') return;
@@ -237,7 +246,8 @@ export class BladeApp {
     this.raf = requestAnimationFrame(time => this.frame(time));
   }
   private finish(): void {
-    this.root.classList.remove('blade-calibrating'); this.phase = 'over'; this.camera.stop(); this.el('.blade-tracking').hidden = true;
+    this.root.classList.remove('blade-calibrating'); this.phase = 'over'; this.camera.stop(); this.clearPointer();
+    this.view.reset(); this.view.draw(this.game, null, performance.now(), this.mode === 'camera'); this.el('.blade-tracking').hidden = true;
     // Flush the final values before stopping the throttled HUD/render loop.
     this.text('[data-time]', '00'); this.text('[data-score]', String(this.game.score));
     this.text('[data-combo]', `${this.game.combo} · ×${this.game.multiplier}`);

@@ -89,9 +89,9 @@ abstract class Mission implements FestivalGame {
     this.burstX=x; this.burstY=y; this.burstColor=color; this.burstRemaining=.46;
   }
   abstract update(dt:number,input:FestivalInput):Cue;
-  protected abstract paint(c:Ctx):void;
-  draw(c:Ctx,width:number,height:number):void {
-    c.save(); c.scale(width/W,height/H); this.paint(c);
+  protected abstract paint(c:Ctx,showAim:boolean):void;
+  draw(c:Ctx,width:number,height:number,showAim=true):void {
+    c.save(); c.scale(width/W,height/H); this.paint(c,showAim);
     if(this.burstRemaining>0) {
       const age=.46-this.burstRemaining;
       for(let i=0;i<12;i++) {
@@ -325,6 +325,7 @@ const herdSpawns=[[.17,.32],[.26,.41],[.18,.58],[.29,.69],[.09,.45]];
 /** The wand attracts nearby strays. Separating neighbours and deflecting the
  * velocity at the pond edge keeps the flock steerable without pathfinding. */
 class Herd extends Mission {
+  readonly showsOwnAim = true;
   private herd:Stray[]=herdSpawns.map(([x,y],i)=>({x,y,vx:0,vy:0,saved:false,coat:[frost,mint,gold,violet,frost][i]}));
   private pointer={x:.25,y:.48};
   private pulse=0;
@@ -374,7 +375,7 @@ class Herd extends Mission {
     }
     this.won=this.delivered===this.herd.length; return cue;
   }
-  protected paint(c:Ctx):void {
+  protected paint(c:Ctx,showAim:boolean):void {
     const bg=c.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#1d404c'); bg.addColorStop(1,'#336459'); c.fillStyle=bg; c.fillRect(0,0,W,H);
     for(let i=0;i<63;i++){
       const x=(i*113+13)%W,y=64+(i*79)%(H-80);
@@ -393,17 +394,21 @@ class Herd extends Mission {
     for(let i=0;i<this.delivered;i++)pet(c,bx+(i%3-1)*25,by+Math.floor(i/3)*24,23,this.herd.filter(p=>p.saved)[i].coat,this.elapsed*2+i);
     const x=this.pointer.x*W,y=this.pointer.y*H;
     const radius=(this.pulse>0?.345:.225)*W;
-    c.strokeStyle=this.pulse>0?'#ffe09b':'#84f2d99c';c.lineWidth=2;c.setLineDash([4,9]);c.beginPath();c.ellipse(x,y,radius,radius*H/(W*.7),0,0,Math.PI*2);c.stroke();c.setLineDash([]);
+    if(showAim) {
+      c.strokeStyle=this.pulse>0?'#ffe09b':'#84f2d99c';c.lineWidth=2;c.setLineDash([4,9]);c.beginPath();c.ellipse(x,y,radius,radius*H/(W*.7),0,0,Math.PI*2);c.stroke();c.setLineDash([]);
+    }
     const ordered=[...this.herd].sort((a,b)=>a.y-b.y);
     for(const p of ordered){
       if(p.saved)continue;
       const px=p.x*W,py=p.y*H;
-      if(Math.hypot(x-px,(y-py)*W/H*.7)<radius)line(c,'#91f1cc5c',2,x,y,px,py-9);
+      if(showAim && Math.hypot(x-px,(y-py)*W/H*.7)<radius)line(c,'#91f1cc5c',2,x,y,px,py-9);
       c.fillStyle='#163e42';c.beginPath();c.ellipse(px+4,py+1,19,6,0,0,2*Math.PI);c.fill();
       pet(c,px,py,37,p.coat,this.elapsed*(Math.abs(p.vx)+Math.abs(p.vy)>.015?9:2)+p.x*8);
     }
-    line(c,'#a9c7ea',9,x-23,y+32,x,y);line(c,'#f6d59b',4,x-23,y+32,x,y);
-    ring(c,x,y,this.pulse>0?17:10,this.active?'#baffe0':'#9ab9d6',3);
+    if(showAim) {
+      line(c,'#a9c7ea',9,x-23,y+32,x,y);line(c,'#f6d59b',4,x-23,y+32,x,y);
+      ring(c,x,y,this.pulse>0?17:10,this.active?'#baffe0':'#9ab9d6',3);
+    }
     number(c,this.delivered, bx,by+56,20,'#fff0b7');
     for(let i=0;i<this.herd.length;i++)block(c,32+i*28,30,15,10,5,i<this.delivered?gold:teal);
     rect(c,'#31545e',W-110,24,82,5);rect(c,'#9ff3d8',W-110,24,82*(1-this.cooldown/2.2),5);

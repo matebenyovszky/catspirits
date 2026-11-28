@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FestivalGame, FestivalInput } from '../../core/festival/types';
+import { handFixture } from '../../core/robot/handFixture';
+import type { PoseFrame } from '../../core/tracking/types';
 import type { SwordFrame } from '../../core/tracking/sword/types';
 import { setLanguage } from '../../i18n';
 import { FestivalApp } from './FestivalApp';
 
 const { createGame, wand, hand, roverView } = vi.hoisted(() => ({
   createGame: vi.fn(() => ({
-    score: 0, won: false, lost: false, hull: 3, gates: 0,
+    score: 0, won: false, lost: false, hull: 3, gates: 0, showsOwnAim: false,
     draw: vi.fn(), update: vi.fn<FestivalGame['update']>(() => null),
   })),
   roverView: { open: vi.fn(), draw: vi.fn(), dispose: vi.fn() },
@@ -15,7 +17,10 @@ const { createGame, wand, hand, roverView } = vi.hoisted(() => ({
     start: vi.fn<() => Promise<boolean>>(), stop: vi.fn(), running: true,
     emit: undefined as ((frame: SwordFrame | null) => void) | undefined,
   },
-  hand: { start: vi.fn<() => Promise<boolean>>(), stop: vi.fn() },
+  hand: {
+    start: vi.fn<() => Promise<boolean>>(), stop: vi.fn(),
+    emit: undefined as ((frame: PoseFrame | null) => void) | undefined,
+  },
 }));
 vi.mock('../../core/festival/missions', () => ({ createMission: createGame }));
 vi.mock(import('../../core/festival/workshop'), async importOriginal => ({
@@ -37,7 +42,12 @@ vi.mock('../../core/blade/BladeCamera', () => ({
   },
 }));
 vi.mock('../../core/robot/RobotCamera', () => ({
-  RobotCamera: class { running = true; start = hand.start; stop = hand.stop; },
+  RobotCamera: class {
+    constructor(emit: (frame: PoseFrame | null) => void) { hand.emit = emit; }
+    running = true;
+    start = hand.start;
+    stop = hand.stop;
+  },
 }));
 
 let root: HTMLElement;
@@ -74,7 +84,7 @@ function pendingWand() {
 beforeEach(() => {
   vi.clearAllMocks();
   wand.start.mockReset().mockResolvedValue(true); hand.start.mockReset().mockResolvedValue(true);
-  wand.emit = undefined; wand.running = true;
+  wand.emit = hand.emit = undefined; wand.running = true;
   localStorage.clear(); setLanguage('en'); clock = 100; callbacks = new Map();
   root = document.createElement('div'); document.body.replaceChildren(root);
   let nextFrame = 0;
@@ -287,4 +297,33 @@ describe('festival practice round', () => {
     expect(localStorage.getItem('catspirits.arcade.paint.touch.v1')).toBe('36');
     expect(wand.start).not.toHaveBeenCalled(); expect(hand.start).not.toHaveBeenCalled();
   });
+});
+
+
+it('draws the native brush without the extra reticle and clears it when the hand goes to a menu', async () => {
+  mount('paint');
+  mode('hand');
+  start();
+  await Promise.resolve();
+  const game = currentGame();
+  game.showsOwnAim = true;
+  const ctx = vi.mocked(HTMLCanvasElement.prototype.getContext).mock.results[0].value as CanvasRenderingContext2D;
+  advance(48, () => hand.emit?.(handFixture(clock, false)));
+  expect(game.update).toHaveBeenCalled();
+  expect(game.draw).toHaveBeenLastCalledWith(ctx, 800, 560, true);
+  expect(ctx.arc).not.toHaveBeenCalled();
+
+  // The shared feed sends null when menu navigation takes this hand.
+  hand.emit?.(null);
+  advance(1);
+  expect(game.draw).toHaveBeenLastCalledWith(ctx, 800, 560, false);
+  advance(2, () => hand.emit?.(handFixture(clock, false)));
+  expect(game.draw).toHaveBeenLastCalledWith(ctx, 800, 560, true);
+  el('[data-pause]').click();
+  expect(game.draw).toHaveBeenLastCalledWith(ctx, 800, 560, false);
+  mode('touch');
+  start();
+  expect(el('[data-board]').hasAttribute('data-hand-game-cursor')).toBe(true);
+  el('[data-pause]').click();
+  expect(el('[data-board]').hasAttribute('data-hand-game-cursor')).toBe(false);
 });

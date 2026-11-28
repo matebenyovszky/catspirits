@@ -157,8 +157,6 @@ export class HandNavigation {
     const game = cameraFeed.gameOwnsInput;
     this.point = { x: sample.x * (innerWidth - 1), y: sample.y * (innerHeight - 1) };
     const { x, y } = this.point;
-    this.cursor.hidden = false;
-    this.cursor.style.transform = `translate3d(${x}px,${y}px,0)`;
     const pressed = this.pointer.pressed;
     const hit = this.pointer.move(x, y, !game);
     this.cursor.classList.toggle('target', hit);
@@ -167,12 +165,17 @@ export class HandNavigation {
     if (sample.edge === 'up') this.pointer.up();
     // A click may synchronously start a camera game and transfer input.
     if (game !== cameraFeed.gameOwnsInput) return true;
+    // Native play owns its aim. A pointer-driven game can also supply its own
+    // marker without giving up hover or pinch events from the hand cursor.
+    const menuOwnsInput = game && (hit || pressed);
+    this.cursor.hidden = game ? !menuOwnsInput : this.pointer.usesGameCursor;
+    if (!this.cursor.hidden) this.cursor.style.transform = `translate3d(${x}px,${y}px,0)`;
     this.held = sample.held;
     this.menuWasHit = hit;
     this.cursor.classList.toggle('pressed', sample.held && (!game || hit || pressed));
     this.lastSeen = performance.now();
     this.tick();
-    return game && (hit || pressed);
+    return menuOwnsInput;
   }
 
   private tick(): void {

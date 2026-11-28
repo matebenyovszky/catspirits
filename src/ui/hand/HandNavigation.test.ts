@@ -43,7 +43,7 @@ beforeEach(() => {
   vi.stubGlobal('PointerEvent', MouseEvent);
   Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => hit });
 });
-afterEach(() => { nav?.dispose(); vi.unstubAllGlobals(); vi.restoreAllMocks(); setLanguage('hu'); });
+afterEach(() => { nav?.dispose(); cameraFeed.stop(); vi.unstubAllGlobals(); vi.restoreAllMocks(); setLanguage('hu'); });
 const dialog = () => document.querySelector<HTMLElement>('.camera-required')!;
 const cursor = () => document.querySelector<HTMLElement>('.hand-cursor')!;
 
@@ -123,7 +123,7 @@ it('moves the live camera, cursor and tracking lines into the expanded game and 
   expect(simulation.open).toHaveBeenCalledOnce();
 });
 
-it('keeps the cursor visible during games, restricts native panels and reserves a menu pinch for the menu', async () => {
+it('hands off the cursor to native play and reserves a pinch over menu controls for the menu', async () => {
   nav = new HandNavigation(root);
   await settle();
   const release = cameraFeed.claimInput();
@@ -140,13 +140,21 @@ it('keeps the cursor visible during games, restricts native panels and reserves 
   try {
     hit = game;
     for (const closed of [false, false, false, false, true, true, false, false]) send(closed);
-    expect(cursor().hidden).toBe(false);
+    expect(cursor().hidden).toBe(true);
     expect(gameClick).not.toHaveBeenCalled();
     expect(native).toHaveBeenLastCalledWith(expect.objectContaining({ timestampMs: time }));
     hit = menu;
     for (const closed of [false, false, false, false, true, true, false, false]) send(closed);
+    expect(cursor().hidden).toBe(false);
     expect(menuClick).toHaveBeenCalledOnce();
     expect(native).toHaveBeenLastCalledWith(null);
+    hit = game;
+    send(false);
+    expect(cursor().hidden).toBe(true);
+    expect(native).toHaveBeenLastCalledWith(expect.objectContaining({ timestampMs: time }));
+    release();
+    send(false);
+    expect(cursor().hidden).toBe(false);
     expect(simulation.open).toHaveBeenCalledOnce();
   } finally {
     release();
@@ -163,4 +171,29 @@ it('blocks a camera loss with the same dialog and clears the live cursor', async
   expect(cursor().hidden).toBe(true);
   expect(root.inert).toBe(true);
   expect(document.querySelectorAll('video')).toHaveLength(1);
+});
+
+
+it('sends hover and pinch to a pointer-driven playfield while using its own visible marker', async () => {
+  nav = new HandNavigation(root);
+  await settle();
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('data-hand-game-cursor', '');
+  root.append(canvas);
+  const hover = vi.fn(), down = vi.fn(), up = vi.fn();
+  canvas.addEventListener('pointermove', hover);
+  canvas.addEventListener('pointerdown', down);
+  canvas.addEventListener('pointerup', up);
+  hit = canvas;
+  let time = 0;
+  vi.spyOn(performance, 'now').mockImplementation(() => time);
+  const send = (closed: boolean) => simulation.workers[0].onFrame(handFixture(time += 65, closed));
+  for (const closed of [false, false, false, false, true, true, false, false]) send(closed);
+  expect(cursor().hidden).toBe(true);
+  expect(hover).toHaveBeenCalled();
+  expect(down).toHaveBeenCalledOnce();
+  expect(up).toHaveBeenCalledOnce();
+  canvas.removeAttribute('data-hand-game-cursor');
+  send(false);
+  expect(cursor().hidden).toBe(false);
 });

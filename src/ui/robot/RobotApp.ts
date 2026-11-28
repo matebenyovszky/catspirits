@@ -267,7 +267,9 @@ export class RobotApp {
     this.el('[data-resume]').hidden = true; this.el('[data-next]').hidden = this.game.level === 2; this.hud();
   }
   private hud(): void {
-    const playing = this.phase === 'playing'; this.root.dataset.phase = this.phase; this.root.dataset.control = this.game.mode;
+    const playing = this.phase === 'playing';
+    this.canvas().toggleAttribute('data-hand-game-cursor', playing && this.source === 'pointer' && this.game.mode === 'manual');
+    this.root.dataset.phase = this.phase; this.root.dataset.control = this.game.mode;
     for (const selector of ['[data-manual]', '[data-auto]', '[data-grip]', '[data-pause]']) this.el<HTMLButtonElement>(selector).disabled = !playing;
     this.el<HTMLButtonElement>('[data-camera]').disabled = this.phase === 'loading' || !this.spatialView;
     this.el<HTMLButtonElement>('[data-pointer]').disabled = !this.spatialView;
